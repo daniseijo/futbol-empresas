@@ -58,8 +58,10 @@ Pasa `futbol-copia.db` por AirDrop, Drive, etc., guárdalo como `data/futbol.db`
    o deja que la acción de GitHub la vaya rellenando poco a poco.
 3. **Vercel:** importa el repositorio y define `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, `REVALIDATE_SECRET`
    y, si quieres otro equipo principal, `NEXT_PUBLIC_FOCUS_TEAM_SLUG`.
-4. **GitHub:** en *Settings › Secrets › Actions*, crea `DATABASE_URL`, `DATABASE_AUTH_TOKEN`,
-   `REVALIDATE_SECRET` (el mismo que en Vercel) y `REVALIDATE_URL` (`https://<dominio>/api/revalidate`).
+4. **GitHub:** en *Settings › Secrets and variables › Actions*, crea los secretos `DATABASE_URL`,
+   `DATABASE_AUTH_TOKEN`, `REVALIDATE_SECRET` (el mismo que en Vercel) y `REVALIDATE_URL`
+   (`https://<dominio>/api/revalidate`), y la variable `SYNC_ENABLED=true`. Sin esa variable la acción
+   programada no se ejecuta (así no gasta minutos ni carga la API mientras no hay base de datos remota).
 
 La acción `.github/workflows/sync.yml` sincroniza cada 20 minutos las noches de partido (lunes a viernes)
 y cada 3 horas el resto (15 minutos como máximo por ejecución), y al terminar llama a `/api/revalidate` para

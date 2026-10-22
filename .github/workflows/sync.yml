@@ -15,6 +15,9 @@ concurrency:
 
 jobs:
   sync:
+    # Apagada hasta configurar Turso: crea la variable del repositorio SYNC_ENABLED=true
+    # (Settings › Secrets and variables › Actions › Variables) para activarla.
+    if: vars.SYNC_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
