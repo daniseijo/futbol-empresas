@@ -1,0 +1,493 @@
+import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { Crest } from "@/components/crest";
+import { FormBadges, OutcomeBadge } from "@/components/form-badges";
+import { MatchTimeline } from "@/components/match-timeline";
+import { PlayerAvatar } from "@/components/player-avatar";
+import { VideoEmbed } from "@/components/video-embed";
+import { siteConfig } from "@/config/site";
+import { calendarUrl } from "@/lib/calendar";
+import { getMatch, getSeasonMatches, getCurrentSeason, getTeam } from "@/lib/data";
+import { capitalize, formatLongDate, formatShortDate, relativeDay } from "@/lib/dates";
+import type { LineupPlayer, Position } from "@/lib/sportspress/types";
+import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
+import { outcomeFor } from "@/lib/standings";
+import { getMatchPageData, type MatchPageData, type TeamSide } from "@/lib/views/match";
+
+const decimal = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 });
+
+/** Se generan en el build los partidos del equipo principal; el resto, en la primera visita. */
+export async function generateStaticParams() {
+  const [team, season] = await Promise.all([getTeam(siteConfig.focusTeamSlug), getCurrentSeason()]);
+  const matches = season ? await getSeasonMatches(season.id) : [];
+  const own = team ? matches.filter((m) => m.homeId === team.id || m.awayId === team.id) : [];
+  return (own.length > 0 ? own : matches.slice(0, 1)).map((m) => ({ id: String(m.id) }));
+}
+
+export async function generateMetadata({ params }: PageProps<"/partidos/[id]">): Promise<Metadata> {
+  const { id } = await params;
+  const result = Number.isInteger(Number(id)) ? await getMatch(Number(id)) : null;
+  if (!result) return { title: "Partido" };
+  const { match } = result;
+  const score = match.played ? ` ${match.homeGoals}–${match.awayGoals} ` : " – ";
+  return { title: `${match.homeName}${score}${match.awayName}` };
+}
+
+export default function MatchPage({ params }: PageProps<"/partidos/[id]">) {
+  return (
+    <Suspense fallback={<MatchSkeleton />}>
+      <MatchContent params={params} />
+    </Suspense>
+  );
+}
+
+function MatchSkeleton() {
+  return (
+    <div className="mx-auto max-w-7xl px-4 pt-7 sm:px-6" aria-busy="true">
+      <div className="h-72 animate-pulse rounded-3xl bg-line" />
+      <div className="mt-6 h-96 animate-pulse rounded-3xl bg-line" />
+    </div>
+  );
+}
+
+async function MatchContent({ params }: Pick<PageProps<"/partidos/[id]">, "params">) {
+  const { id } = await params;
+  const data = Number.isInteger(Number(id)) ? await getMatchPageData(Number(id)) : null;
+  if (!data) notFound();
+  const { match } = data;
+
+  return (
+    <>
+      <Scoreboard data={data} />
+      <main className="mx-auto flex max-w-7xl flex-wrap gap-6 px-4 pt-6 sm:px-6">
+        <div className="flex min-w-0 flex-[999_1_640px] flex-col gap-5.5">
+          {match.video && (
+            <VideoEmbed id={match.video.id} title={match.video.title ?? `${match.homeName} – ${match.awayName}`} />
+          )}
+          {match.played ? (
+            <>
+              <Mvp data={data} />
+              <Lineups data={data} />
+              <Photos data={data} />
+            </>
+          ) : (
+            <>
+              <Preview data={data} />
+              {data.home.lineup.length + data.away.lineup.length > 0 && <Lineups data={data} />}
+            </>
+          )}
+        </div>
+        <aside className="flex min-w-0 flex-[1_1_340px] flex-col gap-5.5">
+          {match.played && <Stats data={data} />}
+          <VenueCard data={data} />
+          <HeadToHead data={data} />
+          <RestOfRound data={data} />
+        </aside>
+      </main>
+    </>
+  );
+}
+
+// --- Cabecera ---------------------------------------------------------------------
+
+function TeamLink({ side, align }: { side: TeamSide; align: "left" | "right" }) {
+  const content = (
+    <>
+      <Crest src={side.logoUrl} name={side.name} size={96} />
+      <span className="font-display text-[26px] leading-none font-extrabold [overflow-wrap:anywhere] uppercase sm:text-[44px]">
+        {side.name}
+      </span>
+      {side.standing && (
+        <span className="flex items-center gap-2 text-[13px] text-muted max-sm:hidden">
+          {side.standing.position}º · {side.standing.points} pts
+        </span>
+      )}
+    </>
+  );
+  const className = `flex min-w-0 flex-col items-center gap-3 text-center ${
+    align === "left" ? "sm:items-end sm:text-right" : "sm:items-start sm:text-left"
+  }`;
+  return side.slug ? (
+    <Link href={`/equipos/${side.slug}`} className={`${className} hover:opacity-80`}>
+      {content}
+    </Link>
+  ) : (
+    <div className={className}>{content}</div>
+  );
+}
+
+function Scoreboard({ data }: { data: MatchPageData }) {
+  const { match, home, away } = data;
+  const venue = getVenue(match.venueId);
+  const homeScorers = data.goals.filter((g) => g.teamId === match.homeId);
+  const awayScorers = data.goals.filter((g) => g.teamId === match.awayId);
+  return (
+    <section className="border-b border-line bg-surface">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-6 pb-8 sm:px-6">
+        <nav aria-label="Competición" className="flex flex-wrap items-center gap-2 text-sm text-muted">
+          {data.path.map((part, index) => (
+            <span key={part} className="flex items-center gap-2">
+              {index > 0 && <span aria-hidden="true">›</span>}
+              <span className={index === data.path.length - 1 ? "font-semibold text-ink" : ""}>{part}</span>
+            </span>
+          ))}
+          {match.round && (
+            <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent-text">Jornada {match.round}</span>
+          )}
+        </nav>
+
+        <div className="flex flex-wrap justify-center gap-x-2.5 text-[13px] text-muted">
+          <span>{capitalize(formatLongDate(match.date))}</span>
+          <span>· {match.date.slice(11, 16)}</span>
+          {venue && <span>· {venue.name}</span>}
+          <span>· 2 × 25 min</span>
+        </div>
+
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 sm:gap-8">
+          <TeamLink side={home} align="left" />
+          <div className="flex flex-col items-center gap-2">
+            {match.played ? (
+              <>
+                <div className="font-display text-[72px] leading-[0.9] font-extrabold tracking-tight sm:text-[120px]">
+                  <span className={match.homeGoals! >= match.awayGoals! ? "" : "text-muted"}>{match.homeGoals}</span>
+                  <span className="text-line"> – </span>
+                  <span className={match.awayGoals! >= match.homeGoals! ? "" : "text-muted"}>{match.awayGoals}</span>
+                </div>
+                <span className="rounded-full bg-ink px-2.5 py-1 text-xs font-bold tracking-[0.12em] text-white">FINAL</span>
+                {data.halftime && <span className="text-[13px] text-muted">Descanso {data.halftime}</span>}
+              </>
+            ) : (
+              <>
+                <span className="rounded-full bg-accent px-3 py-1 text-xs font-bold tracking-[0.1em] text-on-accent uppercase">
+                  {relativeDay(match.date, data.now)}
+                </span>
+                <div className="font-display text-[56px] leading-none font-extrabold sm:text-[88px]">{match.date.slice(11, 16)}</div>
+              </>
+            )}
+          </div>
+          <TeamLink side={away} align="right" />
+        </div>
+
+        {match.played && (homeScorers.length > 0 || awayScorers.length > 0) && (
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4 text-[13px] leading-relaxed text-muted sm:gap-8">
+            <ul className="text-right">
+              {homeScorers.map((g, i) => (
+                <li key={i}>
+                  {g.playerName} {g.minute}′
+                </li>
+              ))}
+            </ul>
+            <span className="w-[72px] sm:w-[160px]" />
+            <ul>
+              {awayScorers.map((g, i) => (
+                <li key={i}>
+                  {g.playerName} {g.minute}′
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {match.played && data.goals.length > 0 && (
+          <MatchTimeline
+            goals={data.goals}
+            home={home}
+            away={away}
+            halftime={data.halftime}
+            finalScore={`${match.homeGoals}–${match.awayGoals}`}
+          />
+        )}
+      </div>
+    </section>
+  );
+}
+
+// --- Cuerpo -----------------------------------------------------------------------
+
+function Card({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3 rounded-[22px] border border-line bg-surface p-5.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="font-display text-[26px] font-extrabold uppercase">{title}</h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function teamOf(data: MatchPageData, teamId: number) {
+  return teamId === data.home.id ? data.home : data.away;
+}
+
+/** El «Crack» de la liga: el mejor jugador del partido. */
+function Mvp({ data }: { data: MatchPageData }) {
+  const p = data.mvp;
+  if (!p) return null;
+  const team = teamOf(data, p.teamId);
+  const facts = [
+    p.goals > 0 && `${p.goals} ${p.goals === 1 ? "gol" : "goles"}`,
+    p.assists > 0 && `${p.assists} ${p.assists === 1 ? "asistencia" : "asistencias"}`,
+    p.points > 0 && `${decimal.format(p.points)} puntos`,
+  ].filter(Boolean);
+  return (
+    <section className="flex items-center gap-5 rounded-[22px] bg-accent p-5.5 text-on-accent">
+      <PlayerAvatar name={p.name} photoUrl={p.photoUrl} number={p.number} position={null} size={84} />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="text-xs font-extrabold tracking-[0.14em]">MVP DEL PARTIDO</span>
+        <span className="font-display text-[34px] leading-none font-extrabold uppercase">{p.name || "Jugador"}</span>
+        <span className="text-[13px]">{[team.name, ...facts].join(" · ")}</span>
+      </div>
+      <Crest src={team.logoUrl} name={team.name} size={56} className="max-sm:hidden" />
+    </section>
+  );
+}
+
+const POSITION_ORDER: (Position | null)[] = ["POR", "DEF", "MED", "DEL", null];
+
+function events(p: LineupPlayer) {
+  const parts: string[] = [];
+  if (p.goals > 0) parts.push(p.minutes.length ? p.minutes.map((m) => `● ${m}′`).join(" ") : "●".repeat(p.goals));
+  if (p.assists > 0) parts.push("◆".repeat(p.assists));
+  if (p.yellowCards > 0) parts.push("▮".repeat(p.yellowCards));
+  if (p.redCards > 0) parts.push("roja");
+  return parts.join("  ");
+}
+
+function Lineups({ data }: { data: MatchPageData }) {
+  return (
+    <Card title="Alineaciones">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-6">
+        {[data.home, data.away].map((side) => {
+          const sorted = POSITION_ORDER.flatMap((position) => side.lineup.filter((p) => p.position === position));
+          return (
+            <div key={side.id} className="flex flex-col">
+              <div className="flex items-center gap-2.5 border-b border-line pb-2.5">
+                <Crest src={side.logoUrl} name={side.name} size={28} />
+                <span className="font-bold">{side.name}</span>
+                <span className="text-[13px] text-muted">
+                  {side.lineup.length} {side.lineup.length === 1 ? "jugador" : "jugadores"}
+                </span>
+              </div>
+              {sorted.length === 0 && <p className="py-3 text-sm text-muted">Sin alineación publicada.</p>}
+              {sorted.map((p) => (
+                <div key={p.playerId} className="grid grid-cols-[40px_1fr_auto_32px] items-center gap-2.5 border-b border-line-soft py-2">
+                  <PlayerAvatar name={p.name} photoUrl={p.photoUrl} number={p.number} position={p.position} size={34} />
+                  <span className="min-w-0 text-sm">
+                    <span className="font-semibold">{p.name || "Sin nombre"}</span>{" "}
+                    <span className="text-xs text-muted">{[p.position, p.photoUrl && p.number ? `#${p.number}` : null].filter(Boolean).join(" · ")}</span>
+                    {p.crack && (
+                      <span className="ml-1.5 rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent-text">MVP</span>
+                    )}
+                  </span>
+                  <span className="text-xs font-semibold whitespace-nowrap text-accent-text">{events(p)}</span>
+                  <span className="text-right text-[13px] text-muted">{p.points ? decimal.format(p.points) : ""}</span>
+                </div>
+              ))}
+              {side.unattributedGoals > 0 && (
+                <p className="pt-2 text-xs text-muted">
+                  {side.unattributedGoals} {side.unattributedGoals === 1 ? "gol sin autor en el acta" : "goles sin autor en el acta"} (en propia
+                  puerta o sin registrar).
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-xs text-muted">● gol (con minuto) · ◆ asistencia · ▮ amarilla · a la derecha, puntos del jugador en el partido</p>
+    </Card>
+  );
+}
+
+function Photos({ data }: { data: MatchPageData }) {
+  if (data.match.photos.length === 0) return null;
+  return (
+    <section className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+      {data.match.photos.map((url) => (
+        <div key={url} className="relative h-64 overflow-hidden rounded-2xl">
+          <Image src={url} alt={`Foto del partido ${data.match.homeName} – ${data.match.awayName}`} fill sizes="(min-width: 640px) 40vw, 100vw" className="object-cover" />
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function Preview({ data }: { data: MatchPageData }) {
+  const sides = [data.home, data.away];
+  return (
+    <Card title="Previa">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
+        {sides.map((side) => (
+          <div key={side.id} className="flex flex-col gap-3 rounded-2xl bg-canvas p-4">
+            <div className="flex items-center gap-2.5">
+              <Crest src={side.logoUrl} name={side.name} size={36} />
+              <b>{side.name}</b>
+            </div>
+            {side.standing ? (
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="font-display text-[32px] font-extrabold">{side.standing.position}º</div>
+                  <div className="text-xs text-muted">posición</div>
+                </div>
+                <div>
+                  <div className="font-display text-[32px] font-extrabold">{side.standing.points}</div>
+                  <div className="text-xs text-muted">puntos</div>
+                </div>
+                <div>
+                  <div className="font-display text-[32px] font-extrabold">
+                    {side.standing.goalsFor}–{side.standing.goalsAgainst}
+                  </div>
+                  <div className="text-xs text-muted">goles</div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted">Sin partidos jugados en el grupo.</p>
+            )}
+            {side.standing && side.standing.form.length > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted">Últimos resultados</span>
+                <FormBadges form={side.standing.form} />
+              </div>
+            )}
+            {side.keyPlayers.length > 0 && (
+              <div className="flex flex-col gap-1.5 border-t border-line pt-3">
+                <span className="text-xs font-bold tracking-[0.1em] text-muted">A SEGUIR</span>
+                {side.keyPlayers.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2.5 text-sm">
+                    <PlayerAvatar name={p.name} photoUrl={p.photoUrl} number={p.number} position={p.position} size={32} />
+                    <span className="flex-1 font-semibold">{p.name}</span>
+                    <span className="text-muted">
+                      {p.goals > 0 ? `${p.goals} ${p.goals === 1 ? "gol" : "goles"}` : `${decimal.format(p.mvpPoints)} pts`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// --- Lateral ----------------------------------------------------------------------
+
+function Stats({ data }: { data: MatchPageData }) {
+  const rows = [
+    { label: "Goles", h: data.match.homeGoals ?? 0, a: data.match.awayGoals ?? 0 },
+    { label: "Asistencias", h: data.home.stats.assists, a: data.away.stats.assists },
+    { label: "Amarillas", h: data.home.stats.yellowCards, a: data.away.stats.yellowCards },
+    { label: "Rojas", h: data.home.stats.redCards, a: data.away.stats.redCards },
+    { label: "Jugadores", h: data.home.stats.players, a: data.away.stats.players },
+    { label: "Puntos de equipo", h: data.home.stats.points, a: data.away.stats.points },
+  ];
+  return (
+    <Card title="Estadísticas">
+      {rows.map((row) => {
+        const max = Math.max(row.h, row.a) || 1;
+        return (
+          <div key={row.label} className="flex flex-col gap-1.5">
+            <div className="flex justify-between text-sm">
+              <b>{decimal.format(row.h)}</b>
+              <span className="text-muted">{row.label}</span>
+              <b>{decimal.format(row.a)}</b>
+            </div>
+            <div className="flex h-1.5 gap-1">
+              <div className="flex flex-1 justify-end rounded-full bg-line-soft">
+                <div className="rounded-full bg-accent" style={{ width: `${(row.h / max) * 100}%` }} />
+              </div>
+              <div className="flex-1 rounded-full bg-line-soft">
+                <div className="h-1.5 rounded-full bg-ink" style={{ width: `${(row.a / max) * 100}%` }} />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </Card>
+  );
+}
+
+function VenueCard({ data }: { data: MatchPageData }) {
+  const venue = getVenue(data.match.venueId);
+  if (!venue) return null;
+  const location = venue.address ? `${venue.name}, ${venue.address}` : venue.name;
+  return (
+    <Card title="El campo">
+      <div>
+        <div className="font-semibold">{venue.name}</div>
+        {venue.address && <div className="text-sm text-muted">{venue.address}</div>}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <a href={mapsUrl(venue)} className="rounded-[10px] bg-ink px-4 py-3 text-sm font-semibold text-white">
+          Cómo llegar
+        </a>
+        {!data.match.played && (
+          <a href={calendarUrl(data.match, location)} className="rounded-[10px] border border-line px-4 py-3 text-sm font-semibold">
+            Añadir al calendario
+          </a>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function HeadToHead({ data }: { data: MatchPageData }) {
+  const { matches, homeWins, draws, awayWins } = data.headToHead;
+  if (matches.length === 0) return null;
+  return (
+    <Card title="Cara a cara">
+      <div className="grid grid-cols-3 gap-2 text-center">
+        {[
+          { v: homeWins, l: `gana ${data.home.name}` },
+          { v: draws, l: "empates" },
+          { v: awayWins, l: `gana ${data.away.name}` },
+        ].map((item) => (
+          <div key={item.l} className="rounded-xl bg-canvas p-2.5">
+            <div className="font-display text-[28px] font-extrabold">{item.v}</div>
+            <div className="text-xs text-muted">{item.l}</div>
+          </div>
+        ))}
+      </div>
+      {matches.map((m) => {
+        const outcome = outcomeFor(m, data.home.id);
+        return (
+          <Link key={m.id} href={`/partidos/${m.id}`} className="flex items-center gap-2.5 border-t border-line-soft pt-2.5 text-sm hover:text-accent-text">
+            <span className="w-24 text-xs text-muted">{formatShortDate(m.date)} {m.date.slice(2, 4)}</span>
+            <span className="flex-1 truncate">
+              {m.homeName} – {m.awayName}
+            </span>
+            <b>
+              {m.homeGoals}–{m.awayGoals}
+            </b>
+            {outcome && <OutcomeBadge outcome={outcome} size={24} />}
+          </Link>
+        );
+      })}
+    </Card>
+  );
+}
+
+function RestOfRound({ data }: { data: MatchPageData }) {
+  if (data.round.length === 0) return null;
+  return (
+    <Card title={`Resto de la jornada ${data.match.round}`}>
+      {data.round.map((m) => (
+        <Link
+          key={m.id}
+          href={`/partidos/${m.id}`}
+          className="grid grid-cols-[minmax(0,1fr)_64px_minmax(0,1fr)] items-center gap-2 border-t border-line-soft pt-2.5 text-sm hover:text-accent-text"
+        >
+          <span className="truncate text-right">{m.homeName}</span>
+          <span className="text-center font-display text-xl font-bold">
+            {m.played ? `${m.homeGoals}–${m.awayGoals}` : m.date < data.now ? <span className="text-xs font-semibold text-muted">S/R</span> : m.date.slice(11, 16)}
+          </span>
+          <span className="truncate">{m.awayName}</span>
+        </Link>
+      ))}
+      {data.restingTeam && <p className="text-sm text-muted">Descansa: {data.restingTeam}</p>}
+    </Card>
+  );
+}
