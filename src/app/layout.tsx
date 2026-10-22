@@ -1,3 +1,5 @@
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Barlow_Condensed, Inter } from "next/font/google";
 import { SiteFooter } from "@/components/site-footer";
@@ -25,6 +27,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SiteHeader />
         <div className="flex-1">{children}</div>
         <SiteFooter />
+        {/* Visitas y rendimiento real en Vercel; fuera de Vercel no envían nada. */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

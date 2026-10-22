@@ -53,9 +53,13 @@ Pasa `futbol-copia.db` por AirDrop, Drive, etc., guárdalo como `data/futbol.db`
 
 ## Desplegar (Vercel + Turso + GitHub Actions)
 
-1. **Base de datos en Turso:** `turso db create futbolempresas` y `turso db tokens create futbolempresas`.
-2. **Carga inicial:** importa la base de datos local (`turso db create futbolempresas --from-file data/futbol.db`)
-   o deja que la acción de GitHub la vaya rellenando poco a poco.
+1. **Base de datos en Turso, con la carga ya hecha en local:** saca una copia consistente
+   (`sqlite3 data/futbol.db ".backup futbolempresas.db"`), déjala en modo WAL con el registro volcado
+   (`sqlite3 futbolempresas.db "PRAGMA journal_mode=wal; PRAGMA wal_checkpoint(truncate);"`) e impórtala con
+   `turso db import futbolempresas.db` (la base de datos toma el nombre del fichero). Después, crea el token con
+   `turso db tokens create futbolempresas` y saca la URL con `turso db show futbolempresas --url`.
+2. **Sin carga local:** `turso db create futbolempresas` crea una vacía; la acción de GitHub la irá rellenando, pero
+   tarda días y gasta muchos minutos de Actions.
 3. **Vercel:** importa el repositorio y define `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, `REVALIDATE_SECRET`
    y, si quieres otro equipo principal, `NEXT_PUBLIC_FOCUS_TEAM_SLUG`.
 4. **GitHub:** en *Settings › Secrets and variables › Actions*, crea los secretos `DATABASE_URL`,

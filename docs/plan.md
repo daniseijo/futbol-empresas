@@ -7,14 +7,14 @@ Lo que queda por hacer, por orden de prioridad. Cada bloque es independiente.
 Estado (22/10/2026): temporada 26/27 completa (partidos, plantillas, vídeos), 25/26 completa, 24/25 a medias (página 13), 23/24 y 22/23 sin empezar.
 
 - [ ] Dejar correr `pnpm sync` hasta que diga «Todo al día». Es reanudable: se puede cortar y relanzar.
-- [ ] Nombres de jugadores con ficha privada (la API devuelve 401, p. ej. Almudena Torres). Sacarlos de la página web del partido, como ya se hace con el vídeo.
+- [x] ~~Nombres de jugadores con ficha privada~~: no se pueden sacar. La liga los oculta en todas partes: la API da 404, no salen en el acta de la web ni en las listas de plantilla, y su ficha web da 404. Solo queda su id en el acta de la API, así que la web los muestra por su dorsal («Dorsal 7»).
 - [ ] Vídeos de temporadas pasadas: la tarea «Vídeos (histórico)» va al final de la cola; revisar cuántos encuentra.
 
 ## 2. Despliegue (Vercel + Turso + GitHub Actions)
 
 Ver los pasos en el README. Pendiente de decidir cuándo.
 
-- [ ] Crear la base de datos en Turso e importar la local (`turso db create futbolempresas --from-file data/futbol.db`).
+- [ ] Crear la base de datos en Turso e importar la local (`turso db import futbolempresas.db`, con una copia hecha con `.backup` y en modo WAL; ver el README).
 - [ ] Conectar el repositorio a Vercel con `DATABASE_URL`, `DATABASE_AUTH_TOKEN` y `REVALIDATE_SECRET`.
 - [ ] Secretos de GitHub para la acción de sincronización y comprobar la primera ejecución programada.
 - [ ] Comprobar los minutos de GitHub Actions del primer mes (repositorio privado: 2.000 gratis).
