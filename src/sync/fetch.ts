@@ -213,15 +213,33 @@ function mapEvent(raw: RawEvent & { modified?: string }, leagues: LeagueLookup) 
 
 const EVENT_FIELDS = "id,date,modified,status,title,leagues,seasons,venues,teams,main_results,performance,content";
 
-/** El `content` de un partido suelto; undefined si WordPress no consigue generarlo (se queda sin fotos). */
-async function fetchEventContent(id: number): Promise<RawEvent["content"]> {
+/** Tamaño de los grupos en que se pide el `content` cuando una página falla. */
+const CONTENT_CHUNK = 10;
+
+/**
+ * El `content` de varios partidos. Si WordPress no consigue generar el de
+ * alguno (500 permanente), parte el grupo por la mitad hasta aislarlo: ese se
+ * queda sin `content` (sin fotos) y el resto lo conserva.
+ */
+async function fetchEventsContent(ids: number[]): Promise<Map<number, RawEvent["content"]>> {
+  const contents = new Map<number, RawEvent["content"]>();
+  if (ids.length === 0) return contents;
   try {
-    const { items } = await getPage<Pick<RawEvent, "content">>(`${SP}/events`, { include: id, _fields: "content" });
-    return items[0]?.content;
+    const { items } = await getPage<Pick<RawEvent, "id" | "content">>(
+      `${SP}/events`,
+      { include: ids.join(","), per_page: ids.length, _fields: "id,content" },
+      { failFastOn500: true },
+    );
+    for (const item of items) contents.set(item.id, item.content);
   } catch (error) {
-    if (error instanceof SportsPressError && error.status === 500) return undefined;
-    throw error;
+    if (!(error instanceof SportsPressError) || error.status !== 500) throw error;
+    if (ids.length === 1) return contents;
+    const half = Math.ceil(ids.length / 2);
+    for (const part of [ids.slice(0, half), ids.slice(half)]) {
+      for (const [id, content] of await fetchEventsContent(part)) contents.set(id, content);
+    }
   }
+  return contents;
 }
 
 /**
@@ -246,16 +264,22 @@ export async function fetchMatchesPage(
   };
   let result: Page<RawEvent & { modified: string }>;
   try {
-    result = await getPage<RawEvent & { modified: string }>(`${SP}/events`, { ...params, _fields: EVENT_FIELDS });
+    result = await getPage<RawEvent & { modified: string }>(`${SP}/events`, { ...params, _fields: EVENT_FIELDS }, { failFastOn500: true });
   } catch (error) {
     // Algún partido rompe WordPress al generar su `content` (500 persistente,
-    // p. ej. el 86748): se pide la página sin él y el contenido partido a partido.
+    // p. ej. el 86748; en la 23/24, casi una página de cada dos): se pide la
+    // página sin él y el contenido aparte, en grupos.
     if (!(error instanceof SportsPressError) || error.status !== 500) throw error;
     result = await getPage<RawEvent & { modified: string }>(`${SP}/events`, {
       ...params,
       _fields: EVENT_FIELDS.replace(",content", ""),
     });
-    for (const event of result.items) event.content = await fetchEventContent(event.id);
+    const ids = result.items.map((event) => event.id);
+    const contents = new Map<number, RawEvent["content"]>();
+    for (let i = 0; i < ids.length; i += CONTENT_CHUNK) {
+      for (const [id, content] of await fetchEventsContent(ids.slice(i, i + CONTENT_CHUNK))) contents.set(id, content);
+    }
+    for (const event of result.items) event.content = contents.get(event.id);
   }
   return {
     rows: result.items.map((event) => mapEvent(event, leagues)).filter((m) => m !== null),

@@ -51,8 +51,17 @@ const RETRY_DELAYS_MS = [3_000, 10_000, 30_000];
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export interface RequestOptions {
+  /**
+   * Fallar en cuanto llegue un 500, sin reintentar. Los 502/503/504 son de
+   * servidor cargado y se reintentan siempre; un 500 al generar el `content` de
+   * un partido es permanente, y reintentarlo solo cuesta 43 s.
+   */
+  failFastOn500?: boolean;
+}
+
 /** Petición al servidor de la liga con límite de concurrencia y reintentos. */
-async function request(url: string, accept: string): Promise<Response> {
+async function request(url: string, accept: string, { failFastOn500 = false }: RequestOptions = {}): Promise<Response> {
   for (let attempt = 0; ; attempt += 1) {
     const t0 = Date.now();
     let res: Response | null = null;
@@ -63,7 +72,7 @@ async function request(url: string, accept: string): Promise<Response> {
     }
     if (process.env.SP_DEBUG) console.log(`[sp] ${res?.status ?? "error"} ${Date.now() - t0}ms ${url.slice(30, 160)}`);
     if (res?.ok) return res;
-    const retryable = !res || res.status >= 500 || res.status === 429;
+    const retryable = !res || (res.status >= 500 && !(failFastOn500 && res.status === 500)) || res.status === 429;
     if (!retryable || attempt >= RETRY_DELAYS_MS.length) {
       throw new SportsPressError(`SportsPress ${res?.status ?? "sin respuesta"} en ${url}`, res?.status ?? 0, url);
     }
@@ -72,8 +81,8 @@ async function request(url: string, accept: string): Promise<Response> {
 }
 
 /** Una página de una colección de la API REST de WordPress/SportsPress. */
-export async function getPage<T>(path: string, params: Params = {}): Promise<Page<T>> {
-  const res = await request(buildUrl(path, params), "application/json");
+export async function getPage<T>(path: string, params: Params = {}, options?: RequestOptions): Promise<Page<T>> {
+  const res = await request(buildUrl(path, params), "application/json", options);
   const items = (await res.json()) as T[];
   return {
     items,
