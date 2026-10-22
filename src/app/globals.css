@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+/* Paleta «Focos de día» con acento coral. */
+@theme {
+  --color-canvas: #f4f5f7;
+  --color-surface: #ffffff;
+  --color-line: #e3e6eb;
+  --color-line-soft: #eef0f3;
+  --color-ink: #0b0f14;
+  --color-muted: #525c6b;
+
+  --color-accent: #f0533b;
+  --color-on-accent: #0b0f14;
+  --color-accent-text: #c2321e;
+  --color-accent-soft: #fde9e5;
+
+  --color-loss: #b42318;
+  --color-loss-soft: #fdecea;
+
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-barlow), "Arial Narrow", sans-serif;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 2px;
+}
