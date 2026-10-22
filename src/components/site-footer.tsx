@@ -1,6 +1,9 @@
 import { siteConfig } from "@/config/site";
+import { getLastSync } from "@/lib/data";
+import { LastSync } from "./last-sync";
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const lastSync = await getLastSync();
   return (
     <footer className="mt-16 border-t border-line bg-surface">
       <div className="mx-auto flex max-w-7xl flex-wrap justify-between gap-3 px-4 py-6 text-sm text-muted sm:px-6">
@@ -9,7 +12,7 @@ export function SiteFooter() {
           <a href={siteConfig.sourceSite} className="font-semibold text-ink underline-offset-2 hover:underline">
             futbolempresas.es
           </a>
-          . Web no oficial.
+          . Web no oficial.{lastSync && <> <LastSync stamp={lastSync} /></>}
         </span>
         <a href={siteConfig.youtubeChannel} className="font-semibold text-ink underline-offset-2 hover:underline">
           Canal de YouTube

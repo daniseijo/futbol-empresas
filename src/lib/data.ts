@@ -21,6 +21,15 @@ import type {
 
 export const DATA_TAG = "datos";
 
+/** Hora de Madrid de la última sincronización que trajo los cambios de la API, o null si nunca ha corrido. */
+export async function getLastSync(): Promise<string | null> {
+  "use cache";
+  cacheLife("resultados");
+  cacheTag(DATA_TAG);
+  const row = await db.query.syncState.findFirst({ where: eq(schema.syncState.key, "cambios") });
+  return row?.value ?? null;
+}
+
 export async function getSeasons(): Promise<Season[]> {
   "use cache";
   cacheLife("catalogo");

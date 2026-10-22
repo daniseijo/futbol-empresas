@@ -75,6 +75,11 @@ export function relativeDay(stamp: string, today: string): string {
   return formatShortDate(stamp);
 }
 
+/** Minutos de `from` a `to`, dos horas de Madrid en el formato de la API. */
+export function minutesBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to.slice(0, 16)}:00Z`) - Date.parse(`${from.slice(0, 16)}:00Z`)) / 60_000);
+}
+
 export function addDays(stamp: string, days: number): string {
   const date = new Date(`${dayKey(stamp)}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
