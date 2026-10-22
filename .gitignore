@@ -41,5 +41,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# base de datos local (la rellena pnpm sync)
+# base de datos local (la rellena pnpm sync) y sus copias: nunca al repositorio
 /data/
+*.db
+*.db-shm
+*.db-wal
