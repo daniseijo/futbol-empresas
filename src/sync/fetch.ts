@@ -2,7 +2,7 @@
 // Solo lo usa la sincronización (nunca el render), así que puede ser lenta.
 
 import { toLocalStamp } from "@/lib/dates";
-import { getAll, getHtml, getPage } from "@/lib/sportspress/client";
+import { getAll, getHtml, getPage, SportsPressError, type Page } from "@/lib/sportspress/client";
 import {
   cleanTeamName,
   decodeHtml,
@@ -213,6 +213,17 @@ function mapEvent(raw: RawEvent & { modified?: string }, leagues: LeagueLookup) 
 
 const EVENT_FIELDS = "id,date,modified,status,title,leagues,seasons,venues,teams,main_results,performance,content";
 
+/** El `content` de un partido suelto; undefined si WordPress no consigue generarlo (se queda sin fotos). */
+async function fetchEventContent(id: number): Promise<RawEvent["content"]> {
+  try {
+    const { items } = await getPage<Pick<RawEvent, "content">>(`${SP}/events`, { include: id, _fields: "content" });
+    return items[0]?.content;
+  } catch (error) {
+    if (error instanceof SportsPressError && error.status === 500) return undefined;
+    throw error;
+  }
+}
+
 /**
  * Una página de partidos de una temporada, modificados desde una fecha o
  * concretos (por id).
@@ -224,7 +235,7 @@ export async function fetchMatchesPage(
   page: number,
   leagues: LeagueLookup,
 ): Promise<{ rows: { match: MatchRow; lineups: MatchPlayerRow[] }[]; totalPages: number }> {
-  const result = await getPage<RawEvent & { modified: string }>(`${SP}/events`, {
+  const params = {
     seasons: filter.seasonId,
     modified_after: filter.modifiedAfter,
     include: filter.ids?.join(","),
@@ -232,8 +243,20 @@ export async function fetchMatchesPage(
     order: "asc",
     per_page: 50, // con `content` y `performance`, más grandes provocan un 504
     page,
-    _fields: EVENT_FIELDS,
-  });
+  };
+  let result: Page<RawEvent & { modified: string }>;
+  try {
+    result = await getPage<RawEvent & { modified: string }>(`${SP}/events`, { ...params, _fields: EVENT_FIELDS });
+  } catch (error) {
+    // Algún partido rompe WordPress al generar su `content` (500 persistente,
+    // p. ej. el 86748): se pide la página sin él y el contenido partido a partido.
+    if (!(error instanceof SportsPressError) || error.status !== 500) throw error;
+    result = await getPage<RawEvent & { modified: string }>(`${SP}/events`, {
+      ...params,
+      _fields: EVENT_FIELDS.replace(",content", ""),
+    });
+    for (const event of result.items) event.content = await fetchEventContent(event.id);
+  }
   return {
     rows: result.items.map((event) => mapEvent(event, leagues)).filter((m) => m !== null),
     totalPages: result.totalPages,
