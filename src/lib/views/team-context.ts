@@ -6,6 +6,7 @@ import { computeStandings } from "@/lib/standings";
 export interface TeamGroup {
   id: number;
   name: string;
+  href: string;
   phase: string | null;
   competition: string;
 }
@@ -43,6 +44,7 @@ export function buildTeamContext(teamId: number, seasonMatches: Match[], tree: L
     group = {
       id: deepest.id,
       name: deepest.name,
+      href: tree.href(deepest.id),
       phase: path.length > 2 ? path[path.length - 2].name : null,
       competition: path[0]?.name ?? "",
     };

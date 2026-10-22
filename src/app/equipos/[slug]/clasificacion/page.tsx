@@ -21,7 +21,7 @@ function Standings({ data }: { data: TeamPageData }) {
   }
   const title = [data.group.competition, data.group.phase, data.group.name].filter(Boolean).join(" · ");
   return (
-    <SectionCard title={title} aside={<span className="text-sm text-muted">Temporada {data.season.name}</span>}>
+    <SectionCard title={title} link={{ href: data.group.href, label: `Ver grupo · ${data.season.name}` }}>
       <StandingsTable rows={data.standings} teamId={data.team.id} logos={data.logos} slugs={data.slugs} />
       <p className="text-xs text-muted">
         3 puntos por victoria y 1 por empate. A igualdad de puntos, cuenta la diferencia de goles y después los goles a favor. Los partidos sin

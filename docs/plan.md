@@ -21,7 +21,8 @@ Ver los pasos en el README. Pendiente de decidir cuándo.
 
 ## 3. Páginas nuevas
 
-- [ ] **Grupo / competición** (`/competiciones/...`): clasificación, jornadas navegables, pichichi y Crack del grupo. La portada y la ficha de partido enlazarían aquí.
+- [x] **Grupo / competición** (`/competiciones/...`): clasificación, jornadas navegables, pichichi y Crack del grupo, enlazada desde la portada, la ficha de partido y la clasificación del equipo.
+  - [ ] Copas sin grupos (Corporate Cup): ahora salen con una clasificación de todos sus equipos; mejor un cuadro o una lista de eliminatorias.
 - [ ] **Jugador** (`/jugadores/[id]`): partidos, goles con minuto, MVP, equipos por temporada y foto. Los datos ya están en `match_players`.
 - [ ] **Campo** (`/campos/[id]`): mapa, dirección y partidos de hoy en ese campo.
 - [ ] **Liga femenina**: revisar que portada y equipos funcionan bien con sus competiciones.

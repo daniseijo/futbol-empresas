@@ -41,6 +41,16 @@ export async function getLeagues(): Promise<League[]> {
   return db.select().from(schema.leagues);
 }
 
+/** Pares grupo–temporada con partidos (el grupo es el nodo más profundo de cada partido). */
+export async function getGroupSeasons(): Promise<{ groupId: number; seasonId: number }[]> {
+  "use cache";
+  cacheLife("catalogo");
+  cacheTag(DATA_TAG);
+  const m = schema.matches;
+  const rows = await db.selectDistinct({ groupId: m.groupId, seasonId: m.seasonId }).from(m);
+  return rows.filter((row): row is { groupId: number; seasonId: number } => row.groupId !== null && row.seasonId !== null);
+}
+
 export async function getTeams(): Promise<TeamSummary[]> {
   "use cache";
   cacheLife("catalogo");

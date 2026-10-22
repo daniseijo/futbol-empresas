@@ -1,6 +1,6 @@
 import { cacheLife } from "next/cache";
 import { nowInMadrid } from "@/lib/dates";
-import { getHeadToHead, getLeagues, getMatch, getSeasonMatches, getSquad, getTeams } from "@/lib/data";
+import { getCurrentSeason, getHeadToHead, getLeagues, getMatch, getSeasonMatches, getSeasons, getSquad, getTeams } from "@/lib/data";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { LineupPlayer, Match, MatchDetail, SquadPlayer, StandingRow } from "@/lib/sportspress/types";
 import { computeStandings, outcomeFor } from "@/lib/standings";
@@ -33,7 +33,7 @@ export interface TeamSide {
 export interface MatchPageData {
   match: MatchDetail;
   now: string;
-  path: string[];
+  path: { name: string; href: string }[];
   home: TeamSide;
   away: TeamSide;
   goals: GoalEvent[];
@@ -57,8 +57,10 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
   const result = await getMatch(id);
   if (!result) return null;
   const { match, lineups } = result;
-  const [leagues, teams, seasonMatches, headToHead, homeSquad, awaySquad] = await Promise.all([
+  const [leagues, seasons, current, teams, seasonMatches, headToHead, homeSquad, awaySquad] = await Promise.all([
     getLeagues(),
+    getSeasons(),
+    getCurrentSeason(),
     getTeams(),
     match.seasonId ? getSeasonMatches(match.seasonId) : Promise.resolve([]),
     getHeadToHead(match.homeId, match.awayId),
@@ -133,7 +135,9 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
     else if (outcome === "D") record.awayWins += 1;
   }
 
-  const path = match.groupId ? tree.path(match.groupId).map((l) => l.name) : [];
+  // Las temporadas pasadas llevan su parámetro en el enlace a la competición.
+  const season = match.seasonId === current.id ? undefined : seasons.find((s) => s.id === match.seasonId)?.name;
+  const path = match.groupId ? tree.path(match.groupId).map((l) => ({ name: l.name, href: tree.href(l.id, season) })) : [];
   return {
     match,
     now: nowInMadrid(),

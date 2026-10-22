@@ -34,6 +34,7 @@ export interface DayMatch {
 export interface CompetitionCard {
   id: number;
   name: string;
+  href: string;
   status: "live" | "starting" | "upcoming" | "finished";
   description: string;
   played: number;
@@ -43,6 +44,7 @@ export interface CompetitionCard {
 export interface GroupLeader {
   groupId: number;
   groupName: string;
+  href: string;
   leader: string;
   points: number;
   isFocusGroup: boolean;
@@ -195,7 +197,7 @@ export async function getHomeData(): Promise<HomeData> {
       status = played / list.length < 0.25 ? "starting" : "live";
       description = `${teamsInComp} equipos${groups > 1 ? ` en ${groups} grupos` : ""}.`;
     }
-    return { id: root.id, name: root.name, status, description, played, total: list.length };
+    return { id: root.id, name: root.name, href: tree.href(root.id), status, description, played, total: list.length };
   });
   const order = { live: 0, starting: 1, upcoming: 2, finished: 3 };
   competitions.sort((a, b) => order[a.status] - order[b.status] || b.total - a.total);
@@ -218,6 +220,7 @@ export async function getHomeData(): Promise<HomeData> {
     groupLeaders.push({
       groupId,
       groupName: tree.name(groupId),
+      href: tree.href(groupId),
       leader: leader.name,
       points: leader.points,
       isFocusGroup: Boolean(focusRow),

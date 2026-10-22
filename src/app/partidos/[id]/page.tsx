@@ -129,9 +129,14 @@ function Scoreboard({ data }: { data: MatchPageData }) {
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-6 pb-8 sm:px-6">
         <nav aria-label="Competición" className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {data.path.map((part, index) => (
-            <span key={part} className="flex items-center gap-2">
+            <span key={part.href} className="flex items-center gap-2">
               {index > 0 && <span aria-hidden="true">›</span>}
-              <span className={index === data.path.length - 1 ? "font-semibold text-ink" : ""}>{part}</span>
+              <Link
+                href={part.href}
+                className={`hover:text-accent-text hover:underline ${index === data.path.length - 1 ? "font-semibold text-ink" : ""}`}
+              >
+                {part.name}
+              </Link>
             </span>
           ))}
           {match.round && (

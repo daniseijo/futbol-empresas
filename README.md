@@ -73,6 +73,9 @@ que la web refresque su caché.
   los líderes de cada grupo, el pichichi y las goleadas de la semana.
 - `/equipos/[slug]`: equipo, con pestañas que son rutas propias: resumen, `partidos` (próximos y jugados),
   `clasificacion`, `plantilla` (por posición o por valor) e `historial` (temporadas pasadas).
+- `/competiciones/[...ruta]`: competición, fase o grupo (`/competiciones/liga-apertura/fase-1/grupo-20`), con la
+  ruta sacada de los nombres. Muestra sus grupos con el líder, la clasificación, las jornadas (`?jornada=`), el pichichi
+  y el Crack. Las temporadas pasadas se piden con `?temporada=25-26`.
 - `/partidos/[id]`: ficha de partido con marcador, línea de tiempo de goles, resumen en vídeo, MVP,
   alineaciones, estadísticas, cara a cara, resto de la jornada y campo; o la previa si aún no se ha jugado.
 

@@ -62,10 +62,11 @@ async function HomeContent() {
           </div>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2.5">
             {data.groupLeaders.map((group) => (
-              <div
+              <Link
                 key={group.groupId}
+                href={group.href}
                 className={`flex flex-col gap-1 rounded-2xl border px-3.5 py-3 ${
-                  group.isFocusGroup ? "border-accent bg-accent-soft text-accent-text" : "border-line bg-surface"
+                  group.isFocusGroup ? "border-accent bg-accent-soft text-accent-text" : "border-line bg-surface hover:border-ink"
                 }`}
               >
                 <span className={`flex justify-between text-xs font-semibold ${group.isFocusGroup ? "" : "text-muted"}`}>
@@ -76,7 +77,7 @@ async function HomeContent() {
                 <span className={`text-xs ${group.isFocusGroup ? "" : "text-muted"}`}>
                   {group.isFocusGroup && group.focusPosition ? `Tu equipo va ${group.focusPosition}º` : "Líder"}
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         </section>
@@ -365,7 +366,7 @@ function CompetitionTile({ competition }: { competition: CompetitionCard }) {
   const status = STATUS[competition.status];
   const showBar = competition.status === "live" || competition.status === "starting";
   return (
-    <div className="flex flex-col gap-2.5 rounded-[18px] border border-line bg-surface p-4.5">
+    <Link href={competition.href} className="flex flex-col gap-2.5 rounded-[18px] border border-line bg-surface p-4.5 hover:border-ink">
       <span className={`self-start rounded-md px-2 py-1 text-[11px] font-bold tracking-[0.08em] ${status.className}`}>{status.label}</span>
       <span className="font-display text-[26px] leading-none font-extrabold">{competition.name}</span>
       <span className="text-[13px] leading-[1.45] text-muted">{competition.description}</span>
@@ -382,6 +383,6 @@ function CompetitionTile({ competition }: { competition: CompetitionCard }) {
           </span>
         </span>
       )}
-    </div>
+    </Link>
   );
 }
