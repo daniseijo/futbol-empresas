@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { SquadPlayer } from "@/lib/sportspress/types";
 import { PlayerAvatar } from "../player-avatar";
 
@@ -27,13 +28,17 @@ export function Leaders({ squad, columns = 3 }: { squad: SquadPlayer[]; columns?
                 <div className="flex items-center justify-between gap-2.5">
                   <span className="flex min-w-0 items-center gap-2.5">
                     <PlayerAvatar name={first.name} photoUrl={first.photoUrl} number={first.number} position={first.position} />
-                    <b className="truncate">{first.name}</b>
+                    <Link href={`/jugadores/${first.id}`} className="truncate font-bold hover:underline">
+                      {first.name}
+                    </Link>
                   </span>
                   <span className="font-display text-[42px] leading-none font-extrabold text-accent-text">{group.format(first[group.key])}</span>
                 </div>
                 {rest.map((player) => (
                   <div key={player.id} className="flex justify-between gap-2 border-t border-line pt-2 text-sm">
-                    <span className="truncate text-[#3a4350]">{player.name}</span>
+                    <Link href={`/jugadores/${player.id}`} className="truncate text-[#3a4350] hover:underline">
+                      {player.name}
+                    </Link>
                     <b>{group.format(player[group.key])}</b>
                   </div>
                 ))}

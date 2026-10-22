@@ -243,7 +243,9 @@ function Mvp({ data }: { data: MatchPageData }) {
       <PlayerAvatar name={p.name} photoUrl={p.photoUrl} number={p.number} position={null} size={84} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="text-xs font-extrabold tracking-[0.14em]">MVP DEL PARTIDO</span>
-        <span className="font-display text-[34px] leading-none font-extrabold uppercase">{p.name || "Jugador"}</span>
+        <Link href={`/jugadores/${p.playerId}`} className="font-display text-[34px] leading-none font-extrabold uppercase hover:underline">
+          {p.name || "Jugador"}
+        </Link>
         <span className="text-[13px]">{[team.name, ...facts].join(" · ")}</span>
       </div>
       <Crest src={team.logoUrl} name={team.name} size={56} className="max-sm:hidden" />
@@ -279,7 +281,11 @@ function Lineups({ data }: { data: MatchPageData }) {
               </div>
               {sorted.length === 0 && <p className="py-3 text-sm text-muted">Sin alineación publicada.</p>}
               {sorted.map((p) => (
-                <div key={p.playerId} className="grid grid-cols-[40px_1fr_auto_32px] items-center gap-2.5 border-b border-line-soft py-2">
+                <Link
+                  key={p.playerId}
+                  href={`/jugadores/${p.playerId}`}
+                  className="grid grid-cols-[40px_1fr_auto_32px] items-center gap-2.5 border-b border-line-soft py-2 hover:bg-canvas"
+                >
                   <PlayerAvatar name={p.name} photoUrl={p.photoUrl} number={p.number} position={p.position} size={34} />
                   <span className="min-w-0 text-sm">
                     <span className="font-semibold">{p.name || "Sin nombre"}</span>{" "}
@@ -290,7 +296,7 @@ function Lineups({ data }: { data: MatchPageData }) {
                   </span>
                   <span className="text-xs font-semibold whitespace-nowrap text-accent-text">{events(p)}</span>
                   <span className="text-right text-[13px] text-muted">{p.points ? decimal.format(p.points) : ""}</span>
-                </div>
+                </Link>
               ))}
               {side.unattributedGoals > 0 && (
                 <p className="pt-2 text-xs text-muted">
@@ -361,13 +367,13 @@ function Preview({ data }: { data: MatchPageData }) {
               <div className="flex flex-col gap-1.5 border-t border-line pt-3">
                 <span className="text-xs font-bold tracking-[0.1em] text-muted">A SEGUIR</span>
                 {side.keyPlayers.map((p) => (
-                  <div key={p.id} className="flex items-center gap-2.5 text-sm">
+                  <Link key={p.id} href={`/jugadores/${p.id}`} className="flex items-center gap-2.5 text-sm hover:text-accent-text">
                     <PlayerAvatar name={p.name} photoUrl={p.photoUrl} number={p.number} position={p.position} size={32} />
                     <span className="flex-1 font-semibold">{p.name}</span>
                     <span className="text-muted">
                       {p.goals > 0 ? `${p.goals} ${p.goals === 1 ? "gol" : "goles"}` : `${decimal.format(p.mvpPoints)} pts`}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

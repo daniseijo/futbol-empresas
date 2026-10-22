@@ -76,6 +76,8 @@ que la web refresque su caché.
 - `/competiciones/[...ruta]`: competición, fase o grupo (`/competiciones/liga-apertura/fase-1/grupo-20`), con la
   ruta sacada de los nombres. Muestra sus grupos con el líder, la clasificación, las jornadas (`?jornada=`), el pichichi
   y el Crack. Las temporadas pasadas se piden con `?temporada=25-26`.
+- `/jugadores/[id]`: jugador, con totales, partidos (goles con minuto, asistencias, MVP) y equipos por temporada, sacados
+  de las actas. Los de ficha privada salen por su dorsal hasta que se cargue su nombre.
 - `/partidos/[id]`: ficha de partido con marcador, línea de tiempo de goles, resumen en vídeo, MVP,
   alineaciones, estadísticas, cara a cara, resto de la jornada y campo; o la previa si aún no se ha jugado.
 

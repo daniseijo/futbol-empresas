@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { Position, SquadPlayer } from "@/lib/sportspress/types";
 import { PlayerAvatar } from "../player-avatar";
@@ -12,7 +13,7 @@ const COLUMNS = "grid-cols-[44px_1fr_32px_40px_40px_84px]";
 
 function PlayerRow({ player, rank }: { player: SquadPlayer; rank?: number }) {
   return (
-    <div className={`grid ${COLUMNS} items-center gap-2 border-t border-line-soft py-2 text-sm`}>
+    <Link href={`/jugadores/${player.id}`} className={`grid ${COLUMNS} items-center gap-2 border-t border-line-soft py-2 text-sm hover:bg-canvas`}>
       <PlayerAvatar name={player.name} photoUrl={player.photoUrl} number={player.number} position={player.position} size={36} />
       <span className="min-w-0 truncate font-semibold">
         {rank !== undefined && <span className="mr-2 font-normal text-muted">{rank}.</span>}
@@ -23,7 +24,7 @@ function PlayerRow({ player, rank }: { player: SquadPlayer; rank?: number }) {
       <span className="text-right">{player.goals}</span>
       <span className="text-right">{player.assists}</span>
       <span className="text-right font-semibold">{money.format(player.marketValue)} M€</span>
-    </div>
+    </Link>
   );
 }
 

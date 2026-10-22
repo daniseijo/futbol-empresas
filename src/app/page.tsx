@@ -86,7 +86,11 @@ async function HomeContent() {
       <section className="flex flex-wrap gap-5">
         <Panel title={`Pichichi · ${data.mainCompetition.name}`} className="flex-[1_1_380px]">
           {data.scorers.map((scorer, index) => (
-            <div key={scorer.playerId} className="grid grid-cols-[24px_40px_1fr_40px] items-center gap-2.5 border-t border-line-soft py-2">
+            <Link
+              key={scorer.playerId}
+              href={`/jugadores/${scorer.playerId}`}
+              className="grid grid-cols-[24px_40px_1fr_40px] items-center gap-2.5 border-t border-line-soft py-2 hover:bg-canvas"
+            >
               <span className="text-center text-sm text-muted">{index + 1}</span>
               <PlayerAvatar name={scorer.name} photoUrl={scorer.photoUrl} number={null} position={null} size={36} />
               <span className="flex flex-col">
@@ -94,7 +98,7 @@ async function HomeContent() {
                 <span className="text-xs text-muted">{scorer.team}</span>
               </span>
               <span className="text-right font-display text-[26px] font-extrabold">{scorer.goals}</span>
-            </div>
+            </Link>
           ))}
         </Panel>
 

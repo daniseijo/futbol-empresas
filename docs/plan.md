@@ -23,18 +23,18 @@ Ver los pasos en el README. Pendiente de decidir cuándo.
 
 - [x] **Grupo / competición** (`/competiciones/...`): clasificación, jornadas navegables, pichichi y Crack del grupo, enlazada desde la portada, la ficha de partido y la clasificación del equipo.
   - [ ] Copas sin grupos (Corporate Cup): ahora salen con una clasificación de todos sus equipos; mejor un cuadro o una lista de eliminatorias.
-- [ ] **Jugador** (`/jugadores/[id]`): partidos, goles con minuto, MVP, equipos por temporada y foto. Los datos ya están en `match_players`.
+- [x] **Jugador** (`/jugadores/[id]`): partidos, goles con minuto, MVP, equipos por temporada y foto, enlazada desde alineaciones, pichichi, Crack, plantilla y líderes del equipo.
 - [ ] **Campo** (`/campos/[id]`): mapa, dirección y partidos de hoy en ese campo.
 - [ ] **Liga femenina**: revisar que portada y equipos funcionan bien con sus competiciones.
 
 ## 4. Mejoras de lo que ya existe
 
 - [ ] Portada: si hoy no hay partidos, mostrar la próxima jornada y los últimos resultados en lugar de «0 partidos».
-- [ ] Ficha de partido: alineaciones en formato campo (opcional) y enlaces a la ficha de cada jugador.
+- [ ] Ficha de partido: alineaciones en formato campo (opcional).
 - [ ] Equipo: botón «Compartir» con el estilo de la web.
 - [ ] Buscador: buscar también jugadores (`players?search=`).
 - [ ] SEO: `sitemap.xml`, imágenes Open Graph por partido y equipo.
-- [ ] Página 404 real: ahora responde 200 porque el contenido va en streaming.
+- [ ] Página 404 real: ahora responde 200 porque el contenido va en streaming. En desarrollo, la primera carga de un 404 a veces da «cannot have a negative time stamp» en `performance.measure` (de React, no de la web).
 
 ## 5. Calidad
 

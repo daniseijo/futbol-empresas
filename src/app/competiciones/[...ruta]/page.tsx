@@ -273,7 +273,11 @@ function TallyCard({ title, unit, items, note }: { title: string; unit: string; 
       ) : (
         <div className="flex flex-col">
           {items.map((item, index) => (
-            <div key={item.playerId} className="grid grid-cols-[24px_40px_1fr_auto] items-center gap-2.5 border-t border-line-soft py-2">
+            <Link
+              key={item.playerId}
+              href={`/jugadores/${item.playerId}`}
+              className="grid grid-cols-[24px_40px_1fr_auto] items-center gap-2.5 border-t border-line-soft py-2 hover:bg-canvas"
+            >
               <span className="text-center text-sm text-muted">{index + 1}</span>
               <PlayerAvatar name={item.name} photoUrl={item.photoUrl} number={null} position={null} size={36} />
               <span className="flex min-w-0 flex-col">
@@ -284,7 +288,7 @@ function TallyCard({ title, unit, items, note }: { title: string; unit: string; 
                 <span className="font-display text-[26px] font-extrabold">{item.value}</span>
                 <span className="sr-only"> {unit}</span>
               </span>
-            </div>
+            </Link>
           ))}
         </div>
       )}

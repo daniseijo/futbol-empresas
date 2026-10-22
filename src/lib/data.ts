@@ -264,6 +264,76 @@ export async function getPlayers(ids: number[]): Promise<Record<number, PlayerIn
   return Object.fromEntries(rows.map((p) => [p.id, { id: p.id, name: p.name, photoUrl: p.photoUrl }]));
 }
 
+export interface PlayerSquadEntry {
+  teamId: number;
+  number: string | null;
+  position: string | null;
+  mvpPoints: number;
+  marketValue: number;
+}
+
+export interface PlayerLine {
+  match: Match;
+  line: Omit<LineupPlayer, "name" | "photoUrl">;
+}
+
+/**
+ * Ficha, actas y plantillas de un jugador, de cualquier temporada y equipo, por
+ * fecha. null si no aparece en ninguna parte. Muchos jugadores con ficha
+ * privada no tienen fila en `players`: entonces el nombre va vacío.
+ */
+export async function getPlayerCareer(
+  playerId: number,
+): Promise<{ player: PlayerInfo; lines: PlayerLine[]; squads: PlayerSquadEntry[] } | null> {
+  "use cache";
+  cacheLife("resultados");
+  cacheTag(DATA_TAG);
+  const mp = schema.matchPlayers;
+  const [rows, player, squads] = await Promise.all([
+    db
+      .select({ match: schema.matches, line: mp, homeTeamName: homeTeam.name, awayTeamName: awayTeam.name })
+      .from(mp)
+      .innerJoin(schema.matches, eq(schema.matches.id, mp.matchId))
+      .leftJoin(homeTeam, eq(homeTeam.id, schema.matches.homeId))
+      .leftJoin(awayTeam, eq(awayTeam.id, schema.matches.awayId))
+      .where(eq(mp.playerId, playerId))
+      .orderBy(schema.matches.date),
+    db.query.players.findFirst({ where: eq(schema.players.id, playerId) }),
+    db
+      .select({
+        teamId: schema.squadPlayers.teamId,
+        number: schema.squadPlayers.number,
+        position: schema.squadPlayers.position,
+        mvpPoints: schema.squadPlayers.mvpPoints,
+        marketValue: schema.squadPlayers.marketValue,
+      })
+      .from(schema.squadPlayers)
+      .where(eq(schema.squadPlayers.playerId, playerId)),
+  ]);
+  if (rows.length === 0 && !player && squads.length === 0) return null;
+  return {
+    player: { id: playerId, name: player?.name ?? "", photoUrl: player?.photoUrl ?? null },
+    lines: rows.map(({ match, line, homeTeamName, awayTeamName }) => ({
+      match: toMatch({ match, homeTeamName, awayTeamName }, []),
+      line: {
+        playerId: line.playerId,
+        teamId: line.teamId,
+        number: line.number,
+        position: line.position as Position | null,
+        goals: line.goals,
+        minutes: line.minutes,
+        assists: line.assists,
+        yellowCards: line.yellowCards,
+        redCards: line.redCards,
+        crack: line.crack,
+        dandy: line.dandy,
+        points: line.points,
+      },
+    })),
+    squads,
+  };
+}
+
 /** Plantilla de la temporada en curso con las estadísticas que calcula la liga. */
 export async function getSquad(teamId: number): Promise<SquadPlayer[]> {
   "use cache";
