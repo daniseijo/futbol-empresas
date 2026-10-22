@@ -1,0 +1,1 @@
+ALTER TABLE `teams` ADD `squad_synced_at` text;
