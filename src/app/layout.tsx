@@ -20,7 +20,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className={`${inter.variable} ${barlow.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">
+      {/* Extensiones como Grammarly añaden atributos al <body> antes de hidratar. */}
+      <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <SiteHeader />
         <div className="flex-1">{children}</div>
         <SiteFooter />
