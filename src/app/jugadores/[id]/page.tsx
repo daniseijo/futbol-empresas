@@ -151,6 +151,10 @@ function MatchLine({ row, data }: { row: PlayerMatchRow; data: PlayerPageData })
   const isHome = match.homeId === row.teamId;
   const opponentId = isHome ? match.awayId : match.homeId;
   const opponent = isHome ? match.awayName : match.homeName;
+  // El marcador va desde el equipo del jugador: primero sus goles. Los campos son
+  // neutrales, así que local o visitante solo es el orden del partido y no se muestra.
+  const own = isHome ? match.homeGoals : match.awayGoals;
+  const against = isHome ? match.awayGoals : match.homeGoals;
   const events = [
     row.goals > 0 && (row.minutes.length ? row.minutes.map((m) => `● ${m}′`).join(" ") : "●".repeat(row.goals)),
     row.assists > 0 && "◆".repeat(row.assists),
@@ -160,25 +164,28 @@ function MatchLine({ row, data }: { row: PlayerMatchRow; data: PlayerPageData })
   return (
     <Link
       href={`/partidos/${match.id}`}
-      className="grid grid-cols-[minmax(0,1fr)_56px_28px] items-center gap-2.5 border-b border-line-soft px-1.5 py-2.5 text-sm hover:bg-canvas sm:grid-cols-[64px_minmax(0,1fr)_auto_56px_28px]"
+      className="grid grid-cols-[minmax(0,1fr)_56px_28px] items-center gap-2.5 border-b border-line-soft px-1.5 py-2.5 text-sm hover:bg-canvas sm:grid-cols-[84px_minmax(0,1fr)_auto_56px_28px]"
     >
-      <span className="text-[13px] text-muted max-sm:hidden">{formatShortDate(match.date)}</span>
+      <span className="text-[13px] whitespace-nowrap text-muted max-sm:hidden">{formatShortDate(match.date)}</span>
       {/* En móvil, la fecha y lo que hizo van en una segunda línea bajo el rival. */}
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="flex min-w-0 items-center gap-2">
-          <span className="text-xs text-muted">{isHome ? "vs" : "en"}</span>
+          <span className="text-xs text-muted">vs</span>
           <Crest src={data.logos[opponentId]} name={opponent} size={24} />
           <span className="truncate">{opponent}</span>
           {row.crack && <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent-text">MVP</span>}
         </span>
         <span className="flex gap-2 text-xs sm:hidden">
-          <span className="text-muted">{formatShortDate(match.date)}</span>
+          <span className="whitespace-nowrap text-muted">{formatShortDate(match.date)}</span>
           <span className="font-semibold text-accent-text">{events.join("  ")}</span>
         </span>
       </span>
       <span className="text-xs font-semibold whitespace-nowrap text-accent-text max-sm:hidden">{events.join("  ")}</span>
-      <span className="rounded-lg bg-canvas text-center font-display text-lg font-extrabold">
-        {match.played ? `${match.homeGoals}–${match.awayGoals}` : "–"}
+      <span
+        className="rounded-lg bg-canvas text-center font-display text-lg font-extrabold"
+        title={match.played ? `${match.homeName} ${match.homeGoals}–${match.awayGoals} ${match.awayName}` : undefined}
+      >
+        {match.played ? `${own}–${against}` : "–"}
       </span>
       <span>{row.outcome && <OutcomeBadge outcome={row.outcome} size={26} />}</span>
     </Link>
