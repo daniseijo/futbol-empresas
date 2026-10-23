@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "explain-diff": {
+      "source": "lucaslimafons/skills",
+      "sourceType": "github",
+      "skillPath": "explain-diff/SKILL.md",
+      "computedHash": "1c41201576fcc71e345916a0fabe5203c67ccdafcb3c6a5c3d86e574cf5db7d8"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",
