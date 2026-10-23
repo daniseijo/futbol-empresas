@@ -88,24 +88,27 @@ refreshes when it ends, so avoid match nights.
   month. If a schedule was disabled anyway: `gh workflow enable sync.yml`.
 - **Late or missing scheduled runs:** GitHub's `schedule` is best effort. On busy hours it starts runs hours
   late or drops them (on 22–23 Oct 2026 the 09:07 UTC run started at 11:27, and a match night got 5 of its
-  ~21 runs). So match nights are not on GitHub's schedule: an external cron triggers the workflow instead
-(set up on 23 Oct 2026 in cron-job.org). To set it up again:
-  1. Create a fine-grained token at *GitHub › Settings › Developer settings › Fine-grained tokens*, for this
-     repository only, with **Actions: Read and write** and nothing else. It expires: note the date.
-  2. In an external cron service (e.g. cron-job.org, free), add a job in the `Europe/Madrid` time zone, every
-     20 minutes from 19:00 to 23:59, Monday to Friday, that sends:
+  ~21 runs). So match nights are not on GitHub's schedule: a [cron-job.org](https://cron-job.org) job calls the
+  `workflow_dispatch` API every 20 minutes, 19:00–23:40 Madrid time, Monday to Friday. GitHub answers `204`.
+  Runs never overlap (`concurrency: sync`); if one is already waiting, GitHub cancels it in favour of the newer
+  one, which is harmless.
 
-     ```
-     POST https://api.github.com/repos/<owner>/<repo>/actions/workflows/sync.yml/dispatches
-     Authorization: Bearer <token>
-     Accept: application/vnd.github+json
-     Content-Type: application/json
+### The match-night cron (cron-job.org)
 
-     {"ref":"main"}
-     ```
+The job is defined in `scripts/cron-job.ts` and managed through cron-job.org's API, with `CRONJOB_API_KEY` in
+`.env.local` (cron-job.org › Settings › API; 100 calls a day on the free plan):
 
-     GitHub answers `204`. Runs never overlap (`concurrency: sync`); if one is already waiting, GitHub
-     cancels it in favour of the newer one, which is harmless.
+```sh
+pnpm cron-job          # the job, its last runs (with GitHub's error message if any) and the next ones
+pnpm cron-job diff     # what apply would change
+pnpm cron-job apply    # make the job match scripts/cron-job.ts, creating it if missing
+```
+
+It calls GitHub with a fine-grained token (*GitHub › Settings › Developer settings › Fine-grained tokens*):
+this repository only, **Actions: Read and write** and nothing else. The token lives only in the job: `apply`
+keeps it, and the script never prints it. To set a new one (it expired, or the job is created from scratch):
+`GITHUB_DISPATCH_TOKEN=github_pat_… pnpm cron-job apply`. cron-job.org emails the owner when a call fails, for
+example with `401` once the token expires.
 
 ## Pages
 

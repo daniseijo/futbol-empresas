@@ -10,6 +10,7 @@
     "sync": "tsx scripts/sync.ts",
     "db:generate": "drizzle-kit generate",
     "sync:reset": "tsx scripts/sync.ts --reset",
+    "cron-job": "tsx scripts/cron-job.ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {

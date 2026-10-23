@@ -81,6 +81,7 @@ pnpm test                                  # unit tests (node:test + tsx), next 
 npx next typegen && npx tsc --noEmit       # tsc needs the generated route types first
 pnpm db:generate                           # after changing src/db/schema.ts
 node scripts/screenshot.mjs <url> <out.png> [width] [height]   # e.g. 1280 2000, or 390 1800 for a phone
+pnpm cron-job [diff|apply]                 # the match-night cron on cron-job.org: status, diff, apply
 ```
 
 ## Checking your work
