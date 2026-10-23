@@ -72,6 +72,34 @@ Move `futbol-copy.db` over (AirDrop, Drive...), save it as `data/futbol.db` on t
 The `.github/workflows/sync.yml` action syncs every 20 minutes on match nights (Monday to Friday) and every
 3 hours otherwise (15 minutes at most per run), then calls `/api/revalidate` so the site refreshes its cache.
 
+### Keeping an eye on the sync
+
+- **Failures** open an issue labelled `sync-failure` (GitHub notifies the owner). Later failures comment on it,
+  and the next successful run closes it. Running out of the 15-minute budget is not a failure.
+- **Stale data** shows on the site: the footer's "Datos actualizados…" turns red after 12 hours without a sync.
+- **The 60-day shutdown:** GitHub disables schedules in public repositories after 60 days without commits, and
+  the sync never commits. `.github/workflows/keepalive.yml` re-enables both workflows on the 1st of every
+  month. If a schedule was disabled anyway: `gh workflow enable sync.yml`.
+- **Late or missing scheduled runs:** GitHub's `schedule` is best effort. On busy hours it starts runs hours
+  late or drops them (on 22–23 Oct 2026 the 09:07 UTC run started at 11:27, and a match night got 5 of its
+  ~21 runs). For reliable match nights, trigger the workflow from an external cron as well:
+  1. Create a fine-grained token at *GitHub › Settings › Developer settings › Fine-grained tokens*, for this
+     repository only, with **Actions: Read and write** and nothing else. It expires: note the date.
+  2. In an external cron service (e.g. cron-job.org, free), add a job in the `Europe/Madrid` time zone, every
+     20 minutes from 19:00 to 23:59, Monday to Friday, that sends:
+
+     ```
+     POST https://api.github.com/repos/<owner>/<repo>/actions/workflows/sync.yml/dispatches
+     Authorization: Bearer <token>
+     Accept: application/vnd.github+json
+     Content-Type: application/json
+
+     {"ref":"main"}
+     ```
+
+     GitHub answers `204`. Runs never overlap (`concurrency: sync`); if one is already waiting, GitHub
+     cancels it in favour of the newer one, which is harmless.
+
 ## Pages
 
 - `/`: home page with the day's matches, the focus team block, the season's competitions, each group's leader,

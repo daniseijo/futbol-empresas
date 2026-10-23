@@ -23,10 +23,14 @@ See the steps in the README.
 - [x] Create the Turso database and import the local one.
 - [x] Connect the repository to Vercel with `DATABASE_URL`, `DATABASE_AUTH_TOKEN` and `REVALIDATE_SECRET`.
 - [x] GitHub secrets for the sync action and `SYNC_ENABLED=true`.
-- [ ] Check the first scheduled runs. The repository is public (unlimited Actions minutes), but GitHub
-  disables schedules on public repositories after 60 days without commits. `SYNC_ENABLED` was created on
-  23 Oct 2026 at 06:27 UTC; every scheduled run before that was `skipped`. Plan:
-  [03 · Sync monitoring](plans/03-sync-monitoring.md).
+- [x] Check the first scheduled runs. The first one with `SYNC_ENABLED` set succeeded on 23 Oct 2026
+  ([run 39946236436](https://github.com/daniseijo/futbol-empresas/actions/runs/39946236436)), but GitHub
+  started it at 11:27 UTC instead of 09:07 and dropped the 06:07 one; the night before, 5 of the ~21 match-night
+  runs showed up (all `skipped` then). Scheduled runs work but are late or missing on busy hours.
+- [x] Monthly keepalive against the 60-day schedule shutdown (`.github/workflows/keepalive.yml`).
+- [ ] Trigger the sync from an external cron on match nights so it does not depend on GitHub's schedule.
+  Needs a fine-grained token and an account on a cron service; steps in the README ("Keeping an eye on the
+  sync").
 
 ## 3. New pages
 
@@ -65,8 +69,8 @@ See the steps in the README.
   on every push (`.github/workflows/ci.yml`).
 - [ ] End-to-end test of the sync against recorded API responses.
 - [ ] Accessibility review (coral on white contrast, focus, screen readers on the timeline).
-- [ ] Alerts when the sync fails (e.g. a GitHub Actions notification). Plan:
-  [03 · Sync monitoring](plans/03-sync-monitoring.md).
+- [x] Alerts when the sync fails: a `sync-failure` issue that opens on failure and closes on the next success,
+  and the footer's last sync date in red after 12 hours. Plan: [03 · Sync monitoring](plans/03-sync-monitoring.md).
 
 ## Known API oddities
 
