@@ -9,7 +9,8 @@
     "lint": "eslint",
     "sync": "tsx scripts/sync.ts",
     "db:generate": "drizzle-kit generate",
-    "sync:reset": "tsx scripts/sync.ts --reset"
+    "sync:reset": "tsx scripts/sync.ts --reset",
+    "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@libsql/client": "0.18.0",

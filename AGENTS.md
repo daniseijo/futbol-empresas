@@ -32,8 +32,9 @@ futbolempresas.es (WordPress + SportsPress API)
 - `src/config/site.ts`: site settings, including `focusTeamSlug` (env `NEXT_PUBLIC_FOCUS_TEAM_SLUG`).
 - `src/lib/sportspress/`: the domain types (`types.ts`), parsing of the API's quirks (`parse.ts`), the league tree
   (`leagues.ts`) and the venues, a static list (`venues.ts`).
-- `src/lib/views/featured.ts`: whether a team's summary leads with its last result or its next match's preview
-  (`PREVIEW_DAYS`), shared by the home page and the team page.
+- `src/lib/views/featured.ts`: a team's featured match, shared by the home page and the team page. The rules
+  behind it (`PREVIEW_DAYS`, `featuredMode`, the "Sube a 7º" and "A 1 punto de…" texts) are pure, in
+  `featured-rules.ts`.
 - `src/components/`: shared UI (`Crest`, `FormBadges`, `PlayerAvatar`, `PlayerEvents`/`CardIcon`,
   `FeaturedHero`/`FeaturedFooter`, `team/SectionCard`, `team/StandingsZone`, `team/MatchRow`…). Reuse before writing
   new ones.
@@ -55,8 +56,8 @@ futbolempresas.es (WordPress + SportsPress API)
 - **A match with a score is played**, whatever its API status says. Standings are always computed from matches
   (`computeStandings`), never read from the API.
 - **Cards:** the API only counts a player's yellow and red cards per match. Read them through `cardsFor` /
-  `sendingOff` (2 yellows = second yellow; 1 yellow + 1 red = booking then straight red) and draw them with
-  `CardIcon`, in `card-yellow` / `card-red`, never in the coral accent.
+  `sendingOff` in `src/lib/cards.ts` (2 yellows = second yellow; 1 yellow + 1 red = booking then straight red) and
+  draw them with `CardIcon`, in `card-yellow` / `card-red`, never in the coral accent.
 - **Design:** tokens live in `src/app/globals.css` (`canvas`, `surface`, `line`, `line-soft`, `ink`, `muted`,
   `accent` coral, `accent-text`, `accent-soft`, `loss`, `card-yellow`, `card-red`); Inter for text, Barlow Condensed
   (`font-display`, uppercase, extra bold) for headings and numbers. Use tokens, not raw colours. Every page must work
@@ -74,6 +75,7 @@ futbolempresas.es (WordPress + SportsPress API)
 pnpm install
 pnpm dev                                   # http://localhost:3000
 pnpm lint
+pnpm test                                  # unit tests (node:test + tsx), next to the code as *.test.ts
 npx next typegen && npx tsc --noEmit       # tsc needs the generated route types first
 pnpm db:generate                           # after changing src/db/schema.ts
 node scripts/screenshot.mjs <url> <out.png> [width] [height]   # e.g. 1280 2000, or 390 1800 for a phone
@@ -81,8 +83,9 @@ node scripts/screenshot.mjs <url> <out.png> [width] [height]   # e.g. 1280 2000,
 
 ## Checking your work
 
-- Run lint and types, then look at the pages you touched at **1280 px and 390 px** with `scripts/screenshot.mjs`.
-  Headless Chrome's `--window-size` cannot go below ~500 px, so use the script for the phone width.
+- Run lint, types and `pnpm test` (CI runs the same on every push), then look at the pages you touched at
+  **1280 px and 390 px** with `scripts/screenshot.mjs`. Headless Chrome's `--window-size` cannot go below
+  ~500 px, so use the script for the phone width.
 - **Data:** without `.env.local` the site reads `data/futbol.db`, which can be days old. To see production data,
   put `DATABASE_URL` and a **read-only** `DATABASE_AUTH_TOKEN` in `.env.local`
   (`turso db tokens create futbolempresas --read-only`). Never run `pnpm sync` against production from a laptop.

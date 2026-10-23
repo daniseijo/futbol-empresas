@@ -59,8 +59,9 @@ See the steps in the README.
 
 ## 5. Quality
 
-- [ ] Unit tests for `parse.ts` (titles, goals with minute, shortcodes), `standings.ts` and video matching. Plan:
-  [02 · Unit tests](plans/02-unit-tests.md).
+- [x] Unit tests for `parse.ts` (titles, goals with minute, shortcodes), `standings.ts` and video matching, plus
+  cards, the featured match rules, dates and the sync's match mapping. `pnpm test`; CI runs lint, types and tests
+  on every push (`.github/workflows/ci.yml`).
 - [ ] End-to-end test of the sync against recorded API responses.
 - [ ] Accessibility review (coral on white contrast, focus, screen readers on the timeline).
 - [ ] Alerts when the sync fails (e.g. a GitHub Actions notification). Plan:

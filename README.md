@@ -98,6 +98,7 @@ src/
   lib/sportspress/       API client, parsers and domain types
   lib/standings.ts       standings computed from the matches
   app/api/revalidate     endpoint the sync calls when it finishes
+  test/fixtures.ts       builders for test data (tests live next to the code as *.test.ts)
 scripts/sync.ts          `pnpm sync` (see the options above)
 drizzle/                 migrations (generated with `pnpm db:generate`)
 ```
