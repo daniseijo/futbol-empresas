@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 import type { Position } from "@/lib/sportspress/types";
 import { initials } from "./crest";
 
@@ -12,7 +15,8 @@ const POSITION_STYLE: Record<Position, string> = {
 /**
  * The player's photo if there is one; otherwise their shirt number on their
  * position's colour; and without a number, their initials. Always the same
- * size and shape.
+ * size and shape. The league sometimes deletes photos it still lists, so a
+ * photo that fails to load falls back the same way.
  */
 export function PlayerAvatar({
   name,
@@ -27,10 +31,16 @@ export function PlayerAvatar({
   position: Position | null;
   size?: number;
 }) {
-  if (photoUrl) {
+  const [failed, setFailed] = useState(false);
+  if (photoUrl && !failed) {
     return (
       <Image
         src={photoUrl}
+        onError={() => setFailed(true)}
+        // An image that failed before hydration never fires onError: check it on mount.
+        ref={(img) => {
+          if (img?.complete && img.naturalWidth === 0) setFailed(true);
+        }}
         alt=""
         width={size}
         height={size}
