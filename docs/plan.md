@@ -88,3 +88,7 @@ See the steps in the README.
 - A match can be tagged with the wrong group (IBO – PWC S.A.D Curve, two Grupo 4 teams, in Grupo 3). The teams'
   `leagues` say where they really play, but only for the current season: they do not keep past groups.
 - League tables (`/tables`) are no longer kept per group and season, so they cannot list a group's teams.
+- Match videos are not in the API: SportsPress keeps them in the `sp_video` meta, which the REST API only shows in
+  `context=edit` (401). The custom `futbolempresas/v1/match-video/{id}` endpoint exists but returned an empty
+  `youtube_url` for every match checked in October 2026, and `wp/v2/videos` is empty, so the sync reads the video
+  from the match's web page (`fetchMatchVideo`). Worth checking again if the league starts filling that endpoint.
