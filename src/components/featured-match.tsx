@@ -106,16 +106,17 @@ function ResultHero({
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:gap-5">
         <Side side={data.home} isFocus={data.home.id === team.teamId} logos={logos} slugs={slugs} />
         <div className="text-center">
+          {venue && (
+            <div className="mx-auto mb-1.5 max-w-36 text-[13px] text-muted sm:max-w-60">
+              <VenueLink venue={venue} />
+            </div>
+          )}
           <Link href={`/partidos/${match.id}`} className="block font-display text-[56px] leading-[0.88] font-extrabold sm:text-[104px]">
             {match.homeGoals}
             <span className="px-1.5 text-line sm:px-2.5">–</span>
             {match.awayGoals}
           </Link>
-          <div className="mx-auto mt-1.5 max-w-36 text-[13px] text-muted sm:max-w-60">
-            {data.halftime && `Descanso ${data.halftime}`}
-            {data.halftime && venue && " · "}
-            {venue && <VenueLink venue={venue} />}
-          </div>
+          {data.halftime && <div className="mt-1.5 text-[13px] text-muted">Descanso {data.halftime}</div>}
         </div>
         <Side side={data.away} isFocus={data.away.id === team.teamId} logos={logos} slugs={slugs} />
       </div>
