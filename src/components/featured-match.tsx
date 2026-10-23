@@ -160,7 +160,7 @@ function ResultHero({
 
       <div className="flex flex-wrap gap-2.5">
         <Link href={`/partidos/${match.id}`} className="rounded-full bg-ink px-4.5 py-3 text-sm font-semibold text-white">
-          {match.video ? "Ver el resumen y el partido" : "Ver el partido"}
+          Ver el partido
         </Link>
         <Link href={`${teamPath}/partidos`} className="rounded-full border border-line px-4.5 py-3 text-sm font-semibold hover:border-ink">
           Todos los partidos
