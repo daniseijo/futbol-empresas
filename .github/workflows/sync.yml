@@ -8,6 +8,11 @@ on:
     - cron: "*/20 17-23 * * 1-5" # match nights: every 20 minutes
     - cron: "7 */3 * * *" # otherwise: every 3 hours
   workflow_dispatch:
+    inputs:
+      budget_minutes:
+        description: "Minutes before the sync pauses, up to 330 (longer runs advance the backfill faster; scheduled runs wait meanwhile)"
+        type: number
+        default: 15
 
 concurrency:
   group: sync
@@ -19,7 +24,9 @@ jobs:
     # (Settings › Secrets and variables › Actions › Variables) to turn it on.
     if: vars.SYNC_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Room for the budget, installing and the unit running when it expires.
+    # Expressions have no arithmetic, so long manual runs get GitHub's maximum.
+    timeout-minutes: ${{ fromJSON(inputs.budget_minutes || 15) > 15 && 360 || 30 }}
     permissions:
       contents: read
       issues: write
@@ -35,10 +42,11 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Progressive: resumes the backfill where it stopped and stops after 15 minutes.
-      - run: pnpm sync
+      # Progressive: resumes the backfill where it stopped and stops after the
+      # budget (15 minutes unless a manual run asks for more).
+      - run: SYNC_BUDGET_SECONDS=$((BUDGET_MINUTES * 60)) pnpm sync
         env:
-          SYNC_BUDGET_SECONDS: 900
+          BUDGET_MINUTES: ${{ inputs.budget_minutes || 15 }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_AUTH_TOKEN: ${{ secrets.DATABASE_AUTH_TOKEN }}
           REVALIDATE_URL: ${{ secrets.REVALIDATE_URL }}

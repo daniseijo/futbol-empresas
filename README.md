@@ -72,6 +72,11 @@ Move `futbol-copy.db` over (AirDrop, Drive...), save it as `data/futbol.db` on t
 The `.github/workflows/sync.yml` action syncs every 20 minutes on match nights (Monday to Friday) and every
 3 hours otherwise (15 minutes at most per run), then calls `/api/revalidate` so the site refreshes its cache.
 
+The league server is slow (a squad's `/lists` call takes ~10 s, a match page for its video ~3 s, two at a time),
+so a big backfill such as the video archive takes many runs. To finish it in one go, start a longer manual run:
+`gh workflow run sync.yml -f budget_minutes=120` (up to 330). Scheduled runs queue behind it, and the site only
+refreshes when it ends, so avoid match nights.
+
 ### Keeping an eye on the sync
 
 - **Failures** open an issue labelled `sync-failure` (GitHub notifies the owner). Later failures comment on it,
