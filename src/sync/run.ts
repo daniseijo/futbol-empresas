@@ -236,8 +236,8 @@ async function backfillPlayerNames(ctx: Context, { withStats }: { withStats: boo
   return false;
 }
 
-/** A match without a video is checked again at most every 6 hours. */
-const VIDEO_RECHECK_MINUTES = 6 * 60;
+/** A match without a video is checked again at most every 2 hours. */
+const VIDEO_RECHECK_MINUTES = 2 * 60;
 /** Highlights come out a day or two later; after two weeks they are no longer checked as often. */
 const VIDEO_RECENT_DAYS = 14;
 /** Web pages take several seconds: fetch as many at once as the client allows. */
@@ -246,7 +246,7 @@ const VIDEO_CONCURRENCY = 2;
 /**
  * Looks for the video highlights on each match's web page (the API lacks them).
  * `current`: played matches of the current season without a video. Those never
- * checked, always; those from the last two weeks, again every 6 hours (the
+ * checked, always; those from the last two weeks, again every 2 hours (the
  * video comes out a day or two after the match).
  * Otherwise: any played match that was never checked (the archive).
  */
