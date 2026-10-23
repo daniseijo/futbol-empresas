@@ -175,8 +175,8 @@ function FocusSection({ focus, logos, slugs, now }: { focus: FocusBlock; logos: 
   const featured = focus.featured;
 
   return (
-    <section aria-labelledby="tu-equipo" className="flex flex-col overflow-hidden rounded-[22px] border border-line bg-surface">
-      <div className="flex flex-wrap items-center gap-x-7 gap-y-3.5 bg-accent px-5 py-4.5 text-on-accent sm:px-7">
+    <section aria-labelledby="tu-equipo" className="flex flex-col card overflow-hidden">
+      <div className="flex flex-wrap items-center gap-x-7 gap-y-3.5 bg-accent px-4 py-4.5 text-on-accent sm:px-7">
         <div className="flex min-w-0 flex-[1_1_260px] items-center gap-3.5">
           <Crest src={logos[focus.teamId]} name={teamName} size={56} />
           <div className="min-w-0">
@@ -210,14 +210,14 @@ function FocusSection({ focus, logos, slugs, now }: { focus: FocusBlock; logos: 
       </div>
 
       <div className="flex flex-wrap">
-        <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-5 px-5 py-6 sm:px-7">
+        <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-5 px-4 py-6 sm:px-7">
           <FeaturedHero team={focus} logos={logos} slugs={slugs} now={now} teamPath={base} />
         </div>
 
         {focus.group && focus.standings.length > 0 && (
           <aside
             aria-label={`Clasificación del ${focus.group.name}`}
-            className="flex min-w-0 flex-[1_1_360px] flex-col gap-5 border-t border-line-soft px-5 py-5.5 sm:px-6 min-[930px]:border-t-0 min-[930px]:border-l"
+            className="flex min-w-0 flex-[1_1_360px] flex-col gap-5 border-t border-line-soft px-4 py-5.5 sm:px-6 min-[930px]:border-t-0 min-[930px]:border-l"
           >
             <div className="flex flex-col gap-2">
               <div className="flex items-baseline justify-between">

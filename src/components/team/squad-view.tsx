@@ -35,7 +35,7 @@ export function SquadView({ squad }: { squad: SquadPlayer[] }) {
   const byValue = [...squad].sort((a, b) => b.marketValue - a.marketValue || b.mvpPoints - a.mvpPoints);
 
   return (
-    <section className="flex min-w-0 flex-col gap-2.5 rounded-[22px] border border-line bg-surface p-5.5">
+    <section className="flex min-w-0 flex-col gap-2.5 card px-4 py-5 sm:p-5.5">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h2 className="font-display text-[28px] font-extrabold uppercase">Plantilla</h2>
         <div className="flex gap-1.5" role="group" aria-label="Ordenar la plantilla">

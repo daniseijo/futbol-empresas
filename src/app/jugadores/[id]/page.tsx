@@ -86,7 +86,7 @@ function Header({ data }: { data: PlayerPageData }) {
   }
   const facts = [data.position ? POSITION_LABEL[data.position] : null, data.number ? `Dorsal ${data.number}` : null].filter(Boolean);
   return (
-    <section className="flex flex-col gap-5 rounded-[22px] border border-line bg-surface p-6 sm:px-7">
+    <section className="flex flex-col gap-5 card px-4 py-6 sm:px-7">
       <div className="flex flex-wrap items-center gap-5">
         <PlayerAvatar name={data.name} photoUrl={data.photoUrl} number={data.number} position={data.position} size={104} />
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">

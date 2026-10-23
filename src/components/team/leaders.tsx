@@ -59,7 +59,7 @@ export function MarketValue({ squad }: { squad: SquadPlayer[] }) {
   const max = top[0]?.marketValue ?? 0;
   if (max === 0) return null;
   return (
-    <section className="flex flex-col gap-3 rounded-[22px] border border-line bg-surface p-5">
+    <section className="flex flex-col gap-3 card px-4 py-5 sm:p-5">
       <h2 className="font-display text-2xl font-extrabold uppercase">Valor de mercado</h2>
       {top.map((player) => (
         <div key={player.id} className="flex flex-col gap-1.5">

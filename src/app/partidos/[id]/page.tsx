@@ -220,7 +220,7 @@ function Scoreboard({ data }: { data: MatchPageData }) {
 
 function Card({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-3 rounded-[22px] border border-line bg-surface p-5.5">
+    <section className="flex flex-col gap-3 card px-4 py-5 sm:p-5.5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="font-display text-[26px] font-extrabold uppercase">{title}</h2>
         {action}

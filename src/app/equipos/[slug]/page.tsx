@@ -23,8 +23,8 @@ function Summary({ data }: { data: TeamPageData }) {
     <div className="flex flex-wrap gap-6">
       <div className="flex min-w-0 flex-[999_1_640px] flex-col gap-5.5">
         {data.featured && (
-          <section className="flex flex-col overflow-hidden rounded-[22px] border border-line bg-surface">
-            <div className="flex flex-col gap-5 px-5 py-6 sm:px-7">
+          <section className="flex flex-col card overflow-hidden">
+            <div className="flex flex-col gap-5 px-4 py-6 sm:px-7">
               <FeaturedHero team={data} logos={data.logos} slugs={data.slugs} now={data.now} teamPath={base} />
             </div>
             <FeaturedFooter team={data} />
@@ -87,7 +87,7 @@ function SeasonNumbers({ data }: { data: TeamPageData }) {
     { value: balance.lost, label: "derrotas", className: "bg-loss-soft text-loss" },
   ];
   return (
-    <section className="flex flex-col gap-3 rounded-[22px] border border-line bg-surface p-5">
+    <section className="flex flex-col gap-3 card px-4 py-5 sm:p-5">
       <h2 className="font-display text-2xl font-extrabold uppercase">Esta temporada</h2>
       <div className="grid grid-cols-3 gap-2 text-center">
         {items.map((item) => (

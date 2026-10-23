@@ -90,9 +90,9 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
         </div>
         <div className="grid grid-cols-5 gap-px self-start overflow-hidden rounded-[14px] border border-line bg-line">
           {stats.map((stat) => (
-            <div key={stat.label} className="bg-white px-4 py-3">
-              <div className={`font-display text-[38px] leading-none font-extrabold ${stat.accent ? "text-accent-text" : ""}`}>{stat.value}</div>
-              <div className="text-xs text-muted">{stat.label}</div>
+            <div key={stat.label} className="bg-white px-3 py-3 sm:px-4">
+              <div className={`font-display text-[32px] leading-none font-extrabold sm:text-[38px] ${stat.accent ? "text-accent-text" : ""}`}>{stat.value}</div>
+              <div className="text-xs whitespace-nowrap text-muted">{stat.label}</div>
             </div>
           ))}
         </div>

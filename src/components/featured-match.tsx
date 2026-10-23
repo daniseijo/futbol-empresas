@@ -259,7 +259,7 @@ function NextMatchLine({ match, team }: { match: Match; team: FeaturedTeam }) {
   return (
     <Link
       href={`/partidos/${match.id}`}
-      className="flex flex-wrap items-center gap-x-4.5 gap-y-1.5 border-t border-line bg-canvas px-5 py-3.5 text-sm hover:bg-line-soft sm:px-7"
+      className="flex flex-wrap items-center gap-x-4.5 gap-y-1.5 border-t border-line bg-canvas px-4 py-3.5 text-sm hover:bg-line-soft sm:px-7"
     >
       <Eyebrow>Próximo partido</Eyebrow>
       <span className="font-semibold">
@@ -281,7 +281,7 @@ function LastMatchLine({ match, teamId }: { match: Match; teamId: number }) {
   return (
     <Link
       href={`/partidos/${match.id}`}
-      className="flex flex-wrap items-center gap-x-4.5 gap-y-1.5 border-t border-line bg-canvas px-5 py-3.5 text-sm hover:bg-line-soft sm:px-7"
+      className="flex flex-wrap items-center gap-x-4.5 gap-y-1.5 border-t border-line bg-canvas px-4 py-3.5 text-sm hover:bg-line-soft sm:px-7"
     >
       <span className="text-xs font-bold tracking-[0.1em] text-muted uppercase">Último partido</span>
       <span className="font-semibold">

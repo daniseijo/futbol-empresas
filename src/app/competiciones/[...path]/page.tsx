@@ -102,7 +102,7 @@ function Header({ data }: { data: CompetitionPageData }) {
     { value: numberFormat.format(data.totals.goals), label: "goles" },
   ];
   return (
-    <section className="flex flex-col gap-4 rounded-[22px] border border-line bg-surface p-6 sm:px-7">
+    <section className="flex flex-col gap-4 card px-4 py-6 sm:px-7">
       {parents.length > 0 && (
         <nav aria-label="Competición" className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {parents.map((crumb, index) => (

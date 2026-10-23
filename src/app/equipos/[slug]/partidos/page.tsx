@@ -51,7 +51,7 @@ function Matches({ data }: { data: TeamPageData }) {
 
       <aside className="flex min-w-0 flex-[1_1_340px] flex-col gap-5.5">
         {(data.photos.length > 0 || data.team.video || data.team.flickrAlbumUrl) && (
-          <section className="flex flex-col gap-3 rounded-[22px] border border-line bg-surface p-5">
+          <section className="flex flex-col gap-3 card px-4 py-5 sm:p-5">
             <h2 className="font-display text-2xl font-extrabold uppercase">Fotos y vídeos</h2>
             {data.photos.length > 0 && (
               <div className="grid grid-cols-2 gap-2">
