@@ -76,6 +76,9 @@ See the steps in the README.
 - [ ] End-to-end test of the sync against recorded API responses. Plan: [12 · End-to-end sync test](plans/12-sync-e2e-test.md).
 - [ ] Accessibility review (coral on white contrast, focus, screen readers on the timeline). Plan:
   [13 · Accessibility review](plans/13-accessibility.md).
+- [ ] Revalidate only what a sync changed, not the whole site: today almost every run invalidates every page (an
+  archive video counts as a change). Measure first, once the archive video backfill ends. Plan:
+  [14 · Targeted revalidation](plans/14-targeted-revalidation.md).
 - [x] Alerts when the sync fails: a `sync-failure` issue that opens on failure and closes on the next success,
   and the footer's last sync date in red after 12 hours. Plan: [03 · Sync monitoring](plans/03-sync-monitoring.md).
 

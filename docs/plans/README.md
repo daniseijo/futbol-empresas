@@ -19,6 +19,7 @@ Every plan assumes the project guide in [`AGENTS.md`](../../AGENTS.md). The over
 | [11 · A real 404](11-real-404.md) | Missing matches, teams and players answer 404 instead of 200 | S |
 | [12 · End-to-end sync test](12-sync-e2e-test.md) | The whole sync tested offline against recorded API responses | M |
 | [13 · Accessibility review](13-accessibility.md) | Contrast, keyboard and screen reader review and fixes | M |
+| [14 · Targeted revalidation](14-targeted-revalidation.md) | After a sync, rebuild only the pages whose data changed; measure first whether it is still worth it | M |
 
 01 and 02 are the most valuable next. 03 is quick and protects everything else. The rest are independent of each
 other and can run in parallel, but 01 and 04 both touch the home page's match strip: merge one before starting the
