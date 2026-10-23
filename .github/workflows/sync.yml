@@ -20,6 +20,13 @@ jobs:
     if: vars.SYNC_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -36,3 +43,24 @@ jobs:
           DATABASE_AUTH_TOKEN: ${{ secrets.DATABASE_AUTH_TOKEN }}
           REVALIDATE_URL: ${{ secrets.REVALIDATE_URL }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+      # One open issue while the sync is failing: it notifies the owner, later
+      # failures comment on it and the next success closes it. Running out of
+      # budget is not a failure (pnpm sync pauses itself and exits 0).
+      - name: Report the failure
+        if: failure()
+        run: |
+          gh label create sync-failure --color d73a4a --description "La sincronización está fallando" 2>/dev/null || true
+          issue=$(gh issue list --label sync-failure --state open --json number --jq '.[0].number // empty')
+          when=$(TZ=Europe/Madrid date '+%d/%m/%Y %H:%M')
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "Ha vuelto a fallar el $when: $RUN_URL"
+          else
+            gh issue create --label sync-failure --title "La sincronización ha fallado" \
+              --body "La sincronización con futbolempresas.es ha fallado el $when (hora de Madrid): $RUN_URL. La web sigue mostrando los datos de la última sincronización correcta. Esta incidencia se cerrará sola cuando vuelva a funcionar."
+          fi
+      - name: Close the failure report
+        if: success()
+        run: |
+          for issue in $(gh issue list --label sync-failure --state open --json number --jq '.[].number'); do
+            gh issue close "$issue" --comment "Vuelve a funcionar: $RUN_URL"
+          done
