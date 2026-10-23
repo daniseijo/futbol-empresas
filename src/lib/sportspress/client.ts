@@ -27,24 +27,33 @@ export interface Page<T> {
   totalPages: number;
 }
 
-// League API client. Only the sync uses it (src/sync), never rendering: this
-// module-level queue cannot be used inside "use cache".
-// The server answers a single request in ~200 ms, but with several at once
-// each one climbs to 5-7 s, so we limit concurrency.
-const MAX_CONCURRENT = 2;
-let active = 0;
-const waiting: (() => void)[] = [];
-
-async function withSlot<T>(task: () => Promise<T>): Promise<T> {
-  if (active >= MAX_CONCURRENT) await new Promise<void>((resolve) => waiting.push(resolve));
-  active += 1;
-  try {
-    return await task();
-  } finally {
-    active -= 1;
-    waiting.shift()?.();
-  }
+// League API client. Only the sync uses it (src/sync), never rendering: these
+// module-level queues cannot be used inside "use cache".
+// The API answers a single request in ~200 ms, but with several at once each
+// one climbs to 5-7 s, and its heaviest calls (pages of matches with
+// `content`) are already close to a 504. The website's pages take ~13 s each
+// (Oct 2026) but stay nearly that fast with 6 at once.
+function slots(max: number) {
+  let active = 0;
+  const waiting: (() => void)[] = [];
+  return async function withSlot<T>(task: () => Promise<T>): Promise<T> {
+    if (active >= max) await new Promise<void>((resolve) => waiting.push(resolve));
+    active += 1;
+    try {
+      return await task();
+    } finally {
+      active -= 1;
+      waiting.shift()?.();
+    }
+  };
 }
+
+/** Requests at once to the REST API. */
+const API_CONCURRENCY = 2;
+/** Requests at once to the website's pages (for data the API lacks). */
+export const PAGE_CONCURRENCY = 6;
+const apiSlot = slots(API_CONCURRENCY);
+const pageSlot = slots(PAGE_CONCURRENCY);
 
 /** Waits before retrying: the server returns 502/503/504 under load. */
 const RETRY_DELAYS_MS = [3_000, 10_000, 30_000];
@@ -61,7 +70,12 @@ export interface RequestOptions {
 }
 
 /** Request to the league server with a concurrency limit and retries. */
-async function request(url: string, accept: string, { failFastOn500 = false }: RequestOptions = {}): Promise<Response> {
+async function request(
+  url: string,
+  accept: string,
+  withSlot: <T>(task: () => Promise<T>) => Promise<T>,
+  { failFastOn500 = false }: RequestOptions = {},
+): Promise<Response> {
   for (let attempt = 0; ; attempt += 1) {
     const t0 = Date.now();
     let res: Response | null = null;
@@ -82,7 +96,7 @@ async function request(url: string, accept: string, { failFastOn500 = false }: R
 
 /** One page of a WordPress/SportsPress REST API collection. */
 export async function getPage<T>(path: string, params: Params = {}, options?: RequestOptions): Promise<Page<T>> {
-  const res = await request(buildUrl(path, params), "application/json", options);
+  const res = await request(buildUrl(path, params), "application/json", apiSlot, options);
   const items = (await res.json()) as T[];
   return {
     items,
@@ -93,7 +107,7 @@ export async function getPage<T>(path: string, params: Params = {}, options?: Re
 
 /** HTML of a league website page (for data the API does not expose). */
 export async function getHtml(path: string): Promise<string> {
-  const res = await request(`${siteConfig.sourceSite}${path}`, "text/html");
+  const res = await request(`${siteConfig.sourceSite}${path}`, "text/html", pageSlot);
   return res.text();
 }
 

@@ -12,7 +12,7 @@ import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { siteConfig } from "@/config/site";
 import { db, schema } from "@/db/client";
 import { addDays, nowInMadrid } from "@/lib/dates";
-import { SportsPressError } from "@/lib/sportspress/client";
+import { PAGE_CONCURRENCY, SportsPressError } from "@/lib/sportspress/client";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Season } from "@/lib/sportspress/types";
 import {
@@ -241,9 +241,9 @@ const VIDEO_RECHECK_MINUTES = 2 * 60;
 /** Highlights come out a day or two later; after two weeks they are no longer checked as often. */
 const VIDEO_RECENT_DAYS = 14;
 /** Web pages take several seconds: fetch as many at once as the client allows. */
-const VIDEO_CONCURRENCY = 2;
-/** Progress line every so many matches: a batch of 20 takes over a minute. */
-const VIDEO_LOG_EVERY = 6;
+const VIDEO_CONCURRENCY = PAGE_CONCURRENCY;
+/** Progress line every so many matches (one round of pages, ~15-20 s). */
+const VIDEO_LOG_EVERY = VIDEO_CONCURRENCY;
 
 /** Matches whose video still has to be checked (see `backfillMatchVideos`). */
 function videoPending(ctx: Context, { current }: { current: boolean }) {

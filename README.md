@@ -73,8 +73,10 @@ The `.github/workflows/sync.yml` action syncs every 3 hours, and an external cro
 match nights (Monday to Friday, see below). Each run takes 15 minutes at most, then calls `/api/revalidate` so
 the site refreshes its cache.
 
-The league server is slow (a squad's `/lists` call takes ~10 s, a match page for its video ~3 s, two at a time),
-so a big backfill such as the video archive takes many runs. To finish it in one go, start a longer manual run:
+The league server is slow (a squad's `/lists` call takes ~10 s, an old match page for its video ~13 s), but it
+keeps a page's time nearly flat with several at once, so the client fetches up to 6 website pages at a time
+(`PAGE_CONCURRENCY` in `src/lib/sportspress/client.ts`) and keeps the API at 2. Even so, a big backfill
+such as the video archive (~1,000 matches an hour) takes many runs. To finish it in one go, start a longer manual run:
 `gh workflow run sync.yml -f budget_minutes=120` (up to 330). Scheduled runs queue behind it, and the site only
 refreshes when it ends, so avoid match nights.
 
