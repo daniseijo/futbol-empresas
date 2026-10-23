@@ -48,7 +48,7 @@ export function TeamSearch({ teams }: { teams: SearchableTeam[] }) {
   return (
     // On phones the results drop below the whole header row, not just the narrow field.
     <div className="min-w-0 flex-1 sm:relative sm:w-72 sm:flex-none">
-      <label className="flex h-11 items-center gap-1.5 rounded-[10px] border border-line bg-canvas px-2.5 sm:gap-2 sm:px-3">
+      <label className="flex h-11 items-center gap-1.5 rounded-[10px] border border-line bg-canvas px-2.5 focus-within:border-muted sm:gap-2 sm:px-3">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted" aria-hidden="true">
           <circle cx="11" cy="11" r="7" />
           <path d="M20 20l-3.5-3.5" />
@@ -84,8 +84,9 @@ export function TeamSearch({ teams }: { teams: SearchableTeam[] }) {
               setOpen(false);
             }
           }}
-          // 16px on phones: iOS Safari zooms into smaller fields when they get focus.
-          className="w-full bg-transparent text-base outline-none placeholder:text-muted sm:text-sm"
+          // 16px on phones: iOS Safari zooms into smaller fields when they get focus. The field's own
+          // outline is off (it needs `!` to beat the global :focus-visible ring); the box's border shows focus.
+          className="w-full bg-transparent text-base outline-none! placeholder:text-muted sm:text-sm"
         />
       </label>
       {showList && (
