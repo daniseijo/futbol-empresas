@@ -175,7 +175,7 @@ function FocusSection({ focus, logos, slugs, now }: { focus: FocusBlock; logos: 
   const featured = focus.featured;
 
   return (
-    <section aria-labelledby="tu-equipo" className="flex flex-col card overflow-hidden">
+    <section aria-labelledby="tu-equipo" className="card flex flex-col overflow-hidden max-sm:-mt-7 max-sm:border-t-0">
       <div className="flex flex-wrap items-center gap-x-7 gap-y-3.5 bg-accent px-4 py-4.5 text-on-accent sm:px-7">
         <div className="flex min-w-0 flex-[1_1_260px] items-center gap-3.5">
           <Crest src={logos[focus.teamId]} name={teamName} size={56} />
