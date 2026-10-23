@@ -159,7 +159,7 @@ async function forEachTeam(ctx: Context, label: string, teamIds: number[], work:
   for (const [index, teamId] of teamIds.entries()) {
     if (!hasTime(ctx)) return false;
     await work(teamId);
-    if ((index + 1) % 10 === 0 || index + 1 === teamIds.length) ctx.log(`${label}: ${index + 1}/${teamIds.length}`);
+    if ((index + 1) % 5 === 0 || index + 1 === teamIds.length) ctx.log(`${label}: ${index + 1}/${teamIds.length}`);
   }
   return true;
 }
@@ -242,17 +242,13 @@ const VIDEO_RECHECK_MINUTES = 2 * 60;
 const VIDEO_RECENT_DAYS = 14;
 /** Web pages take several seconds: fetch as many at once as the client allows. */
 const VIDEO_CONCURRENCY = 2;
+/** Progress line every so many matches: a batch of 20 takes over a minute. */
+const VIDEO_LOG_EVERY = 6;
 
-/**
- * Looks for the video highlights on each match's web page (the API lacks them).
- * `current`: played matches of the current season without a video. Those never
- * checked, always; those from the last two weeks, again every 2 hours (the
- * video comes out a day or two after the match).
- * Otherwise: any played match that was never checked (the archive).
- */
-async function backfillMatchVideos(ctx: Context, { current }: { current: boolean }): Promise<boolean> {
+/** Matches whose video still has to be checked (see `backfillMatchVideos`). */
+function videoPending(ctx: Context, { current }: { current: boolean }) {
   const m = schema.matches;
-  const where = current
+  return current
     ? and(
         eq(m.played, true),
         eq(m.seasonId, ctx.current.id),
@@ -266,6 +262,18 @@ async function backfillMatchVideos(ctx: Context, { current }: { current: boolean
         ),
       )
     : and(eq(m.played, true), isNull(m.videoCheckedAt));
+}
+
+/**
+ * Looks for the video highlights on each match's web page (the API lacks them).
+ * `current`: played matches of the current season without a video. Those never
+ * checked, always; those from the last two weeks, again every 2 hours (the
+ * video comes out a day or two after the match).
+ * Otherwise: any played match that was never checked (the archive).
+ */
+async function backfillMatchVideos(ctx: Context, { current }: { current: boolean }): Promise<boolean> {
+  const m = schema.matches;
+  const where = videoPending(ctx, { current });
   let found = 0;
   let checked = 0;
   while (hasTime(ctx)) {
@@ -289,10 +297,16 @@ async function backfillMatchVideos(ctx: Context, { current }: { current: boolean
           }
         }),
       );
+      if (checked % VIDEO_LOG_EVERY === 0) ctx.log(`Videos${current ? "" : " (archive)"}: ${found} found in ${checked} matches`);
     }
-    ctx.log(`Videos${current ? "" : " (archive)"}: ${found} found in ${checked} matches`);
   }
+  if (checked % VIDEO_LOG_EVERY !== 0) ctx.log(`Videos${current ? "" : " (archive)"}: ${found} found in ${checked} matches`);
   return hasTime(ctx);
+}
+
+async function countMatches(where: SQL | undefined): Promise<number> {
+  const [row] = await db.select({ n: sql<number>`count(*)` }).from(schema.matches).where(where);
+  return row?.n ?? 0;
 }
 
 // --- Orchestration ------------------------------------------------------------------
@@ -348,14 +362,18 @@ export async function runSync({
     const teams = await fetchTeams(after);
     await upsert(schema.teams, teams, [schema.teams.id]);
     const touched = new Set(teams.map((t) => t.id));
+    let matches = 0;
     for (let page = 1, total = 1; page <= total; page += 1) {
       const result = await fetchMatchesPage({ modifiedAfter: after }, page, ctx.lookup);
       total = result.totalPages;
+      matches += result.rows.length;
       for (const id of await saveMatches(ctx, result.rows)) touched.add(id);
     }
-    log(`Changes since ${since}: ${teams.length} teams and ${touched.size} teams with matches`);
+    log(`Changes since ${since}: ${teams.length} teams updated, ${matches} matches updated (${touched.size} squads to refresh)`);
     for (const teamId of teams.map((t) => t.id)) await syncTeamDetail(ctx, teamId);
+    const squadsStarted = Date.now();
     for (const teamId of touched) await syncSquad(ctx, teamId);
+    if (touched.size > 0) log(`Squads refreshed: ${touched.size} in ${Math.round((Date.now() - squadsStarted) / 1000)} s`);
   } else if (!(await getState("backfill:teams"))) {
     const teams = await fetchTeams();
     await upsert(schema.teams, teams, [schema.teams.id]);
@@ -366,8 +384,13 @@ export async function runSync({
   await upsert(schema.tournaments, await fetchTournaments(ctx.current.id), [schema.tournaments.id]);
   await upsert(schema.news, await fetchNews(10), [schema.news.id]);
 
-  // 2. Initial backfill by priority, until the budget runs out.
-  const tasks: [string, () => Promise<boolean>][] = [
+  // 2. Initial backfill by priority, until the budget runs out. The optional
+  // third element says how much a paused task has left, for the log.
+  type Task = [string, () => Promise<boolean>, (() => Promise<string>)?];
+  const teamsLeft = async (column: typeof schema.teams.detailSyncedAt | typeof schema.teams.squadSyncedAt) =>
+    `${(await pendingTeams(ctx, column)).length} teams left`;
+  const videosLeft = async (current: boolean) => `${await countMatches(videoPending(ctx, { current }))} matches left`;
+  const tasks: Task[] = [
     [`Matches ${ctx.current.name}`, () => backfillSeasonMatches(ctx, ctx.current)],
     [
       "Focus team and its group",
@@ -379,13 +402,18 @@ export async function runSync({
       },
     ],
     ["Scorer names", () => backfillPlayerNames(ctx, { withStats: true })],
-    ["Current season videos", () => backfillMatchVideos(ctx, { current: true })],
+    ["Current season videos", () => backfillMatchVideos(ctx, { current: true }), () => videosLeft(true)],
     [
       "Team details",
       async () =>
         forEachTeam(ctx, "Team details", await pendingTeams(ctx, schema.teams.detailSyncedAt), (id) => syncTeamDetail(ctx, id)),
+      () => teamsLeft(schema.teams.detailSyncedAt),
     ],
-    ["Squads", async () => forEachTeam(ctx, "Squads", await pendingTeams(ctx, schema.teams.squadSyncedAt), (id) => syncSquad(ctx, id))],
+    [
+      "Squads",
+      async () => forEachTeam(ctx, "Squads", await pendingTeams(ctx, schema.teams.squadSyncedAt), (id) => syncSquad(ctx, id)),
+      () => teamsLeft(schema.teams.squadSyncedAt),
+    ],
     ["Lineup names", () => backfillPlayerNames(ctx, { withStats: false })],
     [
       "Past season champions",
@@ -399,14 +427,15 @@ export async function runSync({
     ...[...ctx.seasons]
       .reverse()
       .slice(1)
-      .map((season): [string, () => Promise<boolean>] => [`Matches ${season.name}`, () => backfillSeasonMatches(ctx, season)]),
+      .map((season): Task => [`Matches ${season.name}`, () => backfillSeasonMatches(ctx, season)]),
     ["Lineup names (archive)", () => backfillPlayerNames(ctx, { withStats: false })],
-    ["Videos (archive)", () => backfillMatchVideos(ctx, { current: false })],
+    ["Videos (archive)", () => backfillMatchVideos(ctx, { current: false }), () => videosLeft(false)],
   ];
 
   const pending: string[] = [];
-  for (const [name, task] of tasks) {
-    if (!hasTime(ctx) || !(await task())) pending.push(name);
+  for (const [name, task, remaining] of tasks) {
+    if (hasTime(ctx) && (await task())) continue;
+    pending.push(remaining ? `${name} (${await remaining()})` : name);
   }
 
   const seconds = Math.round((Date.now() - started) / 1000);
