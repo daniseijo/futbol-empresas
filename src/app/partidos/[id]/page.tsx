@@ -8,6 +8,7 @@ import { FormBadges, OutcomeBadge } from "@/components/form-badges";
 import { MatchTimeline } from "@/components/match-timeline";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PlayerEvents, PlayerEventsLegend } from "@/components/player-events";
+import { VenueLink } from "@/components/venue-link";
 import { VideoEmbed } from "@/components/video-embed";
 import { siteConfig } from "@/config/site";
 import { calendarUrl } from "@/lib/calendar";
@@ -148,7 +149,11 @@ function Scoreboard({ data }: { data: MatchPageData }) {
         <div className="flex flex-wrap justify-center gap-x-2.5 text-[13px] text-muted">
           <span>{capitalize(formatLongDate(match.date))}</span>
           <span>· {match.date.slice(11, 16)}</span>
-          {venue && <span>· {venue.name}</span>}
+          {venue && (
+            <span>
+              · <VenueLink venue={venue} />
+            </span>
+          )}
           <span>· 2 × 25 min</span>
         </div>
 
@@ -426,7 +431,7 @@ function VenueCard({ data }: { data: MatchPageData }) {
   return (
     <Card title="El campo">
       <div>
-        <div className="font-semibold">{venue.name}</div>
+        <VenueLink venue={venue} className="font-semibold" />
         {venue.address && <div className="text-sm text-muted">{venue.address}</div>}
       </div>
       <div className="flex flex-wrap gap-2">

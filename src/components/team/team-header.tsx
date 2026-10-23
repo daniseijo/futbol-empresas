@@ -1,8 +1,10 @@
 import Image from "next/image";
+import { Fragment } from "react";
 import type { Match } from "@/lib/sportspress/types";
 import { getVenue } from "@/lib/sportspress/venues";
 import type { TeamPageData } from "@/lib/views/team";
 import { Crest } from "../crest";
+import { VenueLink } from "../venue-link";
 import { TeamTabs } from "./team-tabs";
 
 function homeVenue(matches: Match[], teamId: number) {
@@ -67,9 +69,22 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
             </div>
             <h1 className="font-display text-[64px] leading-[0.88] font-extrabold uppercase sm:text-[96px]">{team.name}</h1>
             <p className="text-[15px] text-muted">
-              {[venue ? `Juega en ${venue.name}` : null, data.squad.length > 0 ? `${data.squad.length} jugadores` : null, data.seniority]
+              {[
+                venue && (
+                  <>
+                    Juega en <VenueLink venue={venue} />
+                  </>
+                ),
+                data.squad.length > 0 && `${data.squad.length} jugadores`,
+                data.seniority,
+              ]
                 .filter(Boolean)
-                .join(" · ")}
+                .map((part, index) => (
+                  <Fragment key={index}>
+                    {index > 0 && " · "}
+                    {part}
+                  </Fragment>
+                ))}
             </p>
           </div>
         </div>

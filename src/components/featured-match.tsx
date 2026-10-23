@@ -7,6 +7,7 @@ import { sendingOff } from "@/lib/cards";
 import { daysBetween, formatShortDate, relativeDay } from "@/lib/dates";
 import type { Match, Outcome } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
+import { VenueLink } from "./venue-link";
 import { outcomeFor } from "@/lib/standings";
 import type { FeaturedTeam } from "@/lib/views/featured";
 import { gap, trend } from "@/lib/views/featured-rules";
@@ -104,16 +105,18 @@ function ResultHero({
 
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:gap-5">
         <Side side={data.home} isFocus={data.home.id === team.teamId} logos={logos} slugs={slugs} />
-        <Link href={`/partidos/${match.id}`} className="text-center">
-          <div className="font-display text-[56px] leading-[0.88] font-extrabold sm:text-[104px]">
+        <div className="text-center">
+          <Link href={`/partidos/${match.id}`} className="block font-display text-[56px] leading-[0.88] font-extrabold sm:text-[104px]">
             {match.homeGoals}
             <span className="px-1.5 text-line sm:px-2.5">–</span>
             {match.awayGoals}
-          </div>
+          </Link>
           <div className="mx-auto mt-1.5 max-w-36 text-[13px] text-muted sm:max-w-60">
-            {[data.halftime && `Descanso ${data.halftime}`, venue?.name].filter(Boolean).join(" · ")}
+            {data.halftime && `Descanso ${data.halftime}`}
+            {data.halftime && venue && " · "}
+            {venue && <VenueLink venue={venue} />}
           </div>
-        </Link>
+        </div>
         <Side side={data.away} isFocus={data.away.id === team.teamId} logos={logos} slugs={slugs} />
       </div>
 
@@ -194,11 +197,17 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
 
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:gap-5">
         <Side side={home} isFocus={home.id === team.teamId} logos={logos} slugs={slugs} form />
-        <Link href={`/partidos/${match.id}`} className="text-center">
-          <div className="text-[13px] font-semibold tracking-[0.04em] text-muted uppercase">{relativeDay(match.date, now)}</div>
-          <div className="font-display text-[48px] leading-[0.9] font-extrabold sm:text-[104px]">{match.date.slice(11, 16)}</div>
-          {venue && <div className="mx-auto mt-1.5 max-w-36 text-[13px] text-muted sm:max-w-60">{venue.name}</div>}
-        </Link>
+        <div className="text-center">
+          <Link href={`/partidos/${match.id}`} className="block">
+            <div className="text-[13px] font-semibold tracking-[0.04em] text-muted uppercase">{relativeDay(match.date, now)}</div>
+            <div className="font-display text-[48px] leading-[0.9] font-extrabold sm:text-[104px]">{match.date.slice(11, 16)}</div>
+          </Link>
+          {venue && (
+            <div className="mx-auto mt-1.5 max-w-36 text-[13px] text-muted sm:max-w-60">
+              <VenueLink venue={venue} />
+            </div>
+          )}
+        </div>
         <Side side={away} isFocus={away.id === team.teamId} logos={logos} slugs={slugs} form />
       </div>
 
