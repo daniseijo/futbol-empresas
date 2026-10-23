@@ -21,6 +21,13 @@ import type {
 
 export const DATA_TAG = "data";
 
+/**
+ * The `players` columns the pages read. Listed, not `select()`ed whole, so a
+ * column added by a migration does not break the site in the window between
+ * deploying and the sync applying it to Turso.
+ */
+const playerColumns = { id: schema.players.id, name: schema.players.name, photoUrl: schema.players.photoUrl };
+
 /** Madrid time of the last sync that pulled the API changes, or null if it never ran. */
 export async function getLastSync(): Promise<string | null> {
   "use cache";
@@ -208,7 +215,7 @@ export async function getMatch(id: number): Promise<{ match: MatchDetail; lineup
   const [scorers, rows] = await Promise.all([
     scorersFor([id]),
     db
-      .select({ line: schema.matchPlayers, player: schema.players })
+      .select({ line: schema.matchPlayers, player: playerColumns })
       .from(schema.matchPlayers)
       .leftJoin(schema.players, eq(schema.players.id, schema.matchPlayers.playerId))
       .where(eq(schema.matchPlayers.matchId, id)),
@@ -269,8 +276,8 @@ export async function getPlayers(ids: number[]): Promise<Record<number, PlayerIn
   cacheLife("catalog");
   cacheTag(DATA_TAG);
   if (ids.length === 0) return {};
-  const rows = await db.select().from(schema.players).where(inArray(schema.players.id, ids));
-  return Object.fromEntries(rows.map((p) => [p.id, { id: p.id, name: p.name, photoUrl: p.photoUrl }]));
+  const rows = await db.select(playerColumns).from(schema.players).where(inArray(schema.players.id, ids));
+  return Object.fromEntries(rows.map((p) => [p.id, p]));
 }
 
 export interface PlayerSquadEntry {
@@ -307,7 +314,11 @@ export async function getPlayerCareer(
       .leftJoin(awayTeam, eq(awayTeam.id, schema.matches.awayId))
       .where(eq(mp.playerId, playerId))
       .orderBy(schema.matches.date),
-    db.query.players.findFirst({ where: eq(schema.players.id, playerId) }),
+    db
+      .select(playerColumns)
+      .from(schema.players)
+      .where(eq(schema.players.id, playerId))
+      .then(([row]) => row),
     db
       .select({
         teamId: schema.squadPlayers.teamId,
@@ -349,7 +360,7 @@ export async function getSquad(teamId: number): Promise<SquadPlayer[]> {
   cacheLife("results");
   cacheTag(DATA_TAG);
   const rows = await db
-    .select({ squad: schema.squadPlayers, player: schema.players })
+    .select({ squad: schema.squadPlayers, player: playerColumns })
     .from(schema.squadPlayers)
     .leftJoin(schema.players, eq(schema.players.id, schema.squadPlayers.playerId))
     .where(eq(schema.squadPlayers.teamId, teamId));

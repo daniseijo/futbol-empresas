@@ -106,6 +106,13 @@ export const players = sqliteTable("players", {
   slug: text("slug"),
   name: text("name").notNull(),
   photoUrl: text("photo_url"),
+  /**
+   * Team of their latest match (or, if they have not played, of their squad),
+   * kept by the sync so the search index does not have to scan every lineup.
+   */
+  lastTeamId: integer("last_team_id"),
+  /** Date of that match, so the sync can update it without reading lineups. */
+  lastMatchDate: text("last_match_date"),
 });
 
 /** Current season squad, with the values the league computes (MVP, market value). */

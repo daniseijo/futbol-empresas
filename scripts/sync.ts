@@ -22,8 +22,12 @@ async function main() {
 
   const url = process.env.REVALIDATE_URL;
   const secret = process.env.REVALIDATE_SECRET;
-  if (url && secret && result.writes > 0) {
-    const res = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${secret}` } });
+  if (url && secret && (result.writes > 0 || result.searchChanged)) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ search: result.searchChanged }),
+    });
     console.log(`Site revalidation: ${res.status}`);
   }
 }
