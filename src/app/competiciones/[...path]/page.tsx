@@ -224,7 +224,7 @@ function Rounds({
       }
     >
       <p className="text-sm text-muted">
-        {formatShortDate(round.date)} · {index + 1} de {group.rounds.length}
+        {formatShortDate(round.date, data.now)} · {index + 1} de {group.rounds.length}
       </p>
       <div className="flex flex-col">
         {round.matches.map((match) => (
@@ -240,7 +240,7 @@ function RoundMatch({ match, roundDay, data }: { match: Match; roundDay: string;
   const focus = match.homeId === data.focusTeamId || match.awayId === data.focusTeamId;
   const pending = !match.played && match.date < data.now;
   // A match postponed to another day shows the date instead of the time.
-  const when = dayKey(match.date) === roundDay ? match.date.slice(11, 16) : formatShortDate(match.date);
+  const when = dayKey(match.date) === roundDay ? match.date.slice(11, 16) : formatShortDate(match.date, data.now);
   return (
     <Link
       href={`/partidos/${match.id}`}

@@ -1,6 +1,7 @@
 import { cacheLife } from "next/cache";
 import { getCurrentSeason, getPlayerCareer, getSeasons, getTeams } from "@/lib/data";
 import type { Match, Outcome, Position } from "@/lib/sportspress/types";
+import { nowInMadrid } from "@/lib/dates";
 import { outcomeFor } from "@/lib/standings";
 
 export interface PlayerTotals {
@@ -46,6 +47,7 @@ export interface PlayerPageData {
   current: { mvpPoints: number; marketValue: number } | null;
   seasons: PlayerSeasonRow[];
   matches: PlayerMatchRow[];
+  now: string;
   logos: Record<number, string | null>;
   slugs: Record<number, string>;
 }
@@ -98,6 +100,7 @@ export async function getPlayerPageData(id: number): Promise<PlayerPageData | nu
 
   return {
     id,
+    now: nowInMadrid(),
     name: player.name,
     displayName: player.name || (number ? `Dorsal ${number}` : "Jugador"),
     photoUrl: player.photoUrl,

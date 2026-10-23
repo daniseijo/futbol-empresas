@@ -43,20 +43,27 @@ export function formatTime(stamp: string): string {
   return parts(stamp).time;
 }
 
-/** "Jue 15 oct" */
-export function formatShortDate(stamp: string): string {
-  const { day, month, weekday } = parts(stamp);
-  return `${WEEKDAYS_SHORT[weekday]} ${day} ${MONTHS_SHORT[month - 1]}`;
+/** The year to add to a date when it is not in the same year as `today` (no `today`, no year). */
+function otherYear(year: number, today: string | undefined): number | null {
+  return today && Number(today.slice(0, 4)) !== year ? year : null;
+}
+
+/** "Jue 15 oct", or "Jue 15 oct 2024" when `today` is in another year. */
+export function formatShortDate(stamp: string, today?: string): string {
+  const { day, month, weekday, year } = parts(stamp);
+  const suffix = otherYear(year, today);
+  return `${WEEKDAYS_SHORT[weekday]} ${day} ${MONTHS_SHORT[month - 1]}${suffix ? ` ${suffix}` : ""}`;
 }
 
 export function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-/** "jueves 22 de octubre" */
-export function formatLongDate(stamp: string): string {
-  const { day, month, weekday } = parts(stamp);
-  return `${WEEKDAYS[weekday]} ${day} de ${MONTHS[month - 1]}`;
+/** "jueves 22 de octubre", or "jueves 22 de octubre de 2024" when `today` is in another year. */
+export function formatLongDate(stamp: string, today?: string): string {
+  const { day, month, weekday, year } = parts(stamp);
+  const suffix = otherYear(year, today);
+  return `${WEEKDAYS[weekday]} ${day} de ${MONTHS[month - 1]}${suffix ? ` de ${suffix}` : ""}`;
 }
 
 export function formatNewsDate(stamp: string): string {
@@ -75,7 +82,7 @@ export function relativeDay(stamp: string, today: string): string {
   if (diff === 0) return "Hoy";
   if (diff === 1) return "Mañana";
   if (diff === -1) return "Ayer";
-  return formatShortDate(stamp);
+  return formatShortDate(stamp, today);
 }
 
 /** Minutes from `from` to `to`, two Madrid times in the API format. */

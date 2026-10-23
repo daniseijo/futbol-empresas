@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { addDays, daysBetween, relativeDay } from "@/lib/dates";
+import { addDays, daysBetween, formatLongDate, formatShortDate, relativeDay } from "@/lib/dates";
 
 describe("daysBetween", () => {
   it("ignores the time of day", () => {
@@ -29,6 +29,21 @@ describe("relativeDay", () => {
 
   it("falls back to the short date", () => {
     assert.equal(relativeDay("2026-11-02T20:00", today), "Lun 2 nov");
+  });
+});
+
+describe("formatShortDate and formatLongDate", () => {
+  const today = "2026-10-31T12:00";
+  it("leave the year out when it is this year or no reference day is given", () => {
+    assert.equal(formatShortDate("2026-10-15T20:00", today), "Jue 15 oct");
+    assert.equal(formatLongDate("2026-10-15T20:00", today), "jueves 15 de octubre");
+    assert.equal(formatShortDate("2024-10-17T20:00"), "Jue 17 oct");
+  });
+
+  it("add the year when it is another year", () => {
+    assert.equal(formatShortDate("2024-10-17T20:00", today), "Jue 17 oct 2024");
+    assert.equal(formatLongDate("2024-10-17T20:00", today), "jueves 17 de octubre de 2024");
+    assert.equal(relativeDay("2027-01-14T20:00", today), "Jue 14 ene 2027");
   });
 });
 

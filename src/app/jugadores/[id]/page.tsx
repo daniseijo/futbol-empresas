@@ -162,9 +162,9 @@ function MatchLine({ row, data }: { row: PlayerMatchRow; data: PlayerPageData })
   return (
     <Link
       href={`/partidos/${match.id}`}
-      className="grid grid-cols-[minmax(0,1fr)_56px_28px] items-center gap-2.5 border-b border-line-soft px-1.5 py-2.5 text-sm hover:bg-canvas sm:grid-cols-[84px_minmax(0,1fr)_auto_56px_28px]"
+      className="grid grid-cols-[minmax(0,1fr)_56px_28px] items-center gap-2.5 border-b border-line-soft px-1.5 py-2.5 text-sm hover:bg-canvas sm:grid-cols-[112px_minmax(0,1fr)_auto_56px_28px]"
     >
-      <span className="text-[13px] whitespace-nowrap text-muted max-sm:hidden">{formatShortDate(match.date)}</span>
+      <span className="text-[13px] whitespace-nowrap text-muted max-sm:hidden">{formatShortDate(match.date, data.now)}</span>
       {/* On mobile, the date and what they did go on a second line under the opponent. */}
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="flex min-w-0 items-center gap-2">
@@ -174,7 +174,7 @@ function MatchLine({ row, data }: { row: PlayerMatchRow; data: PlayerPageData })
           {row.crack && <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent-text">MVP</span>}
         </span>
         <span className="flex gap-2 text-xs sm:hidden">
-          <span className="whitespace-nowrap text-muted">{formatShortDate(match.date)}</span>
+          <span className="whitespace-nowrap text-muted">{formatShortDate(match.date, data.now)}</span>
           {events}
         </span>
       </span>

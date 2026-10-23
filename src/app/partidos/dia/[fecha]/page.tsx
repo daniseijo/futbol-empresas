@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { fecha } = await params;
   const data = await getDayPageData(fecha);
   if (!data) return { title: "Partidos del día" };
-  return { title: `Partidos del ${formatLongDate(data.day.date)}` };
+  return { title: `Partidos del ${formatLongDate(data.day.date, data.now)}` };
 }
 
 export default function DayPage({ params, searchParams }: Props) {
@@ -87,14 +87,14 @@ function Header({ data, order }: { data: DayPageData; order: Order }) {
       <nav aria-label="Otros días" className="flex justify-between gap-3 text-sm font-semibold">
         {data.previous ? (
           <Link href={`/partidos/dia/${data.previous}`} className="hover:text-accent-text">
-            ← {formatShortDate(data.previous)}
+            ← {formatShortDate(data.previous, data.now)}
           </Link>
         ) : (
           <span />
         )}
         {data.next && (
           <Link href={`/partidos/dia/${data.next}`} className="hover:text-accent-text">
-            {formatShortDate(data.next)} →
+            {formatShortDate(data.next, data.now)} →
           </Link>
         )}
       </nav>
@@ -102,7 +102,7 @@ function Header({ data, order }: { data: DayPageData; order: Order }) {
         <div>
           {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
           <h1 className="mt-1 font-display text-[40px] leading-none font-extrabold uppercase sm:text-[52px]">
-            {capitalize(formatLongDate(day.date))}
+            {capitalize(formatLongDate(day.date, data.now))}
           </h1>
           <p className="mt-1.5 text-sm text-muted">
             {count} {count === 1 ? "partido" : "partidos"} en {day.venues} {day.venues === 1 ? "campo" : "campos"}

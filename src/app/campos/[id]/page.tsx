@@ -126,7 +126,7 @@ function NextDay({ day, now, logos }: { day: NonNullable<VenuePageData["day"]>; 
         <div>
           <Eyebrow>{eyebrow}</Eyebrow>
           <h2 id="jornada-del-campo" className="mt-1 font-display text-[34px] leading-none font-extrabold uppercase sm:text-[40px]">
-            {capitalize(formatLongDate(day.date))}
+            {capitalize(formatLongDate(day.date, now))}
           </h2>
           <p className="mt-1 text-sm text-muted">
             {day.matches.length} {day.matches.length === 1 ? "partido" : "partidos"} en este campo
@@ -165,7 +165,7 @@ function MatchList({ matches, now, focusId, logos }: { matches: Match[]; now: st
             }`}
           >
             <span className="text-[13px] text-muted max-sm:col-span-2">
-              {match.played ? `${formatShortDate(match.date)} · ${match.date.slice(11, 16)}` : capitalize(relativeDay(match.date, now))}
+              {match.played ? `${formatShortDate(match.date, now)} · ${match.date.slice(11, 16)}` : capitalize(relativeDay(match.date, now))}
             </span>
             <span className="flex min-w-0 flex-col gap-1">
               <Side id={match.homeId} name={match.homeName} logos={logos} />

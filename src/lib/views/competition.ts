@@ -83,7 +83,7 @@ function naturalCompare(a: string, b: string) {
   return a.localeCompare(b, "es", { numeric: true });
 }
 
-function buildRounds(matches: Match[], standings: StandingRow[]): RoundEntry[] {
+function buildRounds(matches: Match[], standings: StandingRow[], now: string): RoundEntry[] {
   const byKey = new Map<string, Match[]>();
   for (const match of matches) {
     const key = match.round ? String(match.round) : dayKey(match.date);
@@ -95,7 +95,7 @@ function buildRounds(matches: Match[], standings: StandingRow[]): RoundEntry[] {
       const playing = new Set(list.flatMap((m) => [m.homeId, m.awayId]));
       return {
         key,
-        label: round ? `Jornada ${round}` : formatLongDate(list[0].date),
+        label: round ? `Jornada ${round}` : formatLongDate(list[0].date, now),
         date: list[0].date,
         matches: list,
         resting: round ? standings.filter((row) => !playing.has(row.teamId)).map((row) => row.name) : [],
@@ -189,7 +189,7 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
   let group: GroupData | null = null;
   if (direct.length > 0) {
     const standings = computeStandings(direct);
-    const rounds = buildRounds(direct, standings);
+    const rounds = buildRounds(direct, standings, now);
     const next = rounds.find((r) => dayKey(r.date) >= today);
     group = { standings, rounds, currentRound: (next ?? rounds[rounds.length - 1])?.key ?? null };
   }

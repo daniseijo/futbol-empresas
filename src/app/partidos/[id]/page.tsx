@@ -148,7 +148,7 @@ function Scoreboard({ data }: { data: MatchPageData }) {
         </nav>
 
         <div className="flex flex-wrap justify-center gap-x-2.5 text-[13px] text-muted">
-          <span>{capitalize(formatLongDate(match.date))}</span>
+          <span>{capitalize(formatLongDate(match.date, data.now))}</span>
           <span>· {match.date.slice(11, 16)}</span>
           {venue && (
             <span>
@@ -481,7 +481,7 @@ function HeadToHead({ data }: { data: MatchPageData }) {
         const outcome = outcomeFor(m, data.home.id);
         return (
           <Link key={m.id} href={`/partidos/${m.id}`} className="flex items-center gap-2.5 border-t border-line-soft pt-2.5 text-sm hover:text-accent-text">
-            <span className="w-24 text-xs text-muted">{formatShortDate(m.date)} {m.date.slice(2, 4)}</span>
+            <span className="w-24 text-xs text-muted">{formatShortDate(m.date, data.now)}</span>
             <span className="flex-1 truncate">
               {m.homeName} – {m.awayName}
             </span>
