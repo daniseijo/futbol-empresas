@@ -11,7 +11,7 @@ export interface TeamGroup {
   competition: string;
 }
 
-/** Situación de un equipo en la temporada: su grupo, clasificación y partidos. */
+/** A team's situation in the season: its group, standings and matches. */
 export interface TeamContext {
   teamId: number;
   group: TeamGroup | null;
@@ -34,7 +34,7 @@ export function buildTeamContext(teamId: number, seasonMatches: Match[], tree: L
   const nextMatch = upcoming[0] ?? null;
   const lastResults = matches.filter((m) => m.played).reverse();
 
-  // El grupo "actual" es el del próximo partido o, si no hay, el del último.
+  // The "current" group is the next match's or, if there is none, the last one's.
   const reference = nextMatch ?? lastResults[0] ?? matches[matches.length - 1];
   const deepest = reference ? tree.deepest(reference.leagueIds) : undefined;
   let group: TeamGroup | null = null;

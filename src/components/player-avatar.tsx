@@ -10,8 +10,9 @@ const POSITION_STYLE: Record<Position, string> = {
 };
 
 /**
- * Foto del jugador si la hay; si no, su dorsal sobre el color de su posición;
- * y si tampoco hay dorsal, sus iniciales. Siempre el mismo tamaño y forma.
+ * The player's photo if there is one; otherwise their shirt number on their
+ * position's colour; and without a number, their initials. Always the same
+ * size and shape.
  */
 export function PlayerAvatar({
   name,

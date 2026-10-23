@@ -1,5 +1,5 @@
-// Descarga de la API de SportsPress y normalización a filas de la base de datos.
-// Solo lo usa la sincronización (nunca el render), así que puede ser lenta.
+// Downloads from the SportsPress API and normalizes them into database rows.
+// Only the sync uses it (never rendering), so it is allowed to be slow.
 
 import { toLocalStamp } from "@/lib/dates";
 import { getAll, getHtml, getPage, SportsPressError, type Page } from "@/lib/sportspress/client";
@@ -38,11 +38,11 @@ export type PlayerRow = Row<typeof schema.players>;
 
 const SP = "/sportspress/v2";
 
-// --- Catálogo -----------------------------------------------------------------
+// --- Catalog -------------------------------------------------------------------
 
 export async function fetchSeasons() {
   const terms = await getAll<RawTerm>(`${SP}/seasons`, { _fields: "id,name" });
-  // Además de "22/23", "23/24"... hay marcadores como "Actual" que ignoramos.
+  // Besides "22/23", "23/24"... there are markers such as "Actual" that we skip.
   return terms.filter((t) => /^\d{2}\/\d{2}$/.test(t.name)).map((t) => ({ id: t.id, name: t.name }));
 }
 
@@ -74,9 +74,9 @@ export async function fetchMediaUrls(ids: number[], kind: keyof typeof SIZES): P
 }
 
 /**
- * Equipos con su escudo. `modifiedAfter` limita a los modificados desde la
- * última sincronización (hora local de Madrid). Sin `content`: renderizarlo
- * ejecuta los shortcodes de la página del equipo y con 25 equipos ya da 504.
+ * Teams with their crest. `modifiedAfter` limits them to those modified since
+ * the last sync (Madrid local time). No `content`: rendering it runs the team
+ * page's shortcodes, and 25 teams are already enough for a 504.
  */
 export async function fetchTeams(modifiedAfter?: string): Promise<TeamRow[]> {
   const raw = await getAll<RawTeam & { modified: string }>(`${SP}/teams`, {
@@ -99,7 +99,7 @@ export async function fetchTeams(modifiedAfter?: string): Promise<TeamRow[]> {
   }));
 }
 
-/** Foto de equipo, vídeo y álbum, sacados del contenido de su página (~2,5 s por equipo). */
+/** Team photo, video and album, taken from its page content (~2.5 s per team). */
 export async function fetchTeamDetail(teamId: number) {
   const { items } = await getPage<RawTeam>(`${SP}/teams`, { include: teamId, _fields: "id,content" });
   const html = items[0]?.content?.rendered;
@@ -113,23 +113,23 @@ export async function fetchTeamDetail(teamId: number) {
 }
 
 /**
- * Resumen en vídeo de un partido. SportsPress guarda el vídeo como metadato
- * del partido y la API no lo expone, pero la página web del partido lo
- * incrusta en su sección «Video» (sp-event-video).
+ * A match's video highlights. SportsPress stores the video as match metadata
+ * and the API does not expose it, but the match web page embeds it in its
+ * "Video" section (sp-event-video).
  */
 export async function fetchMatchVideo(matchId: number): Promise<{ id: string; title: string | null } | null> {
   const html = await getHtml(`/?post_type=sp_event&p=${matchId}`);
   const start = html.indexOf("sp-event-video");
   if (start === -1) return null;
   const section = html.slice(start, start + 4000);
-  // El iframe va bloqueado por el aviso de cookies: la URL real está escapada en data-wpca-marked-data.
+  // The iframe is blocked by the cookie banner: the real URL is escaped inside data-wpca-marked-data.
   const id = section.match(/youtube(?:-nocookie)?\.com\\?\/embed\\?\/([\w-]{11})/)?.[1];
   if (!id) return null;
   const title = section.match(/<iframe[^>]*\stitle="([^"]*)"/)?.[1];
   return { id, title: title ? decodeHtml(title) : null };
 }
 
-/** Título y miniatura de una lista o vídeo de YouTube (oEmbed público). */
+/** Title and thumbnail of a YouTube playlist or video (public oEmbed). */
 export async function fetchYoutubeInfo(url: string): Promise<{ title: string; thumbnailUrl: string | null } | null> {
   const res = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(url)}`);
   if (!res.ok) return null;
@@ -137,7 +137,7 @@ export async function fetchYoutubeInfo(url: string): Promise<{ title: string; th
   return { title: data.title ?? "Vídeos", thumbnailUrl: data.thumbnail_url ?? null };
 }
 
-// --- Partidos -----------------------------------------------------------------
+// --- Matches -------------------------------------------------------------------
 
 const POSITION_IDS: Record<number, string> = { 100: "POR", 99: "DEF", 98: "MED", 97: "DEL" };
 
@@ -149,7 +149,7 @@ function mapLineups(matchId: number, performance: RawEvent["performance"]): Matc
       const playerId = Number(playerKey);
       if (!playerId || typeof row !== "object" || row === null) continue;
       const goals = parseGoals(row.goals);
-      // Normalmente es una lista de ids, pero algunos partidos traen un texto o un objeto.
+      // Usually a list of ids, but some matches carry a string or an object.
       const rawPosition: unknown = row.position;
       const positionIds = Array.isArray(rawPosition)
         ? rawPosition
@@ -186,7 +186,7 @@ function mapEvent(raw: RawEvent & { modified?: string }, leagues: LeagueLookup) 
   if (raw.teams.length !== 2) return null;
   const { round, home, away } = parseEventTitle(raw.title.rendered);
   const [homeResult, awayResult] = raw.main_results ?? [];
-  // Un partido con resultado cuenta como jugado aunque la API diga "future".
+  // A match with a score counts as played even if the API says "future".
   const played = homeResult !== undefined && awayResult !== undefined && homeResult !== "" && awayResult !== "";
   const groupId = leagues.deepest(raw.leagues);
   const match: MatchRow = {
@@ -213,13 +213,13 @@ function mapEvent(raw: RawEvent & { modified?: string }, leagues: LeagueLookup) 
 
 const EVENT_FIELDS = "id,date,modified,status,title,leagues,seasons,venues,teams,main_results,performance,content";
 
-/** Tamaño de los grupos en que se pide el `content` cuando una página falla. */
+/** Chunk size used to request `content` when a page fails. */
 const CONTENT_CHUNK = 10;
 
 /**
- * El `content` de varios partidos. Si WordPress no consigue generar el de
- * alguno (500 permanente), parte el grupo por la mitad hasta aislarlo: ese se
- * queda sin `content` (sin fotos) y el resto lo conserva.
+ * The `content` of several matches. If WordPress cannot render one of them
+ * (persistent 500), the group is split in half until that one is isolated: it
+ * is left without `content` (no photos) and the rest keep theirs.
  */
 async function fetchEventsContent(ids: number[]): Promise<Map<number, RawEvent["content"]>> {
   const contents = new Map<number, RawEvent["content"]>();
@@ -243,10 +243,8 @@ async function fetchEventsContent(ids: number[]): Promise<Map<number, RawEvent["
 }
 
 /**
- * Una página de partidos de una temporada, modificados desde una fecha o
- * concretos (por id).
- * Ordenados por id: los partidos nuevos van al final, así que un cursor de
- * página sigue siendo válido entre ejecuciones.
+ * One page of matches: from a season, modified since a date, or specific ids.
+ * Sorted by id: new matches go last, so a page cursor stays valid between runs.
  */
 export async function fetchMatchesPage(
   filter: { seasonId?: number; modifiedAfter?: string; ids?: number[] },
@@ -259,16 +257,16 @@ export async function fetchMatchesPage(
     include: filter.ids?.join(","),
     orderby: "id",
     order: "asc",
-    per_page: 50, // con `content` y `performance`, más grandes provocan un 504
+    per_page: 50, // with `content` and `performance`, larger pages cause a 504
     page,
   };
   let result: Page<RawEvent & { modified: string }>;
   try {
     result = await getPage<RawEvent & { modified: string }>(`${SP}/events`, { ...params, _fields: EVENT_FIELDS }, { failFastOn500: true });
   } catch (error) {
-    // Algún partido rompe WordPress al generar su `content` (500 persistente,
-    // p. ej. el 86748; en la 23/24, casi una página de cada dos): se pide la
-    // página sin él y el contenido aparte, en grupos.
+    // Some matches break WordPress when rendering their `content` (persistent
+    // 500, e.g. 86748; in 23/24, almost every other page): fetch the page
+    // without it and the content separately, in chunks.
     if (!(error instanceof SportsPressError) || error.status !== 500) throw error;
     result = await getPage<RawEvent & { modified: string }>(`${SP}/events`, {
       ...params,
@@ -287,9 +285,9 @@ export async function fetchMatchesPage(
   };
 }
 
-// --- Jugadores y plantillas -----------------------------------------------------
+// --- Players and squads ---------------------------------------------------------
 
-/** Nombres de jugadores por id. /players es muy lento (~10 s por llamada). */
+/** Player names by id. /players is very slow (~10 s per call). */
 export async function fetchPlayerNames(ids: number[]): Promise<PlayerRow[]> {
   const rows: PlayerRow[] = [];
   for (let i = 0; i < ids.length; i += 100) {
@@ -304,8 +302,8 @@ export async function fetchPlayerNames(ids: number[]): Promise<PlayerRow[]> {
 }
 
 /**
- * Fotos reales de jugadores: imágenes adjuntas a cada jugador. El avatar
- * genérico de la liga no está adjunto a ninguno, así que no aparece.
+ * Real player photos: images attached to each player. The league's generic
+ * avatar is not attached to anyone, so it never shows up.
  */
 export async function fetchPlayerPhotos(playerIds: number[]): Promise<Map<number, string>> {
   const photos = new Map<number, string>();
@@ -330,9 +328,9 @@ const POSITION_LISTS: [RegExp, string][] = [
 ];
 
 /**
- * Plantilla de un equipo desde sus listas: la lista «Plantilla» da las
- * estadísticas (MVP y valor los calcula la liga) y las listas por posición
- * dan la posición de cada jugador.
+ * A team's squad from its lists: the "Plantilla" list gives the stats (the
+ * league computes MVP and market value) and the per-position lists give each
+ * player's position.
  */
 export async function fetchSquad(teamId: number, listIds: number[]): Promise<{ squad: SquadRow[]; players: PlayerRow[] }> {
   if (listIds.length === 0) return { squad: [], players: [] };
@@ -377,7 +375,7 @@ export async function fetchSquad(teamId: number, listIds: number[]): Promise<{ s
   return { squad, players };
 }
 
-// --- Otros --------------------------------------------------------------------
+// --- Other ----------------------------------------------------------------------
 
 export async function fetchTournaments(seasonId: number) {
   const raw = await getAll<RawTournament>(`${SP}/tournaments`, { seasons: seasonId, _fields: "id,title,leagues,seasons,winner" });

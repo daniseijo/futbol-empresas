@@ -1,12 +1,12 @@
-name: Sincronizar datos de la liga
+name: Sync league data
 
-# Copia los cambios de la API de futbolempresas.es a la base de datos (Turso) y
-# avisa a la web para que refresque su caché. Horas en UTC: los partidos son de
-# lunes a viernes entre las 19:00 y las 23:30 de Madrid.
+# Copies the changes from the futbolempresas.es API into the database (Turso) and
+# tells the site to refresh its cache. Times in UTC: matches are Monday to Friday
+# between 19:00 and 23:30 Madrid time.
 on:
   schedule:
-    - cron: "*/20 17-23 * * 1-5" # noches de partido: cada 20 minutos
-    - cron: "7 */3 * * *" # el resto: cada 3 horas
+    - cron: "*/20 17-23 * * 1-5" # match nights: every 20 minutes
+    - cron: "7 */3 * * *" # otherwise: every 3 hours
   workflow_dispatch:
 
 concurrency:
@@ -15,8 +15,8 @@ concurrency:
 
 jobs:
   sync:
-    # Apagada hasta configurar Turso: crea la variable del repositorio SYNC_ENABLED=true
-    # (Settings › Secrets and variables › Actions › Variables) para activarla.
+    # Off until Turso is set up: create the repository variable SYNC_ENABLED=true
+    # (Settings › Secrets and variables › Actions › Variables) to turn it on.
     if: vars.SYNC_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -28,7 +28,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Progresiva: sigue la carga donde se quedó y para a los 15 minutos.
+      # Progressive: resumes the backfill where it stopped and stops after 15 minutes.
       - run: pnpm sync
         env:
           SYNC_BUDGET_SECONDS: 900

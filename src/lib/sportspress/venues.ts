@@ -1,8 +1,8 @@
 import type { Venue } from "./types";
 
-// La API solo expone el nombre del campo. La dirección y las coordenadas están
-// en el HTML de cada página de campo de futbolempresas.es; las copiamos aquí
-// (octubre de 2026). Si aparece un campo nuevo, se muestra solo con su nombre.
+// The API only exposes the venue name. Address and coordinates live in the HTML
+// of each venue page on futbolempresas.es; we copied them here (October 2026).
+// A new venue is shown with just its name.
 const VENUES: Venue[] = [
   { id: 414, name: "AD La Fundación", address: "Calle de Braojos, 28035 Madrid", lat: 40.48165, lng: -3.73793 },
   { id: 330, name: "Arroyo Media Legua (Trece Rosas)", address: "Av. de las Trece Rosas, 800, 28017 Madrid", lat: 40.42232, lng: -3.64808 },

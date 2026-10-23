@@ -3,17 +3,17 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
-  // Perfiles de caché de las lecturas de la base de datos (src/lib/data.ts).
-  // Además, la sincronización invalida la etiqueta "datos" al terminar.
+  // Cache profiles for the database reads (src/lib/data.ts).
+  // On top of that, the sync invalidates the "data" tag when it finishes.
   cacheLife: {
-    // Resultados, calendario y clasificaciones: cambian en día de partido.
-    resultados: { stale: 60, revalidate: 300, expire: 86400 },
-    // Equipos, competiciones y campos: cambian pocas veces por semana.
-    catalogo: { stale: 300, revalidate: 3600, expire: 604800 },
+    // Results, fixtures and standings: they change on match days.
+    results: { stale: 60, revalidate: 300, expire: 86400 },
+    // Teams, competitions and venues: they change a few times a week.
+    catalog: { stale: 300, revalidate: 3600, expire: 604800 },
   },
   images: {
-    // sharp no se compila en este entorno (pnpm allowBuilds); las imágenes
-    // de la liga ya vienen en tamaños pequeños, así que no las optimizamos.
+    // sharp is not built in this setup (pnpm allowBuilds); the league's images
+    // already come in small sizes, so we do not optimize them.
     unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "www.futbolempresas.es", pathname: "/wp-content/uploads/**" },

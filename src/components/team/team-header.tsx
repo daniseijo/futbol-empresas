@@ -14,7 +14,7 @@ function homeVenue(matches: Match[], teamId: number) {
   return best ? getVenue(best[0]) : null;
 }
 
-/** Cabecera común a todas las pestañas de un equipo. */
+/** Header shared by all of a team's tabs. */
 export function TeamHeader({ data }: { data: TeamPageData }) {
   const { team, row, group, standings, balance } = data;
   const venue = homeVenue(data.matches, team.id);

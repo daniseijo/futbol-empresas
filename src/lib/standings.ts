@@ -13,10 +13,10 @@ export function outcomeFor(match: Match, teamId: number): Outcome | null {
 }
 
 /**
- * Clasificación calculada a partir de los partidos (3 puntos por victoria, 1
- * por empate). Sirve para cualquier temporada: la API guarda una sola tabla
- * por grupo y la reutiliza cada año, así que las pasadas hay que recalcularlas.
- * Desempate: puntos, diferencia de goles, goles a favor y nombre.
+ * Standings computed from the matches (3 points for a win, 1 for a draw).
+ * Works for any season: the API keeps a single table per group and reuses it
+ * every year, so past seasons have to be recomputed.
+ * Tiebreakers: points, goal difference, goals scored and name.
  */
 export function computeStandings(matches: Match[]): StandingRow[] {
   const rows = new Map<number, StandingRow>();

@@ -1,14 +1,14 @@
 import { index, integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-// Copia local de la API de futbolempresas.es. La rellena `pnpm sync` (src/sync)
-// y las páginas solo leen de aquí: nunca llaman a la API al renderizar.
+// Local copy of the futbolempresas.es API. `pnpm sync` (src/sync) fills it and
+// pages only read from here: they never call the API while rendering.
 
 export const seasons = sqliteTable("seasons", {
   id: integer("id").primaryKey(),
   name: text("name").notNull(), // "26/27"
 });
 
-/** Árbol competición › fase › grupo. */
+/** Competition › phase › group tree. */
 export const leagues = sqliteTable("leagues", {
   id: integer("id").primaryKey(),
   name: text("name").notNull(),
@@ -23,7 +23,7 @@ export const teams = sqliteTable(
     slug: text("slug").notNull(),
     name: text("name").notNull(),
     logoUrl: text("logo_url"),
-    /** Foto de equipo real; null si no hay o si es la plantilla de siluetas. */
+    /** Real team photo; null if there is none or it is the silhouette template. */
     photoUrl: text("photo_url"),
     youtubeUrl: text("youtube_url"),
     youtubeTitle: text("youtube_title"),
@@ -32,11 +32,11 @@ export const teams = sqliteTable(
     seasonIds: text("season_ids", { mode: "json" }).$type<number[]>().notNull(),
     leagueIds: text("league_ids", { mode: "json" }).$type<number[]>().notNull(),
     listIds: text("list_ids", { mode: "json" }).$type<number[]>().notNull(),
-    /** Fecha de modificación en WordPress, para la sincronización incremental. */
+    /** WordPress modification date, for the incremental sync. */
     modified: text("modified"),
-    /** Cuándo se descargaron por última vez la foto, el vídeo y el álbum. */
+    /** When the photo, video and album were last downloaded. */
     detailSyncedAt: text("detail_synced_at"),
-    /** Cuándo se descargó por última vez su plantilla. */
+    /** When its squad was last downloaded. */
     squadSyncedAt: text("squad_synced_at"),
   },
   (t) => [index("teams_slug").on(t.slug)],
@@ -46,7 +46,7 @@ export const matches = sqliteTable(
   "matches",
   {
     id: integer("id").primaryKey(),
-    /** Hora local de Madrid, "YYYY-MM-DDTHH:mm". */
+    /** Madrid local time, "YYYY-MM-DDTHH:mm". */
     date: text("date").notNull(),
     round: integer("round"),
     seasonId: integer("season_id"),
@@ -58,15 +58,15 @@ export const matches = sqliteTable(
     awayGoals: integer("away_goals"),
     played: integer("played", { mode: "boolean" }).notNull(),
     leagueIds: text("league_ids", { mode: "json" }).$type<number[]>().notNull(),
-    /** El nodo más profundo del árbol (normalmente el grupo) y su raíz. */
+    /** The deepest tree node (usually the group) and its root. */
     groupId: integer("group_id"),
     competitionId: integer("competition_id"),
     venueId: integer("venue_id"),
     photos: text("photos", { mode: "json" }).$type<string[]>().notNull(),
-    /** Resumen en YouTube: el campo «Vídeo» del partido, que solo sale en su página web. */
+    /** YouTube highlights: the match's "Vídeo" field, only shown on its web page. */
     videoId: text("video_id"),
     videoTitle: text("video_title"),
-    /** Última vez que se miró la página del partido buscando el vídeo. */
+    /** Last time the match page was checked for the video. */
     videoCheckedAt: text("video_checked_at"),
     modified: text("modified"),
   },
@@ -78,7 +78,7 @@ export const matches = sqliteTable(
   ],
 );
 
-/** Alineaciones: una fila por jugador, equipo y partido, con su acta. */
+/** Lineups: one row per player, team and match, with their match sheet. */
 export const matchPlayers = sqliteTable(
   "match_players",
   {
@@ -96,8 +96,8 @@ export const matchPlayers = sqliteTable(
     dandy: integer("dandy", { mode: "boolean" }).notNull(),
     points: real("points").notNull(),
   },
-  // Incluye el equipo: a veces un mismo jugador figura en las dos alineaciones
-  // (p. ej. una portera que juega con ambos equipos en la liga femenina).
+  // Includes the team: sometimes the same player is in both lineups
+  // (e.g. a goalkeeper who plays for both teams in the women's league).
   (t) => [primaryKey({ columns: [t.matchId, t.teamId, t.playerId] }), index("match_players_player").on(t.playerId)],
 );
 
@@ -108,7 +108,7 @@ export const players = sqliteTable("players", {
   photoUrl: text("photo_url"),
 });
 
-/** Plantilla de la temporada en curso, con los valores que calcula la liga (MVP, valor). */
+/** Current season squad, with the values the league computes (MVP, market value). */
 export const squadPlayers = sqliteTable(
   "squad_players",
   {
@@ -142,7 +142,7 @@ export const news = sqliteTable("news", {
   url: text("url").notNull(),
 });
 
-/** Marcas de la sincronización (última ejecución de cada tarea). */
+/** Sync bookmarks (progress cursors and the last run of each task). */
 export const syncState = sqliteTable("sync_state", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),

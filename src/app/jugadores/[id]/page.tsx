@@ -15,7 +15,7 @@ const money = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximum
 
 const POSITION_LABEL: Record<Position, string> = { POR: "Portero", DEF: "Defensa", MED: "Medio", DEL: "Delantero" };
 
-/** Los ids llegan como texto de la URL: cualquier cosa que no sea un número es un 404. */
+/** Ids arrive as URL text: anything that is not a number is a 404. */
 function parseId(raw: string): number | null {
   return /^\d+$/.test(raw) ? Number(raw) : null;
 }
@@ -151,8 +151,8 @@ function MatchLine({ row, data }: { row: PlayerMatchRow; data: PlayerPageData })
   const isHome = match.homeId === row.teamId;
   const opponentId = isHome ? match.awayId : match.homeId;
   const opponent = isHome ? match.awayName : match.homeName;
-  // El marcador va desde el equipo del jugador: primero sus goles. Los campos son
-  // neutrales, así que local o visitante solo es el orden del partido y no se muestra.
+  // The score is from the player's team: their goals first. Venues are neutral,
+  // so home or away is only the fixture order and is not shown.
   const own = isHome ? match.homeGoals : match.awayGoals;
   const against = isHome ? match.awayGoals : match.homeGoals;
   const events = [
@@ -167,7 +167,7 @@ function MatchLine({ row, data }: { row: PlayerMatchRow; data: PlayerPageData })
       className="grid grid-cols-[minmax(0,1fr)_56px_28px] items-center gap-2.5 border-b border-line-soft px-1.5 py-2.5 text-sm hover:bg-canvas sm:grid-cols-[84px_minmax(0,1fr)_auto_56px_28px]"
     >
       <span className="text-[13px] whitespace-nowrap text-muted max-sm:hidden">{formatShortDate(match.date)}</span>
-      {/* En móvil, la fecha y lo que hizo van en una segunda línea bajo el rival. */}
+      {/* On mobile, the date and what they did go on a second line under the opponent. */}
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="flex min-w-0 items-center gap-2">
           <span className="text-xs text-muted">vs</span>

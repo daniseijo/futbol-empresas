@@ -27,10 +27,10 @@ export interface Page<T> {
   totalPages: number;
 }
 
-// Cliente de la API de la liga. Solo lo usa la sincronización (src/sync), nunca
-// el render: esta cola a nivel de módulo no puede usarse dentro de "use cache".
-// El servidor responde en ~200 ms a una petición suelta, pero con varias a la
-// vez cada una sube a 5-7 s, así que limitamos la concurrencia.
+// League API client. Only the sync uses it (src/sync), never rendering: this
+// module-level queue cannot be used inside "use cache".
+// The server answers a single request in ~200 ms, but with several at once
+// each one climbs to 5-7 s, so we limit concurrency.
 const MAX_CONCURRENT = 2;
 let active = 0;
 const waiting: (() => void)[] = [];
@@ -46,21 +46,21 @@ async function withSlot<T>(task: () => Promise<T>): Promise<T> {
   }
 }
 
-/** Esperas antes de reintentar: el servidor da 502/503/504 cuando va cargado. */
+/** Waits before retrying: the server returns 502/503/504 under load. */
 const RETRY_DELAYS_MS = [3_000, 10_000, 30_000];
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export interface RequestOptions {
   /**
-   * Fallar en cuanto llegue un 500, sin reintentar. Los 502/503/504 son de
-   * servidor cargado y se reintentan siempre; un 500 al generar el `content` de
-   * un partido es permanente, y reintentarlo solo cuesta 43 s.
+   * Fail as soon as a 500 arrives, without retrying. 502/503/504 mean the
+   * server is busy and are always retried; a 500 while rendering a match's
+   * `content` is permanent, and retrying it only costs 43 s.
    */
   failFastOn500?: boolean;
 }
 
-/** Petición al servidor de la liga con límite de concurrencia y reintentos. */
+/** Request to the league server with a concurrency limit and retries. */
 async function request(url: string, accept: string, { failFastOn500 = false }: RequestOptions = {}): Promise<Response> {
   for (let attempt = 0; ; attempt += 1) {
     const t0 = Date.now();
@@ -74,13 +74,13 @@ async function request(url: string, accept: string, { failFastOn500 = false }: R
     if (res?.ok) return res;
     const retryable = !res || (res.status >= 500 && !(failFastOn500 && res.status === 500)) || res.status === 429;
     if (!retryable || attempt >= RETRY_DELAYS_MS.length) {
-      throw new SportsPressError(`SportsPress ${res?.status ?? "sin respuesta"} en ${url}`, res?.status ?? 0, url);
+      throw new SportsPressError(`SportsPress ${res?.status ?? "no response"} at ${url}`, res?.status ?? 0, url);
     }
     await sleep(RETRY_DELAYS_MS[attempt]);
   }
 }
 
-/** Una página de una colección de la API REST de WordPress/SportsPress. */
+/** One page of a WordPress/SportsPress REST API collection. */
 export async function getPage<T>(path: string, params: Params = {}, options?: RequestOptions): Promise<Page<T>> {
   const res = await request(buildUrl(path, params), "application/json", options);
   const items = (await res.json()) as T[];
@@ -91,17 +91,17 @@ export async function getPage<T>(path: string, params: Params = {}, options?: Re
   };
 }
 
-/** HTML de una página de la web de la liga (para datos que la API no expone). */
+/** HTML of a league website page (for data the API does not expose). */
 export async function getHtml(path: string): Promise<string> {
   const res = await request(`${siteConfig.sourceSite}${path}`, "text/html");
   return res.text();
 }
 
 /**
- * Recorre todas las páginas de una colección (100 elementos por página salvo
- * que se pida otro `per_page`; las peticiones con `content` conviene hacerlas
- * más pequeñas, o el servidor corta con un 504). Ordena por id para que la
- * paginación sea estable aunque se añadan elementos mientras se recorre.
+ * Walks every page of a collection (100 items per page unless another
+ * `per_page` is given; requests with `content` should be smaller, or the
+ * server cuts them off with a 504). Sorted by id so pagination stays stable
+ * even if items are added while walking it.
  */
 export async function getAll<T extends { id: number }>(path: string, params: Params = {}): Promise<T[]> {
   const base = { orderby: "id", order: "asc", per_page: 100, ...params };

@@ -14,7 +14,7 @@ function topBy(squad: SquadPlayer[], key: "goals" | "assists" | "mvpPoints") {
   return [...squad].filter((p) => p[key] > 0).sort((a, b) => b[key] - a[key]).slice(0, 3);
 }
 
-/** Líderes del equipo en goles, asistencias y puntos MVP. */
+/** The team's leaders in goals, assists and MVP points. */
 export function Leaders({ squad, columns = 3 }: { squad: SquadPlayer[]; columns?: 1 | 3 }) {
   return (
     <div className={`grid gap-3.5 ${columns === 3 ? "grid-cols-[repeat(auto-fit,minmax(220px,1fr))]" : ""}`}>
@@ -53,7 +53,7 @@ export function Leaders({ squad, columns = 3 }: { squad: SquadPlayer[]; columns?
   );
 }
 
-/** Los cinco jugadores con más valor de mercado, en barras. */
+/** The five players with the highest market value, as bars. */
 export function MarketValue({ squad }: { squad: SquadPlayer[] }) {
   const top = [...squad].sort((a, b) => b.marketValue - a.marketValue).slice(0, 5);
   const max = top[0]?.marketValue ?? 0;

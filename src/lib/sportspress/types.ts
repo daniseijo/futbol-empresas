@@ -1,5 +1,5 @@
-// Modelo de dominio limpio sobre el que trabaja la web. Todo lo que sale de
-// data.ts está ya normalizado: números como números y textos sin entidades HTML.
+// Clean domain model the site works with. Everything coming out of data.ts is
+// already normalized: numbers as numbers and text without HTML entities.
 
 export type Position = "POR" | "DEF" | "MED" | "DEL";
 export type Outcome = "V" | "E" | "D";
@@ -25,11 +25,11 @@ export interface TeamSummary {
 }
 
 export interface Team extends TeamSummary {
-  /** Foto de equipo real. null si no hay o si es la plantilla de siluetas. */
+  /** Real team photo. null if there is none or it is the silhouette template. */
   photoUrl: string | null;
   video: { url: string; title: string; thumbnailUrl: string | null } | null;
   flickrAlbumUrl: string | null;
-  /** Competiciones y grupos en los que está inscrito (el más profundo es el grupo actual). */
+  /** Competitions and groups the team is registered in (the deepest is the current group). */
   leagueIds: number[];
 }
 
@@ -46,7 +46,7 @@ export interface Scorer {
 
 export interface Match {
   id: number;
-  /** Hora local de Madrid, "YYYY-MM-DDTHH:mm". */
+  /** Madrid local time, "YYYY-MM-DDTHH:mm". */
   date: string;
   round: number | null;
   homeId: number;
@@ -55,11 +55,11 @@ export interface Match {
   awayName: string;
   homeGoals: number | null;
   awayGoals: number | null;
-  /** Un partido con resultado cuenta como jugado aunque la API diga "future". */
+  /** A match with a score counts as played even if the API says "future". */
   played: boolean;
   seasonId: number | null;
   leagueIds: number[];
-  /** El nodo más profundo del árbol de competiciones (el grupo) y su raíz. */
+  /** The deepest node of the competition tree (the group) and its root. */
   groupId: number | null;
   competitionId: number | null;
   venueId: number | null;
@@ -68,11 +68,11 @@ export interface Match {
 
 export interface MatchDetail extends Match {
   photos: string[];
-  /** Resumen en YouTube del partido, si la liga lo ha publicado. */
+  /** The match's YouTube highlights, if the league has published them. */
   video: { id: string; title: string | null } | null;
 }
 
-/** Un jugador en el acta de un partido. */
+/** A player on a match sheet. */
 export interface LineupPlayer {
   playerId: number;
   teamId: number;
@@ -101,7 +101,7 @@ export interface StandingRow {
   goalsFor: number;
   goalsAgainst: number;
   points: number;
-  /** Últimos resultados, del más antiguo al más reciente. */
+  /** Latest results, oldest first. */
   form: Outcome[];
 }
 

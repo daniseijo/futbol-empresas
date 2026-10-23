@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Paleta «Focos de día» con acento coral. */
+/* "Daylight floodlights" palette with a coral accent. */
 @theme {
   --color-canvas: #f4f5f7;
   --color-surface: #ffffff;

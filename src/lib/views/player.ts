@@ -12,14 +12,14 @@ export interface PlayerTotals {
   redCards: number;
 }
 
-/** Una temporada en un equipo. */
+/** One season at one team. */
 export interface PlayerSeasonRow extends PlayerTotals {
   season: string;
   teamId: number;
   teamName: string;
 }
 
-/** Un partido visto desde el jugador: su equipo, el resultado y lo que hizo. */
+/** A match from the player's point of view: their team, the result and what they did. */
 export interface PlayerMatchRow {
   match: Match;
   teamId: number;
@@ -34,7 +34,7 @@ export interface PlayerMatchRow {
 
 export interface PlayerPageData {
   id: number;
-  /** Nombre de la ficha; vacío si es privada y aún no se ha sacado del acta. */
+  /** Profile name; empty if the profile is private. */
   name: string;
   displayName: string;
   photoUrl: string | null;
@@ -42,7 +42,7 @@ export interface PlayerPageData {
   position: Position | null;
   team: { id: number; name: string } | null;
   totals: PlayerTotals;
-  /** Valores que calcula la liga para la plantilla de la temporada en curso. */
+  /** Values the league computes for the current season squad. */
   current: { mvpPoints: number; marketValue: number } | null;
   seasons: PlayerSeasonRow[];
   matches: PlayerMatchRow[];
@@ -62,7 +62,7 @@ function mostCommon<T>(values: T[]): T | null {
 
 export async function getPlayerPageData(id: number): Promise<PlayerPageData | null> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
 
   const [career, seasons, current, teams] = await Promise.all([getPlayerCareer(id), getSeasons(), getCurrentSeason(), getTeams()]);
   if (!career) return null;
@@ -89,7 +89,7 @@ export async function getPlayerPageData(id: number): Promise<PlayerPageData | nu
     }
   }
 
-  // Equipo y dorsal del último partido; si aún no ha jugado, los de la plantilla.
+  // Team and shirt number from the latest match; if none yet, from the squad.
   const last = lines.at(-1);
   const teamId = last?.line.teamId ?? squads[0]?.teamId ?? null;
   const number = last?.line.number ?? squads[0]?.number ?? null;

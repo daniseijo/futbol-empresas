@@ -15,8 +15,8 @@ export default function TeamMatchesPage({ params }: PageProps<"/equipos/[slug]/p
 function Matches({ data }: { data: TeamPageData }) {
   const nextId = data.nextMatch?.id;
   const dateOf = (entry: SeasonEntry) => (entry.kind === "match" ? entry.match.date : entry.date);
-  // Próximos: los que aún no se han jugado y no han pasado (del más cercano al más lejano).
-  // Jugados: todo lo demás, del más reciente al más antiguo (incluye descansos y partidos sin resultado).
+  // Upcoming: not played yet and not in the past (nearest first).
+  // Played: everything else, most recent first (includes byes and matches without a score).
   const isUpcoming = (entry: SeasonEntry) =>
     entry.kind === "match" ? !entry.match.played && entry.match.date >= data.now : entry.date.slice(0, 10) >= data.now.slice(0, 10);
   const upcoming = data.entries.filter(isUpcoming);

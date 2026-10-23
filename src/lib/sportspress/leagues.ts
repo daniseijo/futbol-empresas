@@ -1,7 +1,7 @@
 import type { League } from "./types";
 
-// Las "leagues" de SportsPress forman un árbol: competición › fase › grupo
-// (Liga Apertura › Fase 1 › Grupo 20). Un partido lleva varios ids de ese árbol.
+// SportsPress "leagues" form a tree: competition › phase › group
+// (Liga Apertura › Fase 1 › Grupo 20). A match carries several ids from it.
 
 /** "Corporate Cup – Tercera Div" → "corporate-cup-tercera-div". */
 export function slugify(name: string): string {
@@ -17,9 +17,9 @@ export class LeagueTree {
   private readonly byId: Map<number, League>;
   private readonly childIds: Map<number, number[]>;
   /**
-   * Segmento de URL de cada nodo, sacado del nombre. Los slugs de WordPress no
-   * sirven («grupo-1-fase-i», «18-torneo-clausura»); los nombres solo se repiten
-   * entre ramas distintas, y si dos hermanos coinciden el segundo lleva su id.
+   * Each node's URL segment, taken from its name. WordPress slugs are no good
+   * ("grupo-1-fase-i", "18-torneo-clausura"); names only repeat across
+   * different branches, and if two siblings clash the second gets its id.
    */
   private readonly segments = new Map<number, string>();
 
@@ -41,13 +41,13 @@ export class LeagueTree {
     }
   }
 
-  /** Ruta de un nodo en la web: /competiciones/liga-apertura/fase-1/grupo-1. */
+  /** A node's path on the site: /competiciones/liga-apertura/fase-1/grupo-1. */
   href(id: number, season?: string): string {
     const path = this.path(id).map((league) => this.segments.get(league.id));
     return `/competiciones/${path.join("/")}${season ? `?temporada=${season.replace("/", "-")}` : ""}`;
   }
 
-  /** El nodo de una ruta de la web, o undefined si no existe. */
+  /** The node for a site path, or undefined if there is none. */
   find(segments: string[]): League | undefined {
     let candidates = [...this.byId.values()].filter((league) => league.parentId === null);
     let found: League | undefined;
@@ -71,7 +71,7 @@ export class LeagueTree {
     return (this.childIds.get(id) ?? []).map((childId) => this.byId.get(childId)!).filter(Boolean);
   }
 
-  /** Raíz del árbol: la competición (Liga Apertura, Champions...). */
+  /** Root of the tree: the competition (Liga Apertura, Champions...). */
   competitionOf(id: number): League | undefined {
     let current = this.byId.get(id);
     while (current?.parentId !== null && current?.parentId !== undefined) {
@@ -82,7 +82,7 @@ export class LeagueTree {
     return current;
   }
 
-  /** Ancestros de un nodo, de la raíz al propio nodo. */
+  /** A node's ancestors, from the root to the node itself. */
   path(id: number): League[] {
     const chain: League[] = [];
     let current = this.byId.get(id);
@@ -93,7 +93,7 @@ export class LeagueTree {
     return chain;
   }
 
-  /** El nodo más profundo de los que lleva un partido (normalmente el grupo). */
+  /** The deepest of a match's nodes (usually the group). */
   deepest(ids: number[]): League | undefined {
     const known = ids.filter((id) => this.byId.has(id));
     let best: League | undefined;

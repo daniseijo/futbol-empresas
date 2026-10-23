@@ -13,7 +13,7 @@ interface Props {
 
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 
-/** Clasificación completa del grupo, con forma reciente. */
+/** The group's full standings, with recent form. */
 export function StandingsTable({ rows, teamId, logos, slugs }: Props) {
   const columns = "grid-cols-[26px_30px_minmax(150px,1fr)_repeat(7,36px)_44px_112px]";
   return (
@@ -60,7 +60,7 @@ export function StandingsTable({ rows, teamId, logos, slugs }: Props) {
   );
 }
 
-/** Trozo de la clasificación alrededor del equipo (para el resumen). */
+/** The slice of the standings around the team (for the overview). */
 export function StandingsZone({ rows, teamId, logos, slugs, size = 5 }: Props & { size?: number }) {
   const index = rows.findIndex((r) => r.teamId === teamId);
   const start = Math.max(0, Math.min(index - Math.floor(size / 2), rows.length - size));

@@ -11,7 +11,7 @@ const TABS = [
   { segment: "historial", label: "Historial" },
 ];
 
-/** Pestañas de un equipo: cada una es una ruta propia bajo /equipos/[slug]. */
+/** A team's tabs: each one is its own route under /equipos/[slug]. */
 export function TeamTabs({ slug }: { slug: string }) {
   const pathname = usePathname();
   const base = `/equipos/${slug}`;

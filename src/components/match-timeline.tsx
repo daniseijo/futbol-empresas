@@ -2,10 +2,10 @@ import { Crest } from "./crest";
 
 const MATCH_MINUTES = 50;
 const HALF_MINUTES = 25;
-/** Separación mínima entre etiquetas del mismo lado, en % del ancho (~5 minutos). */
+/** Minimum gap between labels on the same side, in % of the width (~5 minutes). */
 const MIN_GAP_PERCENT = 10;
 const LEVELS = 3;
-/** Alturas de la varilla por nivel y de la etiqueta, en px. */
+/** Stem height per level and label height, in px. */
 const STEM_BASE = 22;
 const STEM_STEP = 54;
 const LABEL_HEIGHT = 50;
@@ -31,8 +31,8 @@ interface PlacedGoal extends TimelineGoal {
 const percentOf = (minute: number) => (Math.min(Math.max(minute, 0), MATCH_MINUTES) / MATCH_MINUTES) * 100;
 
 /**
- * Coloca los goles de un lado en niveles: cada gol usa el nivel más bajo cuya
- * última etiqueta queda lo bastante lejos, para que no se pisen.
+ * Places one side's goals on levels: each goal takes the lowest level whose
+ * last label is far enough away, so they do not overlap.
  */
 function place(goals: TimelineGoal[]): PlacedGoal[] {
   const lastPercent: number[] = Array(LEVELS).fill(-Infinity);
@@ -60,7 +60,7 @@ function lastName(name: string) {
 function GoalMark({ goal, side }: { goal: PlacedGoal; side: "home" | "away" }) {
   const stem = STEM_BASE + goal.level * STEM_STEP;
   const color = side === "home" ? "bg-accent" : "bg-ink";
-  // En los extremos la etiqueta se alinea hacia dentro para no salirse.
+  // At the edges the label aligns inwards so it does not overflow.
   const align = goal.percent < 6 ? "translate-x-0 items-start text-left" : goal.percent > 94 ? "-translate-x-full items-end text-right" : "-translate-x-1/2 items-center text-center";
   return (
     <div className="absolute inset-y-0" style={{ left: `${goal.percent}%` }}>
@@ -90,8 +90,8 @@ function GoalMark({ goal, side }: { goal: PlacedGoal; side: "home" | "away" }) {
 }
 
 /**
- * Línea de tiempo del partido: un eje de 0′ a 50′ con los goles del local
- * hacia arriba y los del visitante hacia abajo.
+ * Match timeline: an axis from 0′ to 50′ with home goals above and away goals
+ * below.
  */
 export function MatchTimeline({
   goals,
@@ -125,7 +125,7 @@ export function MatchTimeline({
       </div>
 
       <div className="relative" style={{ height: top + bottom }}>
-        {/* Eje y marcas cada 5 minutos */}
+        {/* Axis and ticks every 5 minutes */}
         <div className="absolute inset-x-0 h-0.5 -translate-y-1/2 rounded-full bg-ink/25" style={{ top }} />
         {ticks.map((minute) => (
           <div key={minute} className="absolute" style={{ top, left: `${percentOf(minute)}%` }}>
@@ -135,7 +135,7 @@ export function MatchTimeline({
           </div>
         ))}
 
-        {/* Goles: el local arriba, el visitante abajo */}
+        {/* Goals: home above, away below */}
         <div className="absolute inset-x-0 top-0" style={{ height: top * 2 }}>
           {homeGoals.map((goal, index) => (
             <GoalMark key={`h${index}`} goal={goal} side="home" />
@@ -148,7 +148,7 @@ export function MatchTimeline({
         </div>
       </div>
 
-      {/* Eje: inicio, descanso y final, en su propia fila para que no se pisen con los goles */}
+      {/* Axis: kick-off, half-time and full-time, on their own row so they do not clash with the goals */}
       <span />
       <div className="relative mt-2 h-5 border-t border-line-soft pt-1.5 text-xs text-muted">
         <span className="absolute left-0">0′ · Inicio</span>

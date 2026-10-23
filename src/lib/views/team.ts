@@ -19,7 +19,7 @@ export interface TeamPageData extends TeamContext {
   team: Team;
   season: Season;
   now: string;
-  /** «Primera temporada en la liga» o «En la liga desde 22/23». */
+  /** "Primera temporada en la liga" or "En la liga desde 22/23". */
   seniority: string;
   logos: Record<number, string | null>;
   slugs: Record<number, string>;
@@ -27,7 +27,7 @@ export interface TeamPageData extends TeamContext {
   squad: SquadPlayer[];
   photos: Photo[];
   heroPhoto: Photo | null;
-  /** El partido jugado más reciente con resumen en vídeo. */
+  /** The most recent played match with video highlights. */
   latestVideo: { matchId: number; id: string; title: string } | null;
   balance: { played: number; won: number; drawn: number; lost: number; goalsFor: number; goalsAgainst: number };
   competitions: string[];
@@ -37,10 +37,10 @@ function score(match: Match) {
   return `${match.homeName} ${match.homeGoals}–${match.awayGoals} ${match.awayName}`;
 }
 
-/** Todo lo que necesitan las pestañas de un equipo (cabecera, resumen, partidos, clasificación y plantilla). */
+/** Everything a team's tabs need (header, overview, matches, standings and squad). */
 export async function getTeamPageData(slug: string): Promise<TeamPageData | null> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
 
   const [team, season, seasons, leagues, teams] = await Promise.all([
     getTeam(slug),
@@ -52,7 +52,7 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
   if (!team) return null;
   const now = nowInMadrid();
   const tree = new LeagueTree(leagues);
-  // El grupo inscrito en la ficha suele ser el actual: lo pedimos ya, en paralelo.
+  // The group on the team profile is usually the current one: fetch it now, in parallel.
   const enrolledGroup = tree.deepest(team.leagueIds)?.id ?? null;
   const [seasonMatches, squad, enrolledMatches] = await Promise.all([
     getSeasonMatches(season.id),
@@ -61,7 +61,7 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
   ]);
   const context = buildTeamContext(team.id, seasonMatches, tree, now);
 
-  // Fotos y vídeos de los partidos del grupo en los que ha jugado el equipo.
+  // Photos and videos of the group matches the team played.
   const groupMatches = !context.group
     ? []
     : context.group.id === enrolledGroup
@@ -77,7 +77,7 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
     : null;
   const videoIds = new Set(groupMatches.filter((m) => m.video).map((m) => m.id));
 
-  // Jornadas de descanso: rondas del grupo en las que el equipo no juega.
+  // Bye weeks: group rounds in which the team does not play.
   const entries: SeasonEntry[] = context.matches.map((match) => ({ kind: "match", match, hasVideo: videoIds.has(match.id) }));
   const ownRounds = new Set(context.matches.map((m) => m.round));
   const roundDates = new Map<number, string>();
@@ -115,7 +115,7 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
     ),
   ];
 
-  // Antigüedad: temporadas en las que está inscrito (la API las da en la ficha del equipo).
+  // Seniority: seasons it is registered in (the API lists them on the team profile).
   const ownSeasons = seasons.filter((s) => team.seasonIds.includes(s.id));
   const seniority =
     ownSeasons.length <= 1 || ownSeasons[0].id === season.id ? "Primera temporada en la liga" : `En la liga desde la ${ownSeasons[0].name}`;

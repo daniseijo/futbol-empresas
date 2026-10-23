@@ -7,7 +7,7 @@ const NAMED_ENTITIES: Record<string, string> = {
   nbsp: " ",
 };
 
-/** WordPress devuelve títulos con entidades (&#8211;, &amp;...). */
+/** WordPress returns titles with entities (&#8211;, &amp;...). */
 export function decodeHtml(text: string): string {
   return text
     .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
@@ -25,7 +25,7 @@ export function toNumber(value: unknown): number {
 
 const ROUND_PREFIX = /^J(\d+)\s*[–-]\s*/i;
 
-/** "J3 – EY Abogados vs Embat" → jornada 3, local y visitante. */
+/** "J3 – EY Abogados vs Embat" → round 3, home and away. */
 export function parseEventTitle(raw: string): { round: number | null; home: string; away: string } {
   let title = decodeHtml(raw);
   const roundMatch = title.match(ROUND_PREFIX);
@@ -35,12 +35,12 @@ export function parseEventTitle(raw: string): { round: number | null; home: stri
   return { round, home: cleanTeamName(home), away: cleanTeamName(away) };
 }
 
-/** Algunos títulos llevan la jornada pegada al nombre ("J1- Simon Kucher"). */
+/** Some titles have the round stuck to the name ("J1- Simon Kucher"). */
 export function cleanTeamName(name: string): string {
   return name.replace(ROUND_PREFIX, "").trim();
 }
 
-/** Goles del acta: "2 (42', 44')" → { count: 2, minutes: [42, 44] }. */
+/** Match sheet goals: "2 (42', 44')" → { count: 2, minutes: [42, 44] }. */
 export function parseGoals(value: unknown): { count: number; minutes: number[] } {
   if (typeof value === "number") return { count: value, minutes: [] };
   if (typeof value !== "string" || value.trim() === "") return { count: 0, minutes: [] };
@@ -54,17 +54,17 @@ export function isFlag(value: unknown): boolean {
 }
 
 
-// --- Contenido WPBakery -----------------------------------------------------
-// El contenido llega con shortcodes sin renderizar y comillas tipográficas
-// (&#8221;) en los atributos, así que lo decodificamos antes de buscar.
+// --- WPBakery content -------------------------------------------------------
+// Content arrives with unrendered shortcodes and typographic quotes (&#8221;)
+// in the attributes, so we decode it before searching.
 
-/** Fotos de Flickr incrustadas en un partido, en tamaño grande. */
+/** Flickr photos embedded in a match, in large size. */
 export function extractFlickrPhotos(html: string | undefined): string[] {
   if (!html) return [];
   const urls = [...decodeHtml(html).matchAll(/https:\/\/live\.staticflickr\.com\/[^"'\s)]+?\.jpg/g)].map(
     (m) => m[0],
   );
-  // Flickr: _b = 1024px. Sustituimos el sufijo de tamaño que traiga.
+  // Flickr: _b = 1024px. Replace whatever size suffix it has.
   const large = urls.map((url) => url.replace(/(_[a-z])?\.jpg$/, "_b.jpg"));
   return [...new Set(large)];
 }
@@ -81,14 +81,14 @@ export function extractFlickrAlbum(html: string | undefined): string | null {
   return match ? match[0] : null;
 }
 
-/** id del medio usado como cabecera del equipo (primer vc_single_image). */
+/** Id of the media used as the team header (first vc_single_image). */
 export function extractHeaderMediaId(html: string | undefined): number | null {
   if (!html) return null;
   const match = decodeHtml(html).match(/vc_single_image image=["”″]?(\d+)/);
   return match ? Number(match[1]) : null;
 }
 
-/** Las cabeceras *-CABECERA.jpg son la plantilla de siluetas, no una foto. */
+/** *-CABECERA.jpg headers are the silhouette template, not a photo. */
 export function isPlaceholderTeamPhoto(url: string): boolean {
   return /cabecera/i.test(url.split("/").pop() ?? "");
 }

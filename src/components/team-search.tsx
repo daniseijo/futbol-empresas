@@ -20,7 +20,7 @@ function normalize(text: string) {
     .replace(/[̀-ͯ]/g, "");
 }
 
-/** Buscador de empresas. La lista completa llega del servidor (≈325 equipos). */
+/** Company search. The full list comes from the server (≈325 teams). */
 export function TeamSearch({ teams }: { teams: SearchableTeam[] }) {
   const router = useRouter();
   const listId = useId();

@@ -1,8 +1,8 @@
 import { siteConfig } from "@/config/site";
 
-// Las fechas de la API son hora local de Madrid sin zona ("2026-10-22T21:00:38").
-// Trabajamos con ellas como texto "YYYY-MM-DDTHH:mm" y solo usamos Date para
-// saber el día de la semana o el "ahora" en Madrid.
+// API dates are Madrid local time without a zone ("2026-10-22T21:00:38").
+// We handle them as "YYYY-MM-DDTHH:mm" strings and only use Date to get the
+// weekday or "now" in Madrid.
 
 const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 const WEEKDAYS_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -13,7 +13,7 @@ export function toLocalStamp(apiDate: string): string {
   return apiDate.slice(0, 16);
 }
 
-/** Fecha y hora actuales en Madrid, en el mismo formato que las de la API. */
+/** Current date and time in Madrid, in the same format as the API's. */
 export function nowInMadrid(now: Date = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: siteConfig.timeZone,
@@ -64,7 +64,7 @@ export function formatNewsDate(stamp: string): string {
   return `${day} ${MONTHS_SHORT[month - 1]} ${year}`;
 }
 
-/** "Hoy", "Mañana" o la fecha corta, relativo al día de referencia. */
+/** "Hoy", "Mañana" or the short date, relative to the reference day. */
 export function relativeDay(stamp: string, today: string): string {
   const diff = Math.round(
     (Date.parse(`${dayKey(stamp)}T00:00:00Z`) - Date.parse(`${dayKey(today)}T00:00:00Z`)) / 86_400_000,
@@ -75,7 +75,7 @@ export function relativeDay(stamp: string, today: string): string {
   return formatShortDate(stamp);
 }
 
-/** Minutos de `from` a `to`, dos horas de Madrid en el formato de la API. */
+/** Minutes from `from` to `to`, two Madrid times in the API format. */
 export function minutesBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to.slice(0, 16)}:00Z`) - Date.parse(`${from.slice(0, 16)}:00Z`)) / 60_000);
 }

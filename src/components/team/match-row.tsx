@@ -5,7 +5,7 @@ import { outcomeFor } from "@/lib/standings";
 import { Crest } from "../crest";
 import { OutcomeBadge } from "../form-badges";
 
-/** Fila de un partido visto desde un equipo: jornada, fecha, local, marcador, visitante y resultado. */
+/** A match row from a team's point of view: round, date, home, score, away and result. */
 export function MatchRow({
   match,
   teamId,
@@ -62,7 +62,7 @@ export function MatchRow({
   );
 }
 
-/** Jornada en la que el equipo descansa. */
+/** A round in which the team has a bye. */
 export function RestRow({ round, date }: { round: number; date: string }) {
   return (
     <div className="grid grid-cols-[44px_1fr] items-center gap-3 rounded-[14px] border border-line-soft bg-canvas px-3.5 py-3 text-sm text-muted">

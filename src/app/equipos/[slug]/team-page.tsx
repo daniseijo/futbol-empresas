@@ -6,7 +6,7 @@ import { getTeamPageData, type TeamPageData } from "@/lib/views/team";
 
 type Params = Promise<{ slug: string }>;
 
-/** Metadatos de una pestaña: «Plantilla de Embat · Futbolempresas». */
+/** A tab's metadata: "Plantilla de Embat · Futbolempresas". */
 export async function tabMetadata(params: Params, label: string | null): Promise<Metadata> {
   const { slug } = await params;
   const team = await getTeam(slug);
@@ -15,8 +15,8 @@ export async function tabMetadata(params: Params, label: string | null): Promise
 }
 
 /**
- * Envoltorio común de las pestañas: espera los parámetros dentro de Suspense
- * (así la ruta sirve el esqueleto al instante) y carga los datos del equipo.
+ * Shared wrapper for the tabs: awaits the params inside Suspense (so the route
+ * serves the skeleton instantly) and loads the team data.
  */
 export function TeamTab({ params, render }: { params: Params; render: (data: TeamPageData) => React.ReactNode }) {
   return (

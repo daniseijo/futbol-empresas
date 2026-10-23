@@ -16,7 +16,7 @@ export interface SeasonLink {
   href: string;
 }
 
-/** Un grupo, fase o división que cuelga del nodo, con su líder. */
+/** A group, phase or division under the node, with its leader. */
 export interface ChildCard {
   id: number;
   name: string;
@@ -28,7 +28,7 @@ export interface ChildCard {
   hasFocusTeam: boolean;
 }
 
-/** Una jornada (o, en las copas sin jornadas, un día de partidos). */
+/** A round (or, in cups without rounds, a match day). */
 export interface RoundEntry {
   key: string;
   label: string;
@@ -49,9 +49,9 @@ export interface GroupData {
   standings: StandingRow[];
   rounds: RoundEntry[];
   /**
-   * La jornada que se enseña por defecto: la primera que empieza hoy o más
-   * tarde o, si no queda ninguna, la última. Cuenta el día de su primer partido,
-   * para que un partido aplazado no deje la vista en una jornada antigua.
+   * The round shown by default: the first one starting today or later or, if
+   * none is left, the last one. It goes by the day of its first match, so a
+   * postponed match does not leave the view stuck on an old round.
    */
   currentRound: string | null;
 }
@@ -64,7 +64,7 @@ export interface CompetitionPageData {
   isCurrentSeason: boolean;
   seasons: SeasonLink[];
   children: ChildCard[];
-  /** Clasificación y jornadas: solo si el nodo tiene partidos propios (un grupo, una copa). */
+  /** Standings and rounds: only if the node has its own matches (a group, a cup). */
   group: GroupData | null;
   totals: { teams: number; played: number; total: number; goals: number };
   scorers: PlayerTally[];
@@ -102,7 +102,7 @@ function buildRounds(matches: Match[], standings: StandingRow[]): RoundEntry[] {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** Goles o premios de Crack por jugador, de mayor a menor. */
+/** Goals or Crack awards per player, highest first. */
 function tally(matches: Match[], pick: (scorer: Match["scorers"][number]) => number): Map<number, { value: number; teamId: number }> {
   const totals = new Map<number, { value: number; teamId: number }>();
   for (const match of matches) {
@@ -123,13 +123,13 @@ function top(totals: Map<number, { value: number; teamId: number }>) {
 }
 
 /**
- * Página de una competición, fase o grupo en una temporada. `segments` es la
- * ruta de la URL y `seasonParam` la temporada pedida ("25-26"); sin ella, la
- * actual o, si el nodo no se jugó este año, la última en que se jugó.
+ * Page of a competition, phase or group in one season. `segments` is the URL
+ * path and `seasonParam` the requested season ("25-26"); without it, the
+ * current one or, if the node was not played this year, the last one it was.
  */
 export async function getCompetitionPageData(segments: string[], seasonParam: string | null): Promise<CompetitionPageData | null> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
 
   const [leagues, seasons, current, groupSeasons, teams] = await Promise.all([
     getLeagues(),
@@ -142,14 +142,14 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
   const node = tree.find(segments.map((s) => decodeURIComponent(s)));
   if (!node) return null;
 
-  // Temporadas en las que se jugó algún partido de este nodo o de sus hijos.
+  // Seasons in which this node or its children had any match.
   const inSubtree = (groupId: number) => tree.path(groupId).some((league) => league.id === node.id);
   const seasonIds = new Set(groupSeasons.filter((row) => inSubtree(row.groupId)).map((row) => row.seasonId));
   const available = seasons.filter((s) => seasonIds.has(s.id));
   const requested = seasonParam ? seasons.find((s) => s.name === seasonParam.replace("-", "/")) : undefined;
   const fallback = available.some((s) => s.id === current.id) ? current : (available[available.length - 1] ?? current);
   const season = requested ?? fallback;
-  // La temporada actual no lleva parámetro: es la que se ve por defecto en casi todos los nodos.
+  // The current season has no parameter: it is the default for almost every node.
   const seasonHref = (id: number, s: Season) => tree.href(id, s.id === current.id ? undefined : s.name);
 
   const now = nowInMadrid();
@@ -158,7 +158,7 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
   const matches = seasonMatches.filter((m) => m.groupId !== null && inSubtree(m.groupId));
   const focusTeamId = teams.find((t) => t.slug === siteConfig.focusTeamSlug)?.id ?? null;
 
-  // Hijos con partidos esta temporada, con su líder si son un grupo con clasificación.
+  // Children with matches this season, with their leader if they are a group with standings.
   const children: ChildCard[] = tree
     .children(node.id)
     .map((child) => {

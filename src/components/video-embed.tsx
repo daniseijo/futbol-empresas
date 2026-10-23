@@ -4,12 +4,12 @@ import Image from "next/image";
 import { useState } from "react";
 
 /**
- * Vídeo de YouTube que solo carga el reproductor al pulsar play: hasta
- * entonces es una miniatura, así la página no arrastra el peso de YouTube.
+ * YouTube video that only loads the player on play: until then it is a
+ * thumbnail, so the page does not carry YouTube's weight.
  */
 export function VideoEmbed({ id, title, label = "Resumen" }: { id: string; title: string; label?: string }) {
   const [playing, setPlaying] = useState(false);
-  // No todos los vídeos tienen miniatura en máxima resolución.
+  // Not every video has a max-resolution thumbnail.
   const [thumbnail, setThumbnail] = useState(`https://i.ytimg.com/vi/${id}/maxresdefault.jpg`);
 
   return (

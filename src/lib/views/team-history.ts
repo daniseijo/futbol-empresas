@@ -18,10 +18,10 @@ export interface CompetitionStint {
   /** "Liga Apertura › Fase 1 › Grupo 20" */
   path: string[];
   record: Tally;
-  /** Puesto en el grupo; null en eliminatorias y fases finales. */
+  /** Position in the group; null in knockouts and final phases. */
   position: number | null;
   teams: number;
-  /** Todos los partidos del grupo jugados (la clasificación es definitiva). */
+  /** Every group match played (the standings are final). */
   finished: boolean;
 }
 
@@ -36,11 +36,11 @@ export interface SeasonHistory {
 export interface TeamHistory {
   seasons: SeasonHistory[];
   total: Tally;
-  /** Primera temporada con partidos en la base de datos. */
+  /** First season with matches in the database. */
   since: string | null;
 }
 
-/** Más equipos que esto no es un grupo de liga, sino un cuadro o una fase final. */
+/** More teams than this is not a league group, but a bracket or a final phase. */
 const MAX_GROUP_TEAMS = 16;
 
 const emptyTally = (): Tally => ({ played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0 });
@@ -58,13 +58,13 @@ function add(record: Tally, match: Match, teamId: number) {
 }
 
 /**
- * Historial de un equipo por temporadas, con cada competición en la que jugó,
- * su balance y su puesto en el grupo (calculado a partir de los partidos, porque
- * la API reutiliza la clasificación de cada grupo todas las temporadas).
+ * A team's history by season, with each competition it played, its record and
+ * its position in the group (computed from the matches, because the API reuses
+ * each group's standings every season).
  */
 export async function getTeamHistory(slug: string): Promise<TeamHistory | null> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
 
   const team = await getTeam(slug);
   if (!team) return null;
@@ -95,8 +95,8 @@ export async function getTeamHistory(slug: string): Promise<TeamHistory | null> 
       const groupMatches = await getGroupMatches(groupId, seasonId);
       const standings = computeStandings(groupMatches);
       const path = tree.path(groupId).map((l) => l.name);
-      // Solo hay puesto en un grupo de liga de verdad. Las eliminatorias y fases
-      // finales cuelgan de la competición entera o mezclan decenas de equipos.
+      // Only a real league group has positions. Knockouts and final phases hang
+      // off the whole competition or mix dozens of teams.
       const isLeagueGroup = path.length > 1 && standings.length <= MAX_GROUP_TEAMS;
       stints.push({
         groupId,
@@ -107,7 +107,7 @@ export async function getTeamHistory(slug: string): Promise<TeamHistory | null> 
         finished: groupMatches.length > 0 && groupMatches.every((m) => m.played),
       });
     }
-    // Primero la competición con más partidos (la liga), después copas y torneos.
+    // The competition with the most matches (the league) first, then cups and tournaments.
     stints.sort((a, b) => b.record.played - a.record.played);
     history.push({ seasonId, name: seasonName.get(seasonId) ?? "", current: seasonId === current.id, record, stints });
   }

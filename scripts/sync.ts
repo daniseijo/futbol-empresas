@@ -1,10 +1,10 @@
-// Uso:
-//   pnpm sync                       sigue la carga donde se quedó y trae los cambios
-//   pnpm sync -- --budget=600       igual, pero para a los 600 s (lo usa GitHub Actions)
-//   pnpm sync -- --partidos=1,2     vuelve a descargar esos partidos y sigue
-//   pnpm sync:reset                 vuelve a descargar todo desde cero
-// Al terminar, si hay REVALIDATE_URL y REVALIDATE_SECRET, avisa a la web para que
-// refresque su caché.
+// Usage:
+//   pnpm sync                       resumes the backfill and pulls the latest changes
+//   pnpm sync -- --budget=600       same, but stops after 600 s (GitHub Actions uses it)
+//   pnpm sync -- --matches=1,2      downloads those matches again, then carries on
+//   pnpm sync:reset                 downloads everything again from scratch
+// When done, if REVALIDATE_URL and REVALIDATE_SECRET are set, it tells the site
+// to refresh its cache.
 
 import { runSync } from "@/sync/run";
 
@@ -14,7 +14,7 @@ function budgetFromArgs(): number {
 }
 
 async function main() {
-  const matchIds = (process.argv.find((a) => a.startsWith("--partidos="))?.split("=")[1] ?? "")
+  const matchIds = (process.argv.find((a) => a.startsWith("--matches="))?.split("=")[1] ?? "")
     .split(",")
     .map(Number)
     .filter((id) => id > 0);
@@ -24,7 +24,7 @@ async function main() {
   const secret = process.env.REVALIDATE_SECRET;
   if (url && secret && result.writes > 0) {
     const res = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${secret}` } });
-    console.log(`Revalidación de la web: ${res.status}`);
+    console.log(`Site revalidation: ${res.status}`);
   }
 }
 

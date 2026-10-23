@@ -3,8 +3,8 @@
 import { useSyncExternalStore } from "react";
 import { formatShortDate, formatTime, minutesBetween, nowInMadrid } from "@/lib/dates";
 
-// La hora de Madrid al minuto: el texto relativo se recalcula una vez por minuto.
-// En el servidor y al hidratar no hay "ahora", así que se pinta la hora exacta.
+// Madrid time to the minute: the relative text is recomputed once a minute.
+// On the server and during hydration there is no "now", so the exact time is shown.
 function subscribe(onChange: () => void) {
   const id = setInterval(onChange, 60_000);
   return () => clearInterval(id);
@@ -23,7 +23,7 @@ function absolute(stamp: string): string {
   return `el ${formatShortDate(stamp).toLowerCase()} a las ${formatTime(stamp)}`;
 }
 
-/** «Datos actualizados hace 12 min»: cuándo trajo cambios de la API la última sincronización. */
+/** "Datos actualizados hace 12 min": when the last sync pulled changes from the API. */
 export function LastSync({ stamp }: { stamp: string }) {
   const now = useSyncExternalStore(subscribe, getNow, getServerNow);
   return (

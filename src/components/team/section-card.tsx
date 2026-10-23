@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-/** Tarjeta de sección con título y, opcionalmente, un enlace a la pestaña con el detalle. */
+/** Section card with a title and, optionally, a link to the tab with the details. */
 export function SectionCard({
   title,
   link,

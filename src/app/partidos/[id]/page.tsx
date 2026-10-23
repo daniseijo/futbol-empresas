@@ -19,7 +19,7 @@ import { getMatchPageData, type MatchPageData, type TeamSide } from "@/lib/views
 
 const decimal = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 });
 
-/** Se generan en el build los partidos del equipo principal; el resto, en la primera visita. */
+/** The build generates the focus team's matches; the rest, on first visit. */
 export async function generateStaticParams() {
   const [team, season] = await Promise.all([getTeam(siteConfig.focusTeamSlug), getCurrentSeason()]);
   const matches = season ? await getSeasonMatches(season.id) : [];
@@ -91,7 +91,7 @@ async function MatchContent({ params }: Pick<PageProps<"/partidos/[id]">, "param
   );
 }
 
-// --- Cabecera ---------------------------------------------------------------------
+// --- Header -----------------------------------------------------------------------
 
 function TeamLink({ side, align }: { side: TeamSide; align: "left" | "right" }) {
   const content = (
@@ -210,7 +210,7 @@ function Scoreboard({ data }: { data: MatchPageData }) {
   );
 }
 
-// --- Cuerpo -----------------------------------------------------------------------
+// --- Body -------------------------------------------------------------------------
 
 function Card({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -228,7 +228,7 @@ function teamOf(data: MatchPageData, teamId: number) {
   return teamId === data.home.id ? data.home : data.away;
 }
 
-/** El «Crack» de la liga: el mejor jugador del partido. */
+/** The league's "Crack": the player of the match. */
 function Mvp({ data }: { data: MatchPageData }) {
   const p = data.mvp;
   if (!p) return null;
@@ -384,7 +384,7 @@ function Preview({ data }: { data: MatchPageData }) {
   );
 }
 
-// --- Lateral ----------------------------------------------------------------------
+// --- Sidebar ----------------------------------------------------------------------
 
 function Stats({ data }: { data: MatchPageData }) {
   const rows = [

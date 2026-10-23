@@ -18,15 +18,15 @@ import {
 
 const numberFormat = new Intl.NumberFormat("es-ES");
 
-type Props = PageProps<"/competiciones/[...ruta]">;
+type Props = PageProps<"/competiciones/[...path]">;
 
 function single(value: string | string[] | undefined): string | null {
   return (Array.isArray(value) ? value[0] : value) ?? null;
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
-  const [{ ruta }, query] = await Promise.all([params, searchParams]);
-  const data = await getCompetitionPageData(ruta, single(query.temporada));
+  const [{ path }, query] = await Promise.all([params, searchParams]);
+  const data = await getCompetitionPageData(path, single(query.temporada));
   if (!data) return { title: "Competición" };
   const names = data.crumbs.map((crumb) => crumb.name).reverse();
   return { title: `${names.join(" · ")} ${data.season.name}` };
@@ -50,12 +50,12 @@ function CompetitionSkeleton() {
 }
 
 async function CompetitionContent({ params, searchParams }: Props) {
-  const [{ ruta }, query] = await Promise.all([params, searchParams]);
-  const data = await getCompetitionPageData(ruta, single(query.temporada));
+  const [{ path }, query] = await Promise.all([params, searchParams]);
+  const data = await getCompetitionPageData(path, single(query.temporada));
   if (!data) notFound();
 
-  // Las jornadas se navegan con ?jornada=, conservando la temporada.
-  const basePath = `/competiciones/${ruta.join("/")}`;
+  // Rounds are navigated with ?jornada=, keeping the season.
+  const basePath = `/competiciones/${path.join("/")}`;
   const roundHref = (key: string) => {
     const search = new URLSearchParams();
     const season = single(query.temporada);
@@ -239,7 +239,7 @@ function Rounds({
 function RoundMatch({ match, roundDay, data }: { match: Match; roundDay: string; data: CompetitionPageData }) {
   const focus = match.homeId === data.focusTeamId || match.awayId === data.focusTeamId;
   const pending = !match.played && match.date < data.now;
-  // Un partido aplazado a otro día enseña la fecha en lugar de la hora.
+  // A match postponed to another day shows the date instead of the time.
   const when = dayKey(match.date) === roundDay ? match.date.slice(11, 16) : formatShortDate(match.date);
   return (
     <Link

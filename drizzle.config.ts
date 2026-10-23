@@ -3,7 +3,7 @@ import { defineConfig } from "drizzle-kit";
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
-  // "turso" usa libSQL: sirve igual para un fichero local (file:) que para Turso (libsql://).
+  // "turso" uses libSQL: it works both for a local file (file:) and for Turso (libsql://).
   dialect: "turso",
   dbCredentials: {
     url: process.env.DATABASE_URL ?? "file:data/futbol.db",

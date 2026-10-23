@@ -101,7 +101,7 @@ function naturalCompare(a: string, b: string) {
 
 export async function getHomeData(): Promise<HomeData> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
 
   const now = nowInMadrid();
   const today = dayKey(now);
@@ -117,7 +117,7 @@ export async function getHomeData(): Promise<HomeData> {
   const tree = new LeagueTree(leagues);
   const teamName = new Map(teams.map((t) => [t.id, t.name]));
 
-  // Competición principal: la que más partidos tiene esta temporada.
+  // Main competition: the one with the most matches this season.
   const byCompetition = new Map<number, Match[]>();
   for (const match of matches) {
     const id = match.competitionId;
@@ -127,7 +127,7 @@ export async function getHomeData(): Promise<HomeData> {
   const mainId = [...byCompetition.entries()].sort((a, b) => b[1].length - a[1].length)[0]?.[0];
   const mainMatches = mainId ? (byCompetition.get(mainId) ?? []) : [];
 
-  // Equipo principal (Embat por defecto).
+  // Focus team (Embat by default).
   let focus: FocusBlock | null = null;
   if (focusTeam) {
     const context = buildTeamContext(focusTeam.id, matches, tree, now);
@@ -144,7 +144,7 @@ export async function getHomeData(): Promise<HomeData> {
     };
   }
 
-  // Partidos del día (hoy o la próxima fecha con partidos).
+  // Matches of the day (today or the next date with matches).
   const picked = pickDay(matches, today);
   const dayMatches = picked ? matches.filter((m) => dayKey(m.date) === picked.date) : [];
   const labels = new Set<string>();
@@ -173,7 +173,7 @@ export async function getHomeData(): Promise<HomeData> {
   };
   day.labels = [...labels];
 
-  // Competiciones de la temporada.
+  // The season's competitions.
   const winners = new Map<number, string[]>();
   for (const t of tournaments) {
     if (!t.competitionId || !t.winnerId) continue;
@@ -202,7 +202,7 @@ export async function getHomeData(): Promise<HomeData> {
   const order = { live: 0, starting: 1, upcoming: 2, finished: 3 };
   competitions.sort((a, b) => order[a.status] - order[b.status] || b.total - a.total);
 
-  // Líderes de los grupos de la fase en curso de la competición principal.
+  // Group leaders of the main competition's current phase.
   const lastPlayed = [...mainMatches].reverse().find((m) => m.played);
   const phase = lastPlayed ? tree.path(tree.deepest(lastPlayed.leagueIds)!.id)[1] : undefined;
   const groupMatches = new Map<number, Match[]>();
@@ -229,7 +229,7 @@ export async function getHomeData(): Promise<HomeData> {
   }
   groupLeaders.sort((a, b) => naturalCompare(a.groupName, b.groupName));
 
-  // Pichichi de la competición principal (la Corporate Cup y otras copas no cuentan).
+  // Top scorers of the main competition (the Corporate Cup and other cups do not count).
   const goals = new Map<number, { goals: number; teamId: number }>();
   for (const match of mainMatches) {
     for (const scorer of match.scorers) {
@@ -249,7 +249,7 @@ export async function getHomeData(): Promise<HomeData> {
     photoUrl: players[playerId]?.photoUrl ?? null,
   }));
 
-  // Resumen de los últimos 7 días.
+  // Summary of the last 7 days.
   const from = addDays(today, -7);
   const weekMatches = matches.filter((m) => m.played && dayKey(m.date) >= from && dayKey(m.date) <= today);
   const bigWins = [...weekMatches]

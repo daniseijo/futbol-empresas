@@ -1,6 +1,6 @@
-// Lecturas de la base de datos propia para las páginas. Nunca llaman a la API
-// de la liga: eso lo hace la sincronización (src/sync). Las lecturas se cachean
-// con "use cache" y la sincronización las invalida con la etiqueta "datos".
+// Database reads for the pages. They never call the league API: the sync does
+// that (src/sync). Reads are cached with "use cache" and the sync invalidates
+// them through the "data" tag.
 
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
@@ -19,20 +19,20 @@ import type {
   TeamSummary,
 } from "./sportspress/types";
 
-export const DATA_TAG = "datos";
+export const DATA_TAG = "data";
 
-/** Hora de Madrid de la última sincronización que trajo los cambios de la API, o null si nunca ha corrido. */
+/** Madrid time of the last sync that pulled the API changes, or null if it never ran. */
 export async function getLastSync(): Promise<string | null> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
   cacheTag(DATA_TAG);
-  const row = await db.query.syncState.findFirst({ where: eq(schema.syncState.key, "cambios") });
+  const row = await db.query.syncState.findFirst({ where: eq(schema.syncState.key, "changes") });
   return row?.value ?? null;
 }
 
 export async function getSeasons(): Promise<Season[]> {
   "use cache";
-  cacheLife("catalogo");
+  cacheLife("catalog");
   cacheTag(DATA_TAG);
   const rows = await db.select().from(schema.seasons);
   return rows.sort((a, b) => a.name.localeCompare(b.name));
@@ -45,15 +45,15 @@ export async function getCurrentSeason(): Promise<Season> {
 
 export async function getLeagues(): Promise<League[]> {
   "use cache";
-  cacheLife("catalogo");
+  cacheLife("catalog");
   cacheTag(DATA_TAG);
   return db.select().from(schema.leagues);
 }
 
-/** Pares grupo–temporada con partidos (el grupo es el nodo más profundo de cada partido). */
+/** Group–season pairs with matches (the group is each match's deepest node). */
 export async function getGroupSeasons(): Promise<{ groupId: number; seasonId: number }[]> {
   "use cache";
-  cacheLife("catalogo");
+  cacheLife("catalog");
   cacheTag(DATA_TAG);
   const m = schema.matches;
   const rows = await db.selectDistinct({ groupId: m.groupId, seasonId: m.seasonId }).from(m);
@@ -62,7 +62,7 @@ export async function getGroupSeasons(): Promise<{ groupId: number; seasonId: nu
 
 export async function getTeams(): Promise<TeamSummary[]> {
   "use cache";
-  cacheLife("catalogo");
+  cacheLife("catalog");
   cacheTag(DATA_TAG);
   const rows = await db
     .select({
@@ -78,7 +78,7 @@ export async function getTeams(): Promise<TeamSummary[]> {
 
 export async function getTeam(slug: string): Promise<Team | null> {
   "use cache";
-  cacheLife("catalogo");
+  cacheLife("catalog");
   cacheTag(DATA_TAG);
   const row = await db.query.teams.findFirst({ where: eq(schema.teams.slug, slug) });
   if (!row) return null;
@@ -101,10 +101,9 @@ const homeTeam = alias(schema.teams, "home_team");
 const awayTeam = alias(schema.teams, "away_team");
 
 /**
- * Partidos con el nombre actual de cada equipo. El título del partido en la
- * API a veces nombra a otro equipo (p. ej. «Roche Pharma» cuando juega Roche
- * Femenino), así que el nombre sale del equipo enlazado; el del título queda
- * como respaldo.
+ * Matches with each team's current name. The match title in the API sometimes
+ * names another team (e.g. "Roche Pharma" when Roche Femenino plays), so the
+ * name comes from the linked team; the title's is kept as a fallback.
  */
 function selectMatches() {
   return db
@@ -145,7 +144,7 @@ function toMatchDetail(row: MatchRow, scorers: Scorer[]): MatchDetail {
   };
 }
 
-/** Jugadores con algo que contar en cada partido (goles, asistencias, premios). */
+/** Players with something to show in each match (goals, assists, awards). */
 async function scorersFor(matchIds: number[]): Promise<Map<number, Scorer[]>> {
   const result = new Map<number, Scorer[]>();
   if (matchIds.length === 0) return result;
@@ -176,20 +175,20 @@ async function scorersFor(matchIds: number[]): Promise<Map<number, Scorer[]>> {
   return result;
 }
 
-/** Todos los partidos de una temporada, con goleadores. */
+/** Every match of a season, with scorers. */
 export async function getSeasonMatches(seasonId: number): Promise<Match[]> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
   cacheTag(DATA_TAG);
   const rows = await selectMatches().where(eq(schema.matches.seasonId, seasonId)).orderBy(schema.matches.date);
   const scorers = await scorersFor(rows.map((r) => r.match.id));
   return rows.map((row) => toMatch(row, scorers.get(row.match.id) ?? []));
 }
 
-/** Partidos de un grupo con sus fotos. */
+/** A group's matches with their photos. */
 export async function getGroupMatches(groupId: number, seasonId: number): Promise<MatchDetail[]> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
   cacheTag(DATA_TAG);
   const rows = await selectMatches()
     .where(and(eq(schema.matches.groupId, groupId), eq(schema.matches.seasonId, seasonId)))
@@ -198,10 +197,10 @@ export async function getGroupMatches(groupId: number, seasonId: number): Promis
   return rows.map((row) => toMatchDetail(row, scorers.get(row.match.id) ?? []));
 }
 
-/** Un partido con sus fotos, su vídeo y el acta completa de los dos equipos. */
+/** A match with its photos, video and both teams' full match sheets. */
 export async function getMatch(id: number): Promise<{ match: MatchDetail; lineups: LineupPlayer[] } | null> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
   cacheTag(DATA_TAG);
   const [row] = await selectMatches().where(eq(schema.matches.id, id)).limit(1);
   if (!row) return null;
@@ -234,10 +233,10 @@ export async function getMatch(id: number): Promise<{ match: MatchDetail; lineup
   return { match: toMatchDetail(row, scorers.get(id) ?? []), lineups };
 }
 
-/** Todos los partidos de un equipo, de cualquier temporada, por fecha. */
+/** Every match of a team, from any season, by date. */
 export async function getTeamMatches(teamId: number): Promise<Match[]> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
   cacheTag(DATA_TAG);
   const m = schema.matches;
   const rows = await selectMatches()
@@ -246,10 +245,10 @@ export async function getTeamMatches(teamId: number): Promise<Match[]> {
   return rows.map((row) => toMatch(row, []));
 }
 
-/** Todos los enfrentamientos entre dos equipos, de cualquier temporada, del más reciente al más antiguo. */
+/** Every meeting between two teams, from any season, most recent first. */
 export async function getHeadToHead(teamA: number, teamB: number): Promise<Match[]> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
   cacheTag(DATA_TAG);
   const m = schema.matches;
   const rows = await selectMatches()
@@ -266,7 +265,7 @@ export interface PlayerInfo {
 
 export async function getPlayers(ids: number[]): Promise<Record<number, PlayerInfo>> {
   "use cache";
-  cacheLife("catalogo");
+  cacheLife("catalog");
   cacheTag(DATA_TAG);
   if (ids.length === 0) return {};
   const rows = await db.select().from(schema.players).where(inArray(schema.players.id, ids));
@@ -287,15 +286,15 @@ export interface PlayerLine {
 }
 
 /**
- * Ficha, actas y plantillas de un jugador, de cualquier temporada y equipo, por
- * fecha. null si no aparece en ninguna parte. Muchos jugadores con ficha
- * privada no tienen fila en `players`: entonces el nombre va vacío.
+ * A player's profile, match sheets and squads, from any season and team, by
+ * date. null if they appear nowhere. Many players with a private profile have
+ * no `players` row: their name is then empty.
  */
 export async function getPlayerCareer(
   playerId: number,
 ): Promise<{ player: PlayerInfo; lines: PlayerLine[]; squads: PlayerSquadEntry[] } | null> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
   cacheTag(DATA_TAG);
   const mp = schema.matchPlayers;
   const [rows, player, squads] = await Promise.all([
@@ -343,10 +342,10 @@ export async function getPlayerCareer(
   };
 }
 
-/** Plantilla de la temporada en curso con las estadísticas que calcula la liga. */
+/** Current season squad with the stats the league computes. */
 export async function getSquad(teamId: number): Promise<SquadPlayer[]> {
   "use cache";
-  cacheLife("resultados");
+  cacheLife("results");
   cacheTag(DATA_TAG);
   const rows = await db
     .select({ squad: schema.squadPlayers, player: schema.players })
@@ -380,7 +379,7 @@ export interface TournamentWinner {
 
 export async function getSeasonTournaments(seasonId: number): Promise<TournamentWinner[]> {
   "use cache";
-  cacheLife("catalogo");
+  cacheLife("catalog");
   cacheTag(DATA_TAG);
   return db
     .select({
@@ -402,7 +401,7 @@ export interface NewsItem {
 
 export async function getLatestNews(count: number): Promise<NewsItem[]> {
   "use cache";
-  cacheLife("catalogo");
+  cacheLife("catalog");
   cacheTag(DATA_TAG);
   return db.select().from(schema.news).orderBy(desc(schema.news.date)).limit(count);
 }

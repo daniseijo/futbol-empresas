@@ -1,10 +1,10 @@
-// Sincronización API → base de datos, progresiva y reanudable.
+// API → database sync, progressive and resumable.
 //
-// Cada ejecución hace primero lo barato y urgente (catálogo y cambios desde la
-// última vez) y después avanza en la carga inicial por orden de prioridad hasta
-// agotar su presupuesto de tiempo. Guarda el avance tras cada unidad (una página
-// de partidos, un equipo), así que si la API falla o se acaba el tiempo, la
-// siguiente ejecución sigue donde se quedó. La web funciona con datos parciales.
+// Each run first does the cheap, urgent work (catalog and changes since the
+// last run) and then advances the initial backfill in priority order until its
+// time budget runs out. Progress is saved after every unit (a page of matches,
+// a team), so if the API fails or time runs out, the next run picks up where
+// this one stopped. The site works with partial data.
 
 import { and, desc, eq, getTableColumns, gte, inArray, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import { migrate } from "drizzle-orm/libsql/migrator";
@@ -33,7 +33,7 @@ import {
 } from "./fetch";
 
 const BATCH = 200;
-/** Margen al pedir cambios desde la última sincronización, por si hubo cambios durante ella. */
+/** Overlap when asking for changes since the last sync, in case something changed during it. */
 const OVERLAP_MINUTES = 60;
 
 type Log = (message: string) => void;
@@ -45,15 +45,15 @@ interface Context {
   seasons: Season[];
   current: Season;
   lookup: LeagueLookup;
-  /** Cuántas filas se han escrito (para saber si hay que avisar a la web). */
+  /** Rows written (to know whether the site needs revalidating). */
   writes: number;
 }
 
 const hasTime = (ctx: Context) => ctx.deadline === null || Date.now() < ctx.deadline;
 
-// --- Utilidades de base de datos -------------------------------------------------
+// --- Database helpers ---------------------------------------------------------------
 
-/** INSERT ... ON CONFLICT DO UPDATE con todas las columnas que traen las filas. */
+/** INSERT ... ON CONFLICT DO UPDATE with every column the rows carry. */
 async function upsert<T extends SQLiteTable>(table: T, rows: T["$inferInsert"][], target: SQLiteTable["_"]["columns"][string][]) {
   if (rows.length === 0) return;
   const columns = getTableColumns(table);
@@ -103,7 +103,7 @@ async function saveMatches(ctx: Context, rows: { match: MatchRow; lineups: Match
   return touched;
 }
 
-// --- Unidades de trabajo -----------------------------------------------------------
+// --- Units of work ------------------------------------------------------------------
 
 async function syncTeamDetail(ctx: Context, teamId: number) {
   const detail = await fetchTeamDetail(teamId);
@@ -126,35 +126,35 @@ async function syncSquad(ctx: Context, teamId: number) {
   ctx.writes += 1;
 }
 
-// --- Tareas de la carga inicial (en orden de prioridad) ------------------------------
+// --- Initial backfill tasks (in priority order) --------------------------------------
 
-/** Todas las páginas de partidos de una temporada, con cursor de página. */
+/** Every page of a season's matches, with a page cursor. */
 async function backfillSeasonMatches(ctx: Context, season: Season): Promise<boolean> {
-  const key = `carga:partidos:${season.id}`;
+  const key = `backfill:matches:${season.id}`;
   const state = await getState(key);
-  if (state === "hecho") return true;
+  if (state === "done") return true;
   let page = state ? Number(state) : 1;
   while (hasTime(ctx)) {
     let result;
     try {
       result = await fetchMatchesPage({ seasonId: season.id }, page, ctx.lookup);
     } catch (error) {
-      // Página fuera de rango (se borraron partidos): la temporada está completa.
+      // Page out of range (matches were deleted): the season is complete.
       if (error instanceof SportsPressError && error.status === 400) break;
       throw error;
     }
     await saveMatches(ctx, result.rows);
-    ctx.log(`Partidos ${season.name}: página ${page}/${result.totalPages}`);
+    ctx.log(`Matches ${season.name}: page ${page}/${result.totalPages}`);
     if (page >= result.totalPages) break;
     page += 1;
     await setState(key, String(page));
   }
   if (!hasTime(ctx)) return false;
-  await setState(key, "hecho");
+  await setState(key, "done");
   return true;
 }
 
-/** Procesa equipos uno a uno; la consulta ya excluye los hechos, así que es reanudable. */
+/** Processes teams one by one; the query already skips finished ones, so it is resumable. */
 async function forEachTeam(ctx: Context, label: string, teamIds: number[], work: (teamId: number) => Promise<void>): Promise<boolean> {
   for (const [index, teamId] of teamIds.entries()) {
     if (!hasTime(ctx)) return false;
@@ -181,7 +181,7 @@ async function pendingTeams(
   return rows.map((r) => r.id);
 }
 
-/** El equipo principal y sus rivales de grupo: lo que se ve en la portada. */
+/** The focus team and its group rivals: what the home page shows. */
 async function focusTeamIds(ctx: Context): Promise<number[]> {
   const focus = await db.query.teams.findFirst({ where: eq(schema.teams.slug, siteConfig.focusTeamSlug) });
   if (!focus) return [];
@@ -204,10 +204,10 @@ async function focusTeamIds(ctx: Context): Promise<number[]> {
 }
 
 /**
- * Nombres de jugadores que aparecen en alineaciones y aún no conocemos.
- * `withStats`: solo los que tienen algo que contar (goles, asistencias,
- * premios), que son los que salen en la portada. `/players` tarda ~10 s por
- * llamada, así que el resto va con menos prioridad.
+ * Names of players who appear in lineups and are not known yet.
+ * `withStats`: only those with something to show (goals, assists, awards),
+ * which are the ones on the home page. `/players` takes ~10 s per call, so
+ * the rest get lower priority.
  */
 async function backfillPlayerNames(ctx: Context, { withStats }: { withStats: boolean }): Promise<boolean> {
   const mp = schema.matchPlayers;
@@ -226,29 +226,29 @@ async function backfillPlayerNames(ctx: Context, { withStats }: { withStats: boo
     if (rows.length === 0) return true;
     const ids = rows.map((r) => r.id);
     const names = await fetchPlayerNames(ids);
-    // Los que la API ya no devuelve (jugadores borrados) se guardan sin nombre
-    // para no volver a pedirlos en cada ejecución.
+    // Players the API no longer returns (deleted or private) are stored without
+    // a name so they are not requested again on every run.
     const missing = ids.filter((id) => !names.some((n) => n.id === id)).map((id) => ({ id, name: "" }));
     await upsert(schema.players, [...names, ...missing], [schema.players.id]);
     ctx.writes += names.length;
-    ctx.log(`Jugadores: ${names.length} nombres nuevos`);
+    ctx.log(`Players: ${names.length} new names`);
   }
   return false;
 }
 
-/** Cada partido sin vídeo se vuelve a mirar como mucho cada 6 horas. */
+/** A match without a video is checked again at most every 6 hours. */
 const VIDEO_RECHECK_MINUTES = 6 * 60;
-/** El resumen se publica uno o dos días después; pasadas dos semanas no se busca más a menudo. */
+/** Highlights come out a day or two later; after two weeks they are no longer checked as often. */
 const VIDEO_RECENT_DAYS = 14;
-/** Las páginas web tardan varios segundos: se piden tantas a la vez como deja el cliente. */
+/** Web pages take several seconds: fetch as many at once as the client allows. */
 const VIDEO_CONCURRENCY = 2;
 
 /**
- * Busca el resumen en vídeo en la página web de cada partido (la API no lo da).
- * `current`: partidos jugados de la temporada actual sin vídeo. Los que nunca
- * se han mirado, siempre; los de las dos últimas semanas, otra vez cada 6 horas
- * (el vídeo se publica uno o dos días después del partido).
- * Si no: cualquier partido jugado que nunca se haya mirado (el histórico).
+ * Looks for the video highlights on each match's web page (the API lacks them).
+ * `current`: played matches of the current season without a video. Those never
+ * checked, always; those from the last two weeks, again every 6 hours (the
+ * video comes out a day or two after the match).
+ * Otherwise: any played match that was never checked (the archive).
  */
 async function backfillMatchVideos(ctx: Context, { current }: { current: boolean }): Promise<boolean> {
   const m = schema.matches;
@@ -275,7 +275,7 @@ async function backfillMatchVideos(ctx: Context, { current }: { current: boolean
       await Promise.all(
         rows.slice(i, i + VIDEO_CONCURRENCY).map(async ({ id }) => {
           const video = await fetchMatchVideo(id).catch((error) => {
-            if (error instanceof SportsPressError) return null; // página borrada o no publicada
+            if (error instanceof SportsPressError) return null; // page deleted or unpublished
             throw error;
           });
           await db
@@ -290,12 +290,12 @@ async function backfillMatchVideos(ctx: Context, { current }: { current: boolean
         }),
       );
     }
-    ctx.log(`Vídeos${current ? "" : " (histórico)"}: ${found} encontrados en ${checked} partidos`);
+    ctx.log(`Videos${current ? "" : " (archive)"}: ${found} found in ${checked} matches`);
   }
   return hasTime(ctx);
 }
 
-// --- Orquestación ------------------------------------------------------------------
+// --- Orchestration ------------------------------------------------------------------
 
 export interface SyncResult {
   writes: number;
@@ -314,10 +314,10 @@ export async function runSync({
   if (reset) {
     await db.delete(schema.syncState);
     await db.update(schema.teams).set({ detailSyncedAt: null, squadSyncedAt: null });
-    log("Estado de la carga reiniciado: se volverá a descargar todo");
+    log("Backfill state reset: everything will be downloaded again");
   }
 
-  // Catálogo: temporadas y árbol de competiciones (3 llamadas, siempre).
+  // Catalog: seasons and the competition tree (3 calls, always).
   const seasons = (await fetchSeasons()).sort((a, b) => a.name.localeCompare(b.name));
   const leagues = await fetchLeagues();
   await upsert(schema.seasons, seasons, [schema.seasons.id]);
@@ -332,17 +332,17 @@ export async function runSync({
     lookup: { deepest: (ids) => tree.deepest(ids)?.id ?? null, root: (id) => tree.competitionOf(id)?.id ?? null },
     writes: 0,
   };
-  log(`Temporada actual ${ctx.current.name}${budgetSeconds ? ` · presupuesto ${budgetSeconds} s` : ""}`);
+  log(`Current season ${ctx.current.name}${budgetSeconds ? ` · budget ${budgetSeconds} s` : ""}`);
 
-  // 0. Partidos pedidos expresamente (pnpm sync -- --partidos=1,2,3).
+  // 0. Matches requested explicitly (pnpm sync -- --matches=1,2,3).
   for (let i = 0; i < matchIds.length; i += 50) {
     const result = await fetchMatchesPage({ ids: matchIds.slice(i, i + 50) }, 1, ctx.lookup);
     await saveMatches(ctx, result.rows);
-    log(`Partidos vueltos a descargar: ${result.rows.map((r) => r.match.id).join(", ")}`);
+    log(`Matches downloaded again: ${result.rows.map((r) => r.match.id).join(", ")}`);
   }
 
-  // 1. Cambios desde la última ejecución (barato: solo lo modificado).
-  const since = await getState("cambios");
+  // 1. Changes since the last run (cheap: only what was modified).
+  const since = await getState("changes");
   if (since) {
     const after = minusMinutes(since, OVERLAP_MINUTES);
     const teams = await fetchTeams(after);
@@ -353,55 +353,55 @@ export async function runSync({
       total = result.totalPages;
       for (const id of await saveMatches(ctx, result.rows)) touched.add(id);
     }
-    log(`Cambios desde ${since}: ${teams.length} equipos y ${touched.size} equipos con partidos`);
+    log(`Changes since ${since}: ${teams.length} teams and ${touched.size} teams with matches`);
     for (const teamId of teams.map((t) => t.id)) await syncTeamDetail(ctx, teamId);
     for (const teamId of touched) await syncSquad(ctx, teamId);
-  } else if (!(await getState("carga:equipos"))) {
+  } else if (!(await getState("backfill:teams"))) {
     const teams = await fetchTeams();
     await upsert(schema.teams, teams, [schema.teams.id]);
-    await setState("carga:equipos", "hecho");
-    log(`Equipos: ${teams.length}`);
+    await setState("backfill:teams", "done");
+    log(`Teams: ${teams.length}`);
   }
-  await setState("cambios", ctx.startedAt);
+  await setState("changes", ctx.startedAt);
   await upsert(schema.tournaments, await fetchTournaments(ctx.current.id), [schema.tournaments.id]);
   await upsert(schema.news, await fetchNews(10), [schema.news.id]);
 
-  // 2. Carga inicial por prioridad, hasta agotar el presupuesto.
+  // 2. Initial backfill by priority, until the budget runs out.
   const tasks: [string, () => Promise<boolean>][] = [
-    [`Partidos ${ctx.current.name}`, () => backfillSeasonMatches(ctx, ctx.current)],
+    [`Matches ${ctx.current.name}`, () => backfillSeasonMatches(ctx, ctx.current)],
     [
-      "Equipo principal y su grupo",
+      "Focus team and its group",
       async () => {
         const ids = await focusTeamIds(ctx);
-        const details = await forEachTeam(ctx, "Detalle (grupo)", await pendingTeams(ctx, schema.teams.detailSyncedAt, ids), (id) => syncTeamDetail(ctx, id));
-        const squads = await forEachTeam(ctx, "Plantillas (grupo)", await pendingTeams(ctx, schema.teams.squadSyncedAt, ids), (id) => syncSquad(ctx, id));
+        const details = await forEachTeam(ctx, "Details (group)", await pendingTeams(ctx, schema.teams.detailSyncedAt, ids), (id) => syncTeamDetail(ctx, id));
+        const squads = await forEachTeam(ctx, "Squads (group)", await pendingTeams(ctx, schema.teams.squadSyncedAt, ids), (id) => syncSquad(ctx, id));
         return details && squads;
       },
     ],
-    ["Nombres de goleadores", () => backfillPlayerNames(ctx, { withStats: true })],
-    ["Vídeos de la temporada actual", () => backfillMatchVideos(ctx, { current: true })],
+    ["Scorer names", () => backfillPlayerNames(ctx, { withStats: true })],
+    ["Current season videos", () => backfillMatchVideos(ctx, { current: true })],
     [
-      "Detalle de equipos",
+      "Team details",
       async () =>
-        forEachTeam(ctx, "Detalle de equipos", await pendingTeams(ctx, schema.teams.detailSyncedAt), (id) => syncTeamDetail(ctx, id)),
+        forEachTeam(ctx, "Team details", await pendingTeams(ctx, schema.teams.detailSyncedAt), (id) => syncTeamDetail(ctx, id)),
     ],
-    ["Plantillas", async () => forEachTeam(ctx, "Plantillas", await pendingTeams(ctx, schema.teams.squadSyncedAt), (id) => syncSquad(ctx, id))],
-    ["Nombres de las alineaciones", () => backfillPlayerNames(ctx, { withStats: false })],
+    ["Squads", async () => forEachTeam(ctx, "Squads", await pendingTeams(ctx, schema.teams.squadSyncedAt), (id) => syncSquad(ctx, id))],
+    ["Lineup names", () => backfillPlayerNames(ctx, { withStats: false })],
     [
-      "Campeones de temporadas pasadas",
+      "Past season champions",
       async () => {
-        if ((await getState("carga:torneos")) === "hecho") return true;
+        if ((await getState("backfill:tournaments")) === "done") return true;
         for (const season of ctx.seasons) await upsert(schema.tournaments, await fetchTournaments(season.id), [schema.tournaments.id]);
-        await setState("carga:torneos", "hecho");
+        await setState("backfill:tournaments", "done");
         return true;
       },
     ],
     ...[...ctx.seasons]
       .reverse()
       .slice(1)
-      .map((season): [string, () => Promise<boolean>] => [`Partidos ${season.name}`, () => backfillSeasonMatches(ctx, season)]),
-    ["Nombres de las alineaciones (histórico)", () => backfillPlayerNames(ctx, { withStats: false })],
-    ["Vídeos (histórico)", () => backfillMatchVideos(ctx, { current: false })],
+      .map((season): [string, () => Promise<boolean>] => [`Matches ${season.name}`, () => backfillSeasonMatches(ctx, season)]),
+    ["Lineup names (archive)", () => backfillPlayerNames(ctx, { withStats: false })],
+    ["Videos (archive)", () => backfillMatchVideos(ctx, { current: false })],
   ];
 
   const pending: string[] = [];
@@ -410,6 +410,6 @@ export async function runSync({
   }
 
   const seconds = Math.round((Date.now() - started) / 1000);
-  log(pending.length ? `Pausa a los ${seconds} s. Pendiente: ${pending.join(", ")}` : `Todo al día en ${seconds} s`);
+  log(pending.length ? `Paused after ${seconds} s. Pending: ${pending.join(", ")}` : `All up to date in ${seconds} s`);
   return { writes: ctx.writes, pending, seconds };
 }

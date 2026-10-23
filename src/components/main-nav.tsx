@@ -15,9 +15,9 @@ const LINKS = [
 ];
 
 /**
- * En rutas con parámetros que no se generan en el build, la URL no se conoce al
- * prerenderizar y usePathname() suspende: mientras tanto se pintan los mismos
- * enlaces sin marcar el activo, así el menú sigue en la parte estática.
+ * On routes with params not generated at build time, the URL is unknown while
+ * prerendering and usePathname() suspends: meanwhile the same links render
+ * without the active one marked, so the menu stays in the static shell.
  */
 export function MainNav() {
   return (

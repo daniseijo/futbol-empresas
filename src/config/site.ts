@@ -2,8 +2,8 @@ export const siteConfig = {
   name: "Futbolempresas",
   description: "La liga de fútbol 7 entre empresas de Madrid: resultados, clasificaciones y equipos.",
   /**
-   * Equipo principal de la web. Se destaca en la portada y es el destino de
-   * «Tu equipo». Para cambiarlo basta con NEXT_PUBLIC_FOCUS_TEAM_SLUG.
+   * The site's focus team. Highlighted on the home page and the target of
+   * "Tu equipo". Set NEXT_PUBLIC_FOCUS_TEAM_SLUG to change it.
    */
   focusTeamSlug: process.env.NEXT_PUBLIC_FOCUS_TEAM_SLUG ?? "embat",
   apiBase: "https://www.futbolempresas.es/wp-json",

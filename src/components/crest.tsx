@@ -11,7 +11,7 @@ export function initials(name: string): string {
     .toUpperCase();
 }
 
-/** Escudo de un equipo. Sin escudo, muestra sus iniciales con la misma forma. */
+/** A team's crest. Without one, shows its initials in the same shape. */
 export function Crest({
   src,
   name,

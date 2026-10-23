@@ -28,7 +28,7 @@ function PlayerRow({ player, rank }: { player: SquadPlayer; rank?: number }) {
   );
 }
 
-/** Plantilla agrupada por posición u ordenada por valor de mercado. */
+/** Squad grouped by position or sorted by market value. */
 export function SquadView({ squad }: { squad: SquadPlayer[] }) {
   const [view, setView] = useState<"position" | "value">("position");
   const total = squad.reduce((sum, p) => sum + p.marketValue, 0);

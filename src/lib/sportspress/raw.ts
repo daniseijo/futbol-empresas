@@ -1,5 +1,5 @@
-// Formas crudas de la API (solo los campos que usamos). Todo lo que viene de
-// WordPress llega como texto: números, marcadores y estadísticas.
+// Raw API shapes (only the fields we use). Everything from WordPress arrives
+// as text: numbers, scores and stats.
 
 export interface RawRendered {
   rendered: string;
@@ -48,7 +48,7 @@ export interface RawEvent {
   teams: number[];
   main_results: string[];
   results?: Record<string, Record<string, unknown>>;
-  /** { [teamId]: { [playerId | "0"]: fila } }; en partidos futuros puede venir como array. */
+  /** { [teamId]: { [playerId | "0"]: row } }; for future matches it may be an array. */
   performance?: Record<string, Record<string, RawPerformanceRow> | RawPerformanceRow[]>;
   content?: RawRendered;
 }

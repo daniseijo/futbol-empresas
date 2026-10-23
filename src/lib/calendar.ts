@@ -3,7 +3,7 @@ import type { Match } from "@/lib/sportspress/types";
 
 const MATCH_MINUTES = 60;
 
-/** Enlace a Google Calendar para añadir un partido (1 h, hora de Madrid). */
+/** Google Calendar link to add a match (1 h, Madrid time). */
 export function calendarUrl(match: Match, location: string): string {
   const [date, time] = match.date.split("T");
   const [hours, minutes] = time.split(":").map(Number);

@@ -22,12 +22,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className={`${inter.variable} ${barlow.variable} h-full antialiased`}>
-      {/* Extensiones como Grammarly añaden atributos al <body> antes de hidratar. */}
+      {/* Extensions such as Grammarly add attributes to <body> before hydration. */}
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <SiteHeader />
         <div className="flex-1">{children}</div>
         <SiteFooter />
-        {/* Visitas y rendimiento real en Vercel; fuera de Vercel no envían nada. */}
+        {/* Visits and real-user performance on Vercel; outside Vercel they send nothing. */}
         <Analytics />
         <SpeedInsights />
       </body>

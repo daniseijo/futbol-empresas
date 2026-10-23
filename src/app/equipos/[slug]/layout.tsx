@@ -4,7 +4,7 @@ import { TeamHeader, TeamHeaderSkeleton } from "@/components/team/team-header";
 import { siteConfig } from "@/config/site";
 import { getTeamPageData } from "@/lib/views/team";
 
-/** En el build se generan el equipo principal y sus rivales de grupo; el resto, en la primera visita. */
+/** The build generates the focus team and its group rivals; the rest, on first visit. */
 export async function generateStaticParams() {
   const data = await getTeamPageData(siteConfig.focusTeamSlug);
   const rivals = data ? data.standings.map((row) => data.slugs[row.teamId]).filter(Boolean) : [];
