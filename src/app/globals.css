@@ -25,13 +25,17 @@
   --font-display: var(--font-barlow), "Arial Narrow", sans-serif;
 }
 
-/* What shows when the page bounces past its top or bottom: the header's and footer's white, not grey. */
-html {
+/*
+ * The page itself is white like the header and footer, and only the content area between them
+ * (in the root layout) is grey. iOS paints the space shown when the page bounces past its top
+ * with the body's colour, so a grey body showed a grey strip above the header.
+ */
+html,
+body {
   background: var(--color-surface);
 }
 
 body {
-  background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
 }

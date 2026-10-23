@@ -35,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       {/* On phones the bottom padding leaves room for MainNav's tab bar. */}
       <body className="flex min-h-full flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom))] sm:pb-0" suppressHydrationWarning>
         <SiteHeader />
-        <div className="flex-1">{children}</div>
+        <div className="flex-1 bg-canvas pb-16">{children}</div>
         <SiteFooter />
         {/* Visits and real-user performance on Vercel; outside Vercel they send nothing. */}
         <Analytics />

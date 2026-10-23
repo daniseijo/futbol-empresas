@@ -5,7 +5,7 @@ import { LastSync } from "./last-sync";
 export async function SiteFooter() {
   const lastSync = await getLastSync();
   return (
-    <footer className="mt-16 border-t border-line bg-surface">
+    <footer className="border-t border-line bg-surface">
       <div className="mx-auto flex max-w-7xl flex-wrap justify-between gap-3 px-4 py-6 text-sm text-muted sm:px-6">
         <span>
           Datos de{" "}
