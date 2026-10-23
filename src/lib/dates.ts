@@ -64,11 +64,14 @@ export function formatNewsDate(stamp: string): string {
   return `${day} ${MONTHS_SHORT[month - 1]} ${year}`;
 }
 
+/** Calendar days from `from` to `to`, ignoring the time of day. */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${dayKey(to)}T00:00:00Z`) - Date.parse(`${dayKey(from)}T00:00:00Z`)) / 86_400_000);
+}
+
 /** "Hoy", "Mañana" or the short date, relative to the reference day. */
 export function relativeDay(stamp: string, today: string): string {
-  const diff = Math.round(
-    (Date.parse(`${dayKey(stamp)}T00:00:00Z`) - Date.parse(`${dayKey(today)}T00:00:00Z`)) / 86_400_000,
-  );
+  const diff = daysBetween(today, stamp);
   if (diff === 0) return "Hoy";
   if (diff === 1) return "Mañana";
   if (diff === -1) return "Ayer";

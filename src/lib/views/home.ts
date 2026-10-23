@@ -17,16 +17,22 @@ import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, StandingRow } from "@/lib/sportspress/types";
 import { getVenue } from "@/lib/sportspress/venues";
 import { computeStandings } from "@/lib/standings";
-import { buildTeamContext, type TeamContext } from "./team-context";
+import { getFeatured, type FeaturedTeam } from "./featured";
+import { buildTeamContext } from "./team-context";
 
 export interface DayMatch {
   id: number;
   time: string;
+  homeId: number;
+  awayId: number;
   home: string;
   away: string;
+  homePosition: number | null;
+  awayPosition: number | null;
   homeGoals: number | null;
   awayGoals: number | null;
   venue: string;
+  /** Group and round, "Grupo 7 · J4", or the competition outside the main one. */
   label: string | null;
   isFocus: boolean;
 }
@@ -67,18 +73,14 @@ export interface BigWin {
   awayGoals: number;
 }
 
-export interface FocusBlock extends TeamContext {
-  topScorer: { name: string; goals: number } | null;
-  mostValuable: { name: string; value: number } | null;
-  zone: StandingRow[];
-}
+export type FocusBlock = FeaturedTeam;
 
 export interface HomeData {
   now: string;
   season: Season;
-  day: { date: string; isToday: boolean; matches: DayMatch[]; venues: number; labels: string[] };
+  day: { date: string; when: "today" | "upcoming" | "past"; matches: DayMatch[]; venues: number; competition: string | null };
   focus: FocusBlock | null;
-  mainCompetition: { name: string; teams: number; groups: number; played: number; goals: number; venues: number };
+  mainCompetition: { id: number | null; name: string; played: number; goals: number };
   competitions: CompetitionCard[];
   groupsPhase: string;
   groupLeaders: GroupLeader[];
@@ -87,12 +89,12 @@ export interface HomeData {
   news: NewsItem | null;
 }
 
-function pickDay(matches: Match[], today: string): { date: string; isToday: boolean } | null {
-  if (matches.some((m) => dayKey(m.date) === today)) return { date: today, isToday: true };
+function pickDay(matches: Match[], today: string): { date: string; when: HomeData["day"]["when"] } | null {
+  if (matches.some((m) => dayKey(m.date) === today)) return { date: today, when: "today" };
   const next = matches.find((m) => dayKey(m.date) > today);
-  if (next) return { date: dayKey(next.date), isToday: false };
+  if (next) return { date: dayKey(next.date), when: "upcoming" };
   const last = [...matches].reverse().find((m) => dayKey(m.date) < today);
-  return last ? { date: dayKey(last.date), isToday: false } : null;
+  return last ? { date: dayKey(last.date), when: "past" } : null;
 }
 
 function naturalCompare(a: string, b: string) {
@@ -132,46 +134,50 @@ export async function getHomeData(): Promise<HomeData> {
   if (focusTeam) {
     const context = buildTeamContext(focusTeam.id, matches, tree, now);
     const squad = await getSquad(focusTeam.id);
-    const topScorer = [...squad].sort((a, b) => b.goals - a.goals)[0];
-    const mostValuable = [...squad].sort((a, b) => b.marketValue - a.marketValue)[0];
-    const index = context.standings.findIndex((row) => row.teamId === focusTeam.id);
-    const start = Math.max(0, Math.min(index - 2, context.standings.length - 4));
-    focus = {
-      ...context,
-      topScorer: topScorer && topScorer.goals > 0 ? { name: topScorer.name, goals: topScorer.goals } : null,
-      mostValuable: mostValuable ? { name: mostValuable.name, value: mostValuable.marketValue } : null,
-      zone: index >= 0 ? context.standings.slice(start, start + 4) : [],
-    };
+    focus = { ...context, ...(await getFeatured(context, matches, squad, now)) };
   }
 
   // Matches of the day (today or the next date with matches).
   const picked = pickDay(matches, today);
   const dayMatches = picked ? matches.filter((m) => dayKey(m.date) === picked.date) : [];
-  const labels = new Set<string>();
-  const day = {
+  const groupStandings = new Map<number, StandingRow[]>();
+  const positionIn = (groupId: number | null, teamId: number) => {
+    if (!groupId) return null;
+    if (!groupStandings.has(groupId)) groupStandings.set(groupId, computeStandings(matches.filter((m) => m.groupId === groupId)));
+    return groupStandings.get(groupId)!.find((r) => r.teamId === teamId)?.position ?? null;
+  };
+  const dayCompetitions = new Set(dayMatches.map((m) => m.competitionId));
+  const onlyCompetition = dayCompetitions.size === 1 ? [...dayCompetitions][0] : null;
+  const day: HomeData["day"] = {
     date: picked?.date ?? today,
-    isToday: picked?.isToday ?? false,
+    when: picked?.when ?? "upcoming",
     venues: new Set(dayMatches.map((m) => m.venueId)).size,
-    labels: [] as string[],
+    competition: onlyCompetition ? tree.name(onlyCompetition) : null,
     matches: dayMatches.map((m) => {
-      const deepest = tree.deepest(m.leagueIds);
-      const competition = deepest ? tree.competitionOf(deepest.id) : undefined;
-      const label = competition ? `${competition.name}${m.round ? ` · J${m.round}` : ""}` : null;
-      if (label) labels.add(label);
+      const round = m.round ? ` · J${m.round}` : "";
+      const where =
+        m.competitionId && m.competitionId !== mainId
+          ? tree.name(m.competitionId)
+          : m.groupId && m.groupId !== m.competitionId
+            ? tree.name(m.groupId)
+            : null;
       return {
         id: m.id,
         time: m.date.slice(11, 16),
+        homeId: m.homeId,
+        awayId: m.awayId,
         home: m.homeName,
         away: m.awayName,
+        homePosition: positionIn(m.groupId, m.homeId),
+        awayPosition: positionIn(m.groupId, m.awayId),
         homeGoals: m.homeGoals,
         awayGoals: m.awayGoals,
         venue: getVenue(m.venueId)?.name ?? "",
-        label: competition && competition.id !== mainId ? competition.name : null,
+        label: where ? `${where}${round}` : null,
         isFocus: focusTeam ? m.homeId === focusTeam.id || m.awayId === focusTeam.id : false,
       };
     }),
   };
-  day.labels = [...labels];
 
   // The season's competitions.
   const winners = new Map<number, string[]>();
@@ -264,12 +270,10 @@ export async function getHomeData(): Promise<HomeData> {
     day,
     focus,
     mainCompetition: {
+      id: mainId ?? null,
       name: mainId ? tree.name(mainId) : "",
-      teams: new Set(mainMatches.flatMap((m) => [m.homeId, m.awayId])).size,
-      groups: groupMatches.size,
       played: mainPlayed.length,
       goals: mainPlayed.reduce((sum, m) => sum + m.homeGoals! + m.awayGoals!, 0),
-      venues: new Set(matches.map((m) => m.venueId).filter(Boolean)).size,
     },
     competitions,
     groupsPhase: phase?.name ?? "",
