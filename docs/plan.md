@@ -14,7 +14,7 @@ names. Only the archive videos are left; the scheduled GitHub action keeps check
   the API returns 404, they are missing from the match page and the squad lists, and their web profile is a 404.
   Only their id remains on the API match sheet, so the site shows them by shirt number ("Dorsal 7").
 - [ ] Past season videos: the "Videos (archive)" task is last in the queue; check how many it finds
-  (about 3 in 4 matches so far).
+  (about 3 in 4 matches so far). Plan: [08 · Archive videos](plans/08-archive-videos.md).
 
 ## 2. Deployment (Vercel + Turso + GitHub Actions)
 
@@ -38,7 +38,7 @@ See the steps in the README.
 - [x] **Group / competition** (`/competiciones/...`): standings, browsable rounds, top scorers and the group's
   MVP, linked from the home page, the match page and the team standings.
   - [ ] Cups without groups (Corporate Cup): they now show a table with all their teams; a bracket or a list
-    of knockout rounds would be better.
+    of knockout rounds would be better. Plan: [09 · Cup brackets](plans/09-cup-brackets.md).
 - [x] **Player** (`/jugadores/[id]`): matches, goals with minute, MVP, teams per season and photo, linked from
   lineups, top scorers, MVP, squad and team leaders.
 - [x] **Venue** (`/campos/[id]`, index at `/campos`): a map in the site's colours (MapLibre + OpenFreeMap), address, the next date with matches
@@ -55,21 +55,23 @@ See the steps in the README.
 - [x] Home page: if there are no matches today, show the next round and the latest results instead of
   "0 partidos". The home page now shows the next date with matches, and the focus team's last result or next
   match's preview (also on the team summary).
-- [ ] Match page: lineups on a pitch (optional).
+- [ ] Match page: lineups on a pitch (optional). Plan: [10 · Lineups on a pitch](plans/10-lineups-on-pitch.md).
 - [ ] Team: a "Share" button in the site's style. Plan: [06 · Sharing and SEO](plans/06-share-and-seo.md).
 - [ ] Search: search players too. Plan: [05 · Player search](plans/05-player-search.md).
 - [ ] SEO: `sitemap.xml`, Open Graph images per match and team. Plan:
   [06 · Sharing and SEO](plans/06-share-and-seo.md).
 - [ ] A real 404 page: it currently answers 200 because the content is streamed. In development, the first load
   of a 404 sometimes throws "cannot have a negative time stamp" in `performance.measure` (from React, not the site).
+  Plan: [11 · A real 404](plans/11-real-404.md).
 
 ## 5. Quality
 
 - [x] Unit tests for `parse.ts` (titles, goals with minute, shortcodes), `standings.ts` and video matching, plus
   cards, the featured match rules, dates and the sync's match mapping. `pnpm test`; CI runs lint, types and tests
   on every push (`.github/workflows/ci.yml`).
-- [ ] End-to-end test of the sync against recorded API responses.
-- [ ] Accessibility review (coral on white contrast, focus, screen readers on the timeline).
+- [ ] End-to-end test of the sync against recorded API responses. Plan: [12 · End-to-end sync test](plans/12-sync-e2e-test.md).
+- [ ] Accessibility review (coral on white contrast, focus, screen readers on the timeline). Plan:
+  [13 · Accessibility review](plans/13-accessibility.md).
 - [x] Alerts when the sync fails: a `sync-failure` issue that opens on failure and closes on the next success,
   and the footer's last sync date in red after 12 hours. Plan: [03 · Sync monitoring](plans/03-sync-monitoring.md).
 
