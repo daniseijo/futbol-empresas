@@ -46,8 +46,9 @@ export function TeamSearch({ teams }: { teams: SearchableTeam[] }) {
   const showList = open && query.trim().length > 0;
 
   return (
-    <div className="relative w-full sm:w-72">
-      <label className="flex h-11 items-center gap-2 rounded-[10px] border border-line bg-canvas px-3">
+    // On phones the results drop below the whole header row, not just the narrow field.
+    <div className="min-w-0 flex-1 sm:relative sm:w-72 sm:flex-none">
+      <label className="flex h-11 items-center gap-1.5 rounded-[10px] border border-line bg-canvas px-2.5 sm:gap-2 sm:px-3">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted" aria-hidden="true">
           <circle cx="11" cy="11" r="7" />
           <path d="M20 20l-3.5-3.5" />
@@ -60,7 +61,7 @@ export function TeamSearch({ teams }: { teams: SearchableTeam[] }) {
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={showList && results[highlight] ? `${listId}-${highlight}` : undefined}
-          placeholder="Busca tu empresa"
+          placeholder="Buscar empresa"
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -83,14 +84,15 @@ export function TeamSearch({ teams }: { teams: SearchableTeam[] }) {
               setOpen(false);
             }
           }}
-          className="w-full bg-transparent text-sm outline-none placeholder:text-muted"
+          // 16px on phones: iOS Safari zooms into smaller fields when they get focus.
+          className="w-full bg-transparent text-base outline-none placeholder:text-muted sm:text-sm"
         />
       </label>
       {showList && (
         <ul
           id={listId}
           role="listbox"
-          className="absolute right-0 left-0 z-20 mt-1.5 overflow-hidden rounded-xl border border-line bg-surface p-1.5 shadow-lg"
+          className="absolute inset-x-4 z-20 mt-1.5 sm:inset-x-0 overflow-hidden rounded-xl border border-line bg-surface p-1.5 shadow-lg"
         >
           {results.length === 0 && <li className="px-2.5 py-2 text-sm text-muted">Ninguna empresa coincide</li>}
           {results.map((team, index) => (
