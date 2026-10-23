@@ -81,6 +81,18 @@ export function extractFlickrAlbum(html: string | undefined): string | null {
   return match ? match[0] : null;
 }
 
+/** The YouTube video in a match web page's "Video" section (sp-event-video), if any. */
+export function parseMatchVideo(html: string): { id: string; title: string | null } | null {
+  const start = html.indexOf("sp-event-video");
+  if (start === -1) return null;
+  const section = html.slice(start, start + 4000);
+  // The iframe is blocked by the cookie banner: the real URL is escaped inside data-wpca-marked-data.
+  const id = section.match(/youtube(?:-nocookie)?\.com\\?\/embed\\?\/([\w-]{11})/)?.[1];
+  if (!id) return null;
+  const title = section.match(/<iframe[^>]*\stitle="([^"]*)"/)?.[1];
+  return { id, title: title ? decodeHtml(title) : null };
+}
+
 /** Id of the media used as the team header (first vc_single_image). */
 export function extractHeaderMediaId(html: string | undefined): number | null {
   if (!html) return null;

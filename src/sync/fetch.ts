@@ -14,6 +14,7 @@ import {
   isPlaceholderTeamPhoto,
   parseEventTitle,
   parseGoals,
+  parseMatchVideo,
   toNumber,
 } from "@/lib/sportspress/parse";
 import type {
@@ -118,15 +119,7 @@ export async function fetchTeamDetail(teamId: number) {
  * "Video" section (sp-event-video).
  */
 export async function fetchMatchVideo(matchId: number): Promise<{ id: string; title: string | null } | null> {
-  const html = await getHtml(`/?post_type=sp_event&p=${matchId}`);
-  const start = html.indexOf("sp-event-video");
-  if (start === -1) return null;
-  const section = html.slice(start, start + 4000);
-  // The iframe is blocked by the cookie banner: the real URL is escaped inside data-wpca-marked-data.
-  const id = section.match(/youtube(?:-nocookie)?\.com\\?\/embed\\?\/([\w-]{11})/)?.[1];
-  if (!id) return null;
-  const title = section.match(/<iframe[^>]*\stitle="([^"]*)"/)?.[1];
-  return { id, title: title ? decodeHtml(title) : null };
+  return parseMatchVideo(await getHtml(`/?post_type=sp_event&p=${matchId}`));
 }
 
 /** Title and thumbnail of a YouTube playlist or video (public oEmbed). */
@@ -182,7 +175,7 @@ export interface LeagueLookup {
   root(id: number): number | null;
 }
 
-function mapEvent(raw: RawEvent & { modified?: string }, leagues: LeagueLookup) {
+export function mapEvent(raw: RawEvent & { modified?: string }, leagues: LeagueLookup) {
   if (raw.teams.length !== 2) return null;
   const { round, home, away } = parseEventTitle(raw.title.rendered);
   const [homeResult, awayResult] = raw.main_results ?? [];

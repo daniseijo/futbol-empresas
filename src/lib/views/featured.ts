@@ -1,11 +1,7 @@
-import { daysBetween } from "@/lib/dates";
 import type { Match, SquadPlayer } from "@/lib/sportspress/types";
-import { computeStandings } from "@/lib/standings";
+import { featuredMode, positionBefore } from "./featured-rules";
 import { getMatchPageData, type MatchPageData } from "./match";
 import type { TeamContext } from "./team-context";
-
-/** Days before the next match from which its preview replaces the last result. */
-export const PREVIEW_DAYS = 2;
 
 /** The match a team's summary puts first (on the home page and the team page). */
 export interface Featured {
@@ -23,17 +19,11 @@ export type FeaturedTeam = TeamContext & Featured;
 
 export async function getFeatured(context: TeamContext, seasonMatches: Match[], squad: SquadPlayer[], now: string): Promise<Featured> {
   const last = context.lastResults[0] ?? null;
-  const daysToNext = context.nextMatch ? daysBetween(now, context.nextMatch.date) : null;
-  const mode = context.nextMatch && (!last || daysToNext! <= PREVIEW_DAYS) ? "preview" : "result";
-  const featuredMatch = mode === "preview" ? context.nextMatch : last;
-  const featured = featuredMatch ? await getMatchPageData(featuredMatch.id) : null;
+  const { mode, matchId, daysToNext } = featuredMode(context, now);
+  const featured = matchId ? await getMatchPageData(matchId) : null;
 
-  let previousPosition: number | null = null;
-  if (mode === "result" && last?.round && context.group) {
-    const groupId = context.group.id;
-    const before = computeStandings(seasonMatches.filter((m) => m.leagueIds.includes(groupId) && m.round !== last.round));
-    previousPosition = before.find((r) => r.teamId === context.teamId)?.position ?? null;
-  }
+  const previousPosition =
+    mode === "result" && last?.round && context.group ? positionBefore(seasonMatches, context.group.id, context.teamId, last.round) : null;
 
   const mvp = [...squad].sort((a, b) => b.mvpPoints - a.mvpPoints)[0];
   return {

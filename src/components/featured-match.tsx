@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { Crest } from "@/components/crest";
 import { FormBadges, OutcomeBadge } from "@/components/form-badges";
-import { CardIcon, sendingOff } from "@/components/player-events";
+import { CardIcon } from "@/components/player-events";
 import { calendarUrl } from "@/lib/calendar";
+import { sendingOff } from "@/lib/cards";
 import { daysBetween, formatShortDate, relativeDay } from "@/lib/dates";
-import type { Match, Outcome, StandingRow } from "@/lib/sportspress/types";
+import type { Match, Outcome } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import { outcomeFor } from "@/lib/standings";
 import type { FeaturedTeam } from "@/lib/views/featured";
+import { gap, trend } from "@/lib/views/featured-rules";
 import type { MatchPageData, TeamSide } from "@/lib/views/match";
 
 const decimal = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -331,25 +333,4 @@ function goalsByPlayer(data: MatchPageData, teamId: number) {
 function mvpDetail(goals: number, team: string | undefined) {
   const parts = [team, goals > 0 && `${goals} ${goals === 1 ? "gol" : "goles"}`].filter(Boolean);
   return parts.length > 0 ? parts.join(" · ") : null;
-}
-
-/** "Sube a 7º", "Baja a 9º" or "Sigue 9º" after the last round. */
-function trend(position: number, previous: number | null) {
-  if (previous === null || previous === position) return previous === null ? `${position}º` : `Sigue ${position}º`;
-  return `${position < previous ? "Sube" : "Baja"} a ${position}º`;
-}
-
-/** The distance to the team right above (or, for the leader, to the second). */
-function gap(rows: StandingRow[], row: StandingRow) {
-  const points = (n: number) => `${n} ${n === 1 ? "punto" : "puntos"}`;
-  if (row.position === 1) {
-    const second = rows[1];
-    if (!second) return null;
-    const lead = row.points - second.points;
-    return lead > 0 ? `${points(lead)} por delante de ${second.name}` : `Empatado a puntos con ${second.name}`;
-  }
-  const above = rows[rows.indexOf(row) - 1];
-  if (!above) return null;
-  const diff = above.points - row.points;
-  return diff === 0 ? `Empatado a puntos con ${above.name}` : `A ${points(diff)} de ${above.name}`;
 }
