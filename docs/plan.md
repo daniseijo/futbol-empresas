@@ -28,9 +28,10 @@ See the steps in the README.
   started it at 11:27 UTC instead of 09:07 and dropped the 06:07 one; the night before, 5 of the ~21 match-night
   runs showed up (all `skipped` then). Scheduled runs work but are late or missing on busy hours.
 - [x] Monthly keepalive against the 60-day schedule shutdown (`.github/workflows/keepalive.yml`).
-- [ ] Trigger the sync from an external cron on match nights so it does not depend on GitHub's schedule.
-  Needs a fine-grained token and an account on a cron service; steps in the README ("Keeping an eye on the
-  sync").
+- [x] Trigger the sync from an external cron on match nights so it does not depend on GitHub's schedule.
+  Since 23 Oct 2026 cron-job.org calls `workflow_dispatch` every 20 minutes, 19:00–23:59 Madrid time, Monday to
+  Friday, with a fine-grained token limited to Actions on this repository. Steps in the README ("Keeping an eye
+  on the sync").
 
 ## 3. New pages
 
