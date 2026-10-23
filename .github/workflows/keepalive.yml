@@ -1,0 +1,24 @@
+name: Keep schedules alive
+
+# GitHub disables scheduled workflows in public repositories after 60 days
+# without commits, and the sync never commits (it writes to Turso). Enabling a
+# workflow through the API resets that count, so once a month this re-enables
+# the sync and itself.
+on:
+  schedule:
+    - cron: "17 4 1 * *"
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - run: |
+          gh workflow enable sync.yml
+          gh workflow enable keepalive.yml
