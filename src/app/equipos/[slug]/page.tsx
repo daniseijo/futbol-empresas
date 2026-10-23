@@ -1,16 +1,10 @@
 import Image from "next/image";
-import Link from "next/link";
-import { Crest } from "@/components/crest";
-import { FormBadges } from "@/components/form-badges";
+import { FeaturedFooter, FeaturedHero } from "@/components/featured-match";
 import { Leaders } from "@/components/team/leaders";
 import { MatchRow } from "@/components/team/match-row";
 import { SectionCard } from "@/components/team/section-card";
 import { StandingsZone } from "@/components/team/standings-table";
 import { VideoEmbed } from "@/components/video-embed";
-import { calendarUrl } from "@/lib/calendar";
-import { formatLongDate, relativeDay } from "@/lib/dates";
-import type { Match } from "@/lib/sportspress/types";
-import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import type { TeamPageData } from "@/lib/views/team";
 import { tabMetadata, TeamTab } from "./team-page";
 
@@ -28,7 +22,14 @@ function Summary({ data }: { data: TeamPageData }) {
   return (
     <div className="flex flex-wrap gap-6">
       <div className="flex min-w-0 flex-[999_1_640px] flex-col gap-5.5">
-        {data.nextMatch && <NextMatchCard data={data} match={data.nextMatch} />}
+        {data.featured && (
+          <section className="flex flex-col overflow-hidden rounded-[22px] border border-line bg-surface">
+            <div className="flex flex-col gap-5 px-5 py-6 sm:px-7">
+              <FeaturedHero team={data} logos={data.logos} slugs={data.slugs} now={data.now} teamPath={base} />
+            </div>
+            <FeaturedFooter team={data} />
+          </section>
+        )}
 
         <SectionCard title="Últimos resultados" link={{ href: `${base}/partidos`, label: "Todos los partidos" }}>
           {recent.length === 0 ? (
@@ -75,67 +76,6 @@ function Summary({ data }: { data: TeamPageData }) {
         <SeasonNumbers data={data} />
       </aside>
     </div>
-  );
-}
-
-function NextMatchCard({ data, match }: { data: TeamPageData; match: Match }) {
-  const venue = getVenue(match.venueId);
-  const side = (teamId: number, name: string, align: "left" | "right") => {
-    const row = data.standings.find((r) => r.teamId === teamId);
-    return (
-      <div
-        className={`flex min-w-0 flex-col-reverse items-center gap-2 text-center sm:flex-row sm:gap-4 ${
-          align === "right" ? "sm:flex-row-reverse sm:text-left" : "sm:justify-end sm:text-right"
-        }`}
-      >
-        <div className="min-w-0">
-          <div className="font-display text-[22px] leading-none font-extrabold [overflow-wrap:anywhere] uppercase sm:text-[40px]">{name}</div>
-          {row && (
-            <div className="mt-1 flex items-center gap-2 text-[13px] font-medium max-sm:hidden">
-              {row.position}º · {row.points} pts <FormBadges form={row.form.slice(-3)} size={20} />
-            </div>
-          )}
-        </div>
-        <Crest src={data.logos[teamId]} name={name} size={72} />
-      </div>
-    );
-  };
-  return (
-    <article className="flex flex-col gap-5 rounded-[22px] bg-accent p-6.5 text-on-accent">
-      <div className="flex flex-wrap justify-between gap-3 text-sm font-bold tracking-[0.08em] uppercase">
-        <span>
-          Próximo partido · {relativeDay(match.date, data.now)} · {formatLongDate(match.date)} · {match.date.slice(11, 16)}
-        </span>
-        {match.round && <span>Jornada {match.round}</span>}
-      </div>
-      <Link href={`/partidos/${match.id}`} className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 sm:gap-6">
-        {side(match.homeId, match.homeName, "left")}
-        <div className="font-display text-[28px] font-extrabold sm:text-[40px]">VS</div>
-        {side(match.awayId, match.awayName, "right")}
-      </Link>
-      {venue && (
-        <div className="flex flex-wrap items-center justify-between gap-3.5 border-t border-ink/20 pt-4">
-          <div>
-            <div className="font-semibold">{venue.name}</div>
-            {venue.address && <div className="text-[13px]">{venue.address}</div>}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href={`/partidos/${match.id}`} className="rounded-[10px] bg-ink px-4 py-3 text-sm font-semibold text-white">
-              Ver la previa
-            </Link>
-            <a href={mapsUrl(venue)} className="rounded-[10px] bg-white px-4 py-3 text-sm font-semibold text-ink">
-              Cómo llegar
-            </a>
-            <a
-              href={calendarUrl(match, venue.address ? `${venue.name}, ${venue.address}` : venue.name)}
-              className="rounded-[10px] border-[1.5px] border-on-accent px-4 py-[11px] text-sm font-semibold"
-            >
-              Añadir al calendario
-            </a>
-          </div>
-        </div>
-      )}
-    </article>
   );
 }
 

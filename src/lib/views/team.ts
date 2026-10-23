@@ -4,6 +4,7 @@ import { getCurrentSeason, getGroupMatches, getLeagues, getSeasonMatches, getSea
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, SquadPlayer, Team } from "@/lib/sportspress/types";
 import { outcomeFor } from "@/lib/standings";
+import { getFeatured, type Featured } from "./featured";
 import { buildTeamContext, involves, type TeamContext } from "./team-context";
 
 export type SeasonEntry =
@@ -15,7 +16,7 @@ export interface Photo {
   caption: string;
 }
 
-export interface TeamPageData extends TeamContext {
+export interface TeamPageData extends TeamContext, Featured {
   team: Team;
   season: Season;
   now: string;
@@ -123,9 +124,11 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
   const logos = Object.fromEntries(teams.map((t) => [t.id, t.logoUrl]));
   const slugs = Object.fromEntries(teams.map((t) => [t.id, t.slug]));
   const heroPhoto = team.photoUrl ? { url: team.photoUrl, caption: "" } : (photos[0] ?? null);
+  const featured = await getFeatured(context, seasonMatches, squad, now);
 
   return {
     ...context,
+    ...featured,
     team,
     season,
     now,
