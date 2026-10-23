@@ -3,12 +3,14 @@ import { Crest } from "./crest";
 const MATCH_MINUTES = 50;
 const HALF_MINUTES = 25;
 /** Minimum gap between labels on the same side, in % of the width (~5 minutes). */
-const MIN_GAP_PERCENT = 10;
-const LEVELS = 3;
+const MIN_GAP_PERCENT = 11;
+const LEVELS = 5;
 /** Stem height per level and label height, in px. */
-const STEM_BASE = 22;
-const STEM_STEP = 54;
-const LABEL_HEIGHT = 50;
+const STEM_BASE = 20;
+const STEM_STEP = 44;
+const LABEL_HEIGHT = 36;
+/** Room for a crest next to the axis on each side, in px. */
+const MIN_HALF = 56;
 
 interface TimelineGoal {
   minute: number;
@@ -48,8 +50,9 @@ function place(goals: TimelineGoal[]): PlacedGoal[] {
 }
 
 function halfHeight(goals: PlacedGoal[]) {
-  const maxLevel = Math.max(0, ...goals.map((g) => g.level));
-  return STEM_BASE + maxLevel * STEM_STEP + LABEL_HEIGHT + 8;
+  if (goals.length === 0) return MIN_HALF;
+  const maxLevel = Math.max(...goals.map((g) => g.level));
+  return Math.max(MIN_HALF, STEM_BASE + maxLevel * STEM_STEP + LABEL_HEIGHT + 8);
 }
 
 function lastName(name: string) {
@@ -64,76 +67,89 @@ function GoalMark({ goal, side }: { goal: PlacedGoal; side: "home" | "away" }) {
   const align = goal.percent < 6 ? "translate-x-0 items-start text-left" : goal.percent > 94 ? "-translate-x-full items-end text-right" : "-translate-x-1/2 items-center text-center";
   return (
     <div className="absolute inset-y-0" style={{ left: `${goal.percent}%` }}>
-      <span className={`absolute top-1/2 left-0 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white ${color}`} />
+      <span className={`absolute top-1/2 left-0 z-20 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white ${color}`} />
       <span
         className={`absolute left-0 w-0.5 -translate-x-1/2 ${color}`}
         style={side === "home" ? { bottom: "50%", height: stem } : { top: "50%", height: stem }}
       />
       <div
-        className={`absolute left-0 z-10 flex w-max max-w-28 flex-col gap-0.5 rounded-md bg-surface px-1 py-0.5 ${align}`}
-        style={side === "home" ? { bottom: `calc(50% + ${stem + 4}px)` } : { top: `calc(50% + ${stem + 4}px)` }}
+        className={`absolute left-0 z-10 flex w-max max-w-28 flex-col gap-px rounded-md bg-surface px-1 py-0.5 ${align}`}
+        style={side === "home" ? { bottom: `calc(50% + ${stem + 2}px)` } : { top: `calc(50% + ${stem + 2}px)` }}
       >
-        <span
-          className={`rounded px-1.5 py-px text-[10px] font-extrabold tracking-[0.08em] ${
-            side === "home" ? "bg-accent text-on-accent" : "bg-ink text-white"
-          }`}
-        >
-          GOL
-        </span>
         <span className="truncate text-[13px] leading-tight font-bold">{lastName(goal.playerName)}</span>
         <span className="text-xs leading-tight text-muted">
-          {goal.minute}′ · {goal.score}
+          <b className={side === "home" ? "text-accent-text" : "text-ink"}>{goal.minute}′</b> · {goal.score}
         </span>
       </div>
     </div>
   );
 }
 
+/** A team's crest at the start of its side of the axis, ringed in its colour; the name is for screen readers. */
+function TeamCrest({ team, side, top }: { team: TimelineTeam; side: "home" | "away"; top: number }) {
+  return (
+    <span
+      title={team.name}
+      className={`absolute left-0 flex rounded-[9px] ring-2 ${side === "home" ? "ring-accent" : "ring-ink"}`}
+      style={side === "home" ? { top: top - 46 } : { top: top + 10 }}
+    >
+      <Crest src={team.logoUrl} name={team.name} size={36} />
+      <span className="sr-only">{team.name}</span>
+    </span>
+  );
+}
+
 /**
  * Match timeline: an axis from 0′ to 50′ with home goals above and away goals
- * below.
+ * below, each team's crest at the start of its side and the half-time score on
+ * the axis.
  */
 export function MatchTimeline({
   goals,
   home,
   away,
   halftime,
-  finalScore,
 }: {
   goals: TimelineGoal[];
   home: TimelineTeam;
   away: TimelineTeam;
   halftime: string | null;
-  finalScore: string;
 }) {
   const homeGoals = place(goals.filter((g) => g.teamId === home.id));
   const awayGoals = place(goals.filter((g) => g.teamId === away.id));
   const top = halfHeight(homeGoals);
   const bottom = halfHeight(awayGoals);
-  const ticks = Array.from({ length: MATCH_MINUTES / 5 + 1 }, (_, i) => i * 5);
+  const height = top + bottom;
+  const ticks = [10, 20, 30, 40];
 
   return (
-    <div className="hidden grid-cols-[170px_minmax(0,1fr)] gap-x-6 lg:grid" aria-label="Línea de tiempo de los goles">
-      <div className="grid" style={{ gridTemplateRows: `${top}px ${bottom}px` }}>
-        {[home, away].map((team, index) => (
-          <div key={team.id} className={`flex min-w-0 items-center gap-2.5 ${index === 0 ? "self-end pb-6" : "self-start pt-6"}`}>
-            <Crest src={team.logoUrl} name={team.name} size={26} />
-            <span className="truncate text-sm font-semibold">{team.name}</span>
-            <span className={`size-2 shrink-0 rounded-full ${index === 0 ? "bg-accent" : "bg-ink"}`} />
-          </div>
-        ))}
+    <div className="hidden grid-cols-[36px_30px_minmax(0,1fr)_30px] lg:grid" aria-label="Línea de tiempo de los goles">
+      <div className="relative" style={{ height }}>
+        <TeamCrest team={home} side="home" top={top} />
+        <TeamCrest team={away} side="away" top={top} />
+      </div>
+      <div className="relative" style={{ height }}>
+        <span className="absolute right-1.5 -translate-y-1/2 text-[11px] font-semibold text-muted" style={{ top }}>
+          0′
+        </span>
       </div>
 
-      <div className="relative" style={{ height: top + bottom }}>
-        {/* Axis and ticks every 5 minutes */}
-        <div className="absolute inset-x-0 h-0.5 -translate-y-1/2 rounded-full bg-ink/25" style={{ top }} />
+      <div className="relative" style={{ height }}>
+        {/* Axis, a tick every 10 minutes and the half-time score */}
+        <div className="absolute inset-x-0 h-0.5 -translate-y-1/2 rounded-full bg-ink/20" style={{ top }} />
         {ticks.map((minute) => (
-          <div key={minute} className="absolute" style={{ top, left: `${percentOf(minute)}%` }}>
-            <span
-              className={`absolute left-0 -translate-x-1/2 -translate-y-1/2 ${minute === HALF_MINUTES ? "h-5 w-0.5 bg-ink/40" : minute % 25 === 0 ? "h-3 w-px bg-ink/25" : "h-1.5 w-px bg-ink/25"}`}
-            />
-          </div>
+          <span
+            key={minute}
+            className="absolute h-[7px] w-px -translate-x-1/2 -translate-y-1/2 bg-ink/25"
+            style={{ top, left: `${percentOf(minute)}%` }}
+          />
         ))}
+        <span
+          className="absolute z-30 -translate-x-1/2 -translate-y-1/2 rounded-full border border-line bg-surface px-2.5 py-0.5 text-[11px] font-bold whitespace-nowrap"
+          style={{ top, left: `${percentOf(HALF_MINUTES)}%` }}
+        >
+          {halftime ? `Desc. ${halftime}` : "Descanso"}
+        </span>
 
         {/* Goals: home above, away below */}
         <div className="absolute inset-x-0 top-0" style={{ height: top * 2 }}>
@@ -148,14 +164,10 @@ export function MatchTimeline({
         </div>
       </div>
 
-      {/* Axis: kick-off, half-time and full-time, on their own row so they do not clash with the goals */}
-      <span />
-      <div className="relative mt-2 h-5 border-t border-line-soft pt-1.5 text-xs text-muted">
-        <span className="absolute left-0">0′ · Inicio</span>
-        <span className="absolute -translate-x-1/2 font-semibold whitespace-nowrap text-ink" style={{ left: `${percentOf(HALF_MINUTES)}%` }}>
-          25′ · Descanso{halftime ? ` ${halftime}` : ""}
+      <div className="relative" style={{ height }}>
+        <span className="absolute left-1.5 -translate-y-1/2 text-[11px] font-semibold text-muted" style={{ top }}>
+          50′
         </span>
-        <span className="absolute right-0 font-semibold text-ink">Final {finalScore} · 50′</span>
       </div>
     </div>
   );

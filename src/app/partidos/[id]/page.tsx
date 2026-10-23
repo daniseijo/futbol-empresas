@@ -209,7 +209,6 @@ function Scoreboard({ data }: { data: MatchPageData }) {
             home={home}
             away={away}
             halftime={data.halftime}
-            finalScore={`${match.homeGoals}–${match.awayGoals}`}
           />
         )}
       </div>
