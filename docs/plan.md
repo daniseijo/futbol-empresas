@@ -1,5 +1,7 @@
 # Plan
 
+Tasks ready to hand to an agent are in [`plans/`](plans/README.md).
+
 What is left to do, in priority order. Each block is independent.
 
 ## 1. Finish the data backfill
@@ -22,7 +24,9 @@ See the steps in the README.
 - [x] Connect the repository to Vercel with `DATABASE_URL`, `DATABASE_AUTH_TOKEN` and `REVALIDATE_SECRET`.
 - [x] GitHub secrets for the sync action and `SYNC_ENABLED=true`.
 - [ ] Check the first scheduled runs. The repository is public (unlimited Actions minutes), but GitHub
-  disables schedules on public repositories after 60 days without commits.
+  disables schedules on public repositories after 60 days without commits. `SYNC_ENABLED` was created on
+  23 Oct 2026 at 06:27 UTC; every scheduled run before that was `skipped`. Plan:
+  [03 · Sync monitoring](plans/03-sync-monitoring.md).
 
 ## 3. New pages
 
@@ -32,26 +36,34 @@ See the steps in the README.
     of knockout rounds would be better.
 - [x] **Player** (`/jugadores/[id]`): matches, goals with minute, MVP, teams per season and photo, linked from
   lineups, top scorers, Crack, squad and team leaders.
-- [ ] **Venue** (`/campos/[id]`): map, address and today's matches at that venue.
-- [ ] **Women's league**: check that the home page and teams work well with its competitions.
+- [ ] **Venue** (`/campos/[id]`): map, address and today's matches at that venue. Plan:
+  [04 · Venue page](plans/04-venue-page.md).
+- [ ] **Women's league**: check that the home page and teams work well with its competitions. Plan:
+  [07 · Women's league](plans/07-womens-league.md).
+- [ ] **Matches of a day** (`/partidos/dia/[fecha]`), linked from the home page's match strip. Plan:
+  [01 · Matches of a day](plans/01-day-matches-page.md).
 
 ## 4. Improvements to what exists
 
-- [ ] Home page: if there are no matches today, show the next round and the latest results instead of
-  "0 partidos".
+- [x] Home page: if there are no matches today, show the next round and the latest results instead of
+  "0 partidos". The home page now shows the next date with matches, and the focus team's last result or next
+  match's preview (also on the team summary).
 - [ ] Match page: lineups on a pitch (optional).
-- [ ] Team: a "Share" button in the site's style.
-- [ ] Search: search players too (`players?search=`).
-- [ ] SEO: `sitemap.xml`, Open Graph images per match and team.
+- [ ] Team: a "Share" button in the site's style. Plan: [06 · Sharing and SEO](plans/06-share-and-seo.md).
+- [ ] Search: search players too. Plan: [05 · Player search](plans/05-player-search.md).
+- [ ] SEO: `sitemap.xml`, Open Graph images per match and team. Plan:
+  [06 · Sharing and SEO](plans/06-share-and-seo.md).
 - [ ] A real 404 page: it currently answers 200 because the content is streamed. In development, the first load
   of a 404 sometimes throws "cannot have a negative time stamp" in `performance.measure` (from React, not the site).
 
 ## 5. Quality
 
-- [ ] Unit tests for `parse.ts` (titles, goals with minute, shortcodes), `standings.ts` and video matching.
+- [ ] Unit tests for `parse.ts` (titles, goals with minute, shortcodes), `standings.ts` and video matching. Plan:
+  [02 · Unit tests](plans/02-unit-tests.md).
 - [ ] End-to-end test of the sync against recorded API responses.
 - [ ] Accessibility review (coral on white contrast, focus, screen readers on the timeline).
-- [ ] Alerts when the sync fails (e.g. a GitHub Actions notification).
+- [ ] Alerts when the sync fails (e.g. a GitHub Actions notification). Plan:
+  [03 · Sync monitoring](plans/03-sync-monitoring.md).
 
 ## Known API oddities
 
