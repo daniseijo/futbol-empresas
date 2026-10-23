@@ -47,6 +47,22 @@ body {
   }
 }
 
+/*
+ * Installed as an app, the page reaches under the iPhone's status bar (viewport-fit=cover)
+ * and iOS blurs whatever scrolls beneath it. A fixed band in the header's colour keeps
+ * that strip solid. Outside the installed app the inset is 0 and the band has no height.
+ */
+@media (display-mode: standalone) {
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 50;
+    height: env(safe-area-inset-top, 0px);
+    background: var(--color-surface);
+  }
+}
+
 :focus-visible {
   outline: 2px solid var(--color-accent-text);
   outline-offset: 2px;
