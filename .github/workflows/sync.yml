@@ -26,8 +26,8 @@ jobs:
     if: vars.SYNC_ENABLED == 'true'
     runs-on: ubuntu-latest
     # Room for the budget, installing and the unit running when it expires.
-    # Expressions have no arithmetic, so long manual runs get GitHub's maximum.
-    timeout-minutes: ${{ fromJSON(inputs.budget_minutes || 15) > 15 && 360 || 30 }}
+    # Expressions have no arithmetic, so long runs get GitHub's maximum.
+    timeout-minutes: ${{ (github.event.schedule == '0 7 * * 6,0' || fromJSON(inputs.budget_minutes || 15) > 15) && 360 || 30 }}
     permissions:
       contents: read
       issues: write
@@ -44,10 +44,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Progressive: resumes the backfill where it stopped and stops after the
-      # budget (15 minutes unless a manual run asks for more).
+      # budget: 15 minutes, unless a manual run asks for more. The weekend run
+      # gets 330, so a big backfill (the video archive) advances while there are
+      # no matches to delay; with nothing pending it ends in a few minutes.
       - run: SYNC_BUDGET_SECONDS=$((BUDGET_MINUTES * 60)) pnpm sync
         env:
-          BUDGET_MINUTES: ${{ inputs.budget_minutes || 15 }}
+          BUDGET_MINUTES: ${{ inputs.budget_minutes || (github.event.schedule == '0 7 * * 6,0' && 330) || 15 }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_AUTH_TOKEN: ${{ secrets.DATABASE_AUTH_TOKEN }}
           REVALIDATE_URL: ${{ secrets.REVALIDATE_URL }}

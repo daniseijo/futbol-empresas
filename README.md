@@ -76,9 +76,10 @@ the site refreshes its cache.
 The league server is slow (a squad's `/lists` call takes ~10 s, an old match page for its video ~13 s), but it
 keeps a page's time nearly flat with several at once, so the client fetches up to 6 website pages at a time
 (`PAGE_CONCURRENCY` in `src/lib/sportspress/client.ts`) and keeps the API at 2. Even so, a big backfill
-such as the video archive (~1,000 matches an hour) takes many runs. To finish it in one go, start a longer manual run:
-`gh workflow run sync.yml -f budget_minutes=120` (up to 330). Scheduled runs queue behind it, and the site only
-refreshes when it ends, so avoid match nights.
+such as the video archive (~800 matches an hour) takes many runs. To finish it sooner, start a longer manual
+run: `gh workflow run sync.yml -f budget_minutes=120` (up to 330). Scheduled runs queue behind it, and the site
+only refreshes when it ends, so avoid match nights. On Saturday and Sunday at 07:00 UTC a scheduled run gets 330
+minutes on its own; once nothing is pending it ends in a few minutes.
 
 ### Keeping an eye on the sync
 
