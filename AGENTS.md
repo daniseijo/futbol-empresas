@@ -61,6 +61,10 @@ futbolempresas.es (WordPress + SportsPress API)
   `accent` coral, `accent-text`, `accent-soft`, `loss`, `card-yellow`, `card-red`); Inter for text, Barlow Condensed
   (`font-display`, uppercase, extra bold) for headings and numbers. Use tokens, not raw colours. Every page must work
   at 390 px wide without horizontal scroll, and with or without crests and player photos.
+- **Pages are hidden, not unmounted, on navigation.** With Cache Components, Next.js keeps up to 3 previous routes
+  in React `<Activity>` (`display: none`, state and DOM kept). Anything that keeps running while hidden (a YouTube
+  iframe, timers, audio, page-level styles) must stop in a `useLayoutEffect` cleanup, as `VideoEmbed` does. See
+  `node_modules/next/dist/docs/01-app/02-guides/preserving-ui-state.md`.
 - **Players with a private profile have no name** (about half of the `players` table). Never show an empty name,
   and never try to fetch it: the league hides it everywhere.
 

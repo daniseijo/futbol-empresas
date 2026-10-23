@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 
 /**
  * YouTube video that only loads the player on play: until then it is a
@@ -11,6 +11,10 @@ export function VideoEmbed({ id, title, label = "Resumen" }: { id: string; title
   const [playing, setPlaying] = useState(false);
   // Not every video has a max-resolution thumbnail.
   const [thumbnail, setThumbnail] = useState(`https://i.ytimg.com/vi/${id}/maxresdefault.jpg`);
+
+  // Next.js hides the previous page (React <Activity>) instead of unmounting it, and a hidden
+  // YouTube iframe keeps playing over the next page. Back to the thumbnail when hidden.
+  useLayoutEffect(() => () => setPlaying(false), []);
 
   return (
     <div className="relative aspect-video overflow-hidden rounded-[22px] bg-ink">
