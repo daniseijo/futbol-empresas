@@ -36,7 +36,7 @@ See the steps in the README.
     of knockout rounds would be better.
 - [x] **Player** (`/jugadores/[id]`): matches, goals with minute, MVP, teams per season and photo, linked from
   lineups, top scorers, Crack, squad and team leaders.
-- [x] **Venue** (`/campos/[id]`, index at `/campos`): OpenStreetMap embed, address, the next date with matches
+- [x] **Venue** (`/campos/[id]`, index at `/campos`): a map in the site's colours (MapLibre + OpenFreeMap), address, the next date with matches
   there, the rest of the season and who plays there most, linked from every venue name. Plan:
   [04 · Venue page](plans/04-venue-page.md).
 - [ ] **Women's league**: check that the home page and teams work well with its competitions. Plan:

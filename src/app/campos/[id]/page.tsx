@@ -6,10 +6,11 @@ import { Crest } from "@/components/crest";
 import { DayMatchCard } from "@/components/day-match-card";
 import { Eyebrow } from "@/components/featured-match";
 import { SectionCard } from "@/components/team/section-card";
+import { VenueMap } from "@/components/venue-map";
 import { siteConfig } from "@/config/site";
 import { capitalize, daysBetween, formatLongDate, formatShortDate, relativeDay } from "@/lib/dates";
 import { getTeam, getTeams } from "@/lib/data";
-import type { Match, Venue } from "@/lib/sportspress/types";
+import type { Match } from "@/lib/sportspress/types";
 import { getVenue, getVenues, mapsUrl } from "@/lib/sportspress/venues";
 import { getVenuePageData, type VenuePageData } from "@/lib/views/venue";
 import type { DayMatch } from "@/lib/views/day";
@@ -80,7 +81,7 @@ async function VenueContent({ params }: Pick<Props, "params">) {
         </div>
       </header>
 
-      <VenueMap venue={venue} />
+      {venue.lat !== null && venue.lng !== null && <VenueMap lat={venue.lat} lng={venue.lng} name={venue.name} />}
 
       {data.day && <NextDay day={data.day} now={data.now} logos={logos} />}
 
@@ -111,21 +112,6 @@ async function VenueContent({ params }: Pick<Props, "params">) {
         )}
       </div>
     </main>
-  );
-}
-
-/** An OpenStreetMap embed around the venue: no API key, nothing running in the background. */
-function VenueMap({ venue }: { venue: Venue }) {
-  if (venue.lat === null || venue.lng === null) return null;
-  const bbox = [venue.lng - 0.004, venue.lat - 0.0025, venue.lng + 0.004, venue.lat + 0.0025].join(",");
-  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${venue.lat},${venue.lng}`;
-  return (
-    <iframe
-      src={src}
-      title={`Mapa de ${venue.name}`}
-      loading="lazy"
-      className="h-[280px] w-full rounded-[22px] border border-line bg-line-soft"
-    />
   );
 }
 
