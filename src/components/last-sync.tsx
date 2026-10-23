@@ -12,6 +12,9 @@ function subscribe(onChange: () => void) {
 const getNow = () => nowInMadrid();
 const getServerNow = () => null;
 
+// The sync runs at least every 3 hours, so older data means it has stopped.
+const STALE_MINUTES = 12 * 60;
+
 function relative(minutes: number, stamp: string): string {
   if (minutes < 1) return "ahora mismo";
   if (minutes < 60) return `hace ${minutes} min`;
@@ -26,9 +29,10 @@ function absolute(stamp: string): string {
 /** "Datos actualizados hace 12 min": when the last sync pulled changes from the API. */
 export function LastSync({ stamp }: { stamp: string }) {
   const now = useSyncExternalStore(subscribe, getNow, getServerNow);
+  const minutes = now ? minutesBetween(stamp, now) : 0;
   return (
-    <span title={`Última sincronización: ${absolute(stamp)}`}>
-      Datos actualizados <time dateTime={stamp}>{now ? relative(minutesBetween(stamp, now), stamp) : absolute(stamp)}</time>.
+    <span title={`Última sincronización: ${absolute(stamp)}`} className={minutes > STALE_MINUTES ? "text-loss" : undefined}>
+      Datos actualizados <time dateTime={stamp}>{now ? relative(minutes, stamp) : absolute(stamp)}</time>.
     </span>
   );
 }
