@@ -22,7 +22,7 @@ libSQL (Turso in production, `data/futbol.db` locally), pnpm, Node 24.
 
 ```
 futbolempresas.es (WordPress + SportsPress API)
-  └─ pnpm sync (src/sync/, GitHub Actions every 20 min on match nights, every 3 h otherwise)
+  └─ pnpm sync (src/sync/, GitHub Actions every 3 h, every 20 min on match nights via cron-job.org)
        └─ Turso database ──► POST /api/revalidate (refreshes the site's cache)
             └─ src/lib/data.ts        cached queries ("use cache", cacheLife, cacheTag(DATA_TAG))
                  └─ src/lib/views/*.ts  one function per page that composes the data

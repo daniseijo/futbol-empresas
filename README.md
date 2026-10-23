@@ -69,8 +69,9 @@ Move `futbol-copy.db` over (AirDrop, Drive...), save it as `data/futbol.db` on t
    (`https://<domain>/api/revalidate`), and the variable `SYNC_ENABLED=true`. Without that variable the
    scheduled action does not run (so it does not load the API while there is no remote database).
 
-The `.github/workflows/sync.yml` action syncs every 20 minutes on match nights (Monday to Friday) and every
-3 hours otherwise (15 minutes at most per run), then calls `/api/revalidate` so the site refreshes its cache.
+The `.github/workflows/sync.yml` action syncs every 3 hours, and an external cron starts it every 20 minutes on
+match nights (Monday to Friday, see below). Each run takes 15 minutes at most, then calls `/api/revalidate` so
+the site refreshes its cache.
 
 The league server is slow (a squad's `/lists` call takes ~10 s, a match page for its video ~3 s, two at a time),
 so a big backfill such as the video archive takes many runs. To finish it in one go, start a longer manual run:
@@ -87,7 +88,8 @@ refreshes when it ends, so avoid match nights.
   month. If a schedule was disabled anyway: `gh workflow enable sync.yml`.
 - **Late or missing scheduled runs:** GitHub's `schedule` is best effort. On busy hours it starts runs hours
   late or drops them (on 22–23 Oct 2026 the 09:07 UTC run started at 11:27, and a match night got 5 of its
-  ~21 runs). For reliable match nights, trigger the workflow from an external cron as well:
+  ~21 runs). So match nights are not on GitHub's schedule: an external cron triggers the workflow instead
+(set up on 23 Oct 2026 in cron-job.org). To set it up again:
   1. Create a fine-grained token at *GitHub › Settings › Developer settings › Fine-grained tokens*, for this
      repository only, with **Actions: Read and write** and nothing else. It expires: note the date.
   2. In an external cron service (e.g. cron-job.org, free), add a job in the `Europe/Madrid` time zone, every
