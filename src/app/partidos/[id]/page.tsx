@@ -7,12 +7,13 @@ import { Crest } from "@/components/crest";
 import { FormBadges, OutcomeBadge } from "@/components/form-badges";
 import { MatchTimeline } from "@/components/match-timeline";
 import { PlayerAvatar } from "@/components/player-avatar";
+import { PlayerEvents, PlayerEventsLegend } from "@/components/player-events";
 import { VideoEmbed } from "@/components/video-embed";
 import { siteConfig } from "@/config/site";
 import { calendarUrl } from "@/lib/calendar";
 import { getMatch, getSeasonMatches, getCurrentSeason, getTeam } from "@/lib/data";
 import { capitalize, formatLongDate, formatShortDate, relativeDay } from "@/lib/dates";
-import type { LineupPlayer, Position } from "@/lib/sportspress/types";
+import type { Position } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import { outcomeFor } from "@/lib/standings";
 import { getMatchPageData, type MatchPageData, type TeamSide } from "@/lib/views/match";
@@ -255,15 +256,6 @@ function Mvp({ data }: { data: MatchPageData }) {
 
 const POSITION_ORDER: (Position | null)[] = ["POR", "DEF", "MED", "DEL", null];
 
-function events(p: LineupPlayer) {
-  const parts: string[] = [];
-  if (p.goals > 0) parts.push(p.minutes.length ? p.minutes.map((m) => `● ${m}′`).join(" ") : "●".repeat(p.goals));
-  if (p.assists > 0) parts.push("◆".repeat(p.assists));
-  if (p.yellowCards > 0) parts.push("▮".repeat(p.yellowCards));
-  if (p.redCards > 0) parts.push("roja");
-  return parts.join("  ");
-}
-
 function Lineups({ data }: { data: MatchPageData }) {
   return (
     <Card title="Alineaciones">
@@ -277,6 +269,9 @@ function Lineups({ data }: { data: MatchPageData }) {
                 <span className="font-bold">{side.name}</span>
                 <span className="text-[13px] text-muted">
                   {side.lineup.length} {side.lineup.length === 1 ? "jugador" : "jugadores"}
+                </span>
+                <span className="ml-auto text-xs text-muted" title="Puntuación que da la liga a cada jugador en el partido">
+                  Puntos
                 </span>
               </div>
               {sorted.length === 0 && <p className="py-3 text-sm text-muted">Sin alineación publicada.</p>}
@@ -294,7 +289,10 @@ function Lineups({ data }: { data: MatchPageData }) {
                       <span className="ml-1.5 rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent-text">MVP</span>
                     )}
                   </span>
-                  <span className="text-xs font-semibold whitespace-nowrap text-accent-text">{events(p)}</span>
+                  {/* Always a cell, even when empty, so the points stay in their column. */}
+                  <span>
+                    <PlayerEvents goals={p.goals} minutes={p.minutes} assists={p.assists} yellowCards={p.yellowCards} redCards={p.redCards} />
+                  </span>
                   <span className="text-right text-[13px] text-muted">{p.points ? decimal.format(p.points) : ""}</span>
                 </Link>
               ))}
@@ -308,7 +306,7 @@ function Lineups({ data }: { data: MatchPageData }) {
           );
         })}
       </div>
-      <p className="text-xs text-muted">● gol (con minuto) · ◆ asistencia · ▮ amarilla · a la derecha, puntos del jugador en el partido</p>
+      <PlayerEventsLegend extra="Puntos: la puntuación que da la liga a cada jugador en el partido" />
     </Card>
   );
 }

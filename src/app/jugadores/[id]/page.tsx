@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { Crest } from "@/components/crest";
 import { OutcomeBadge } from "@/components/form-badges";
 import { PlayerAvatar } from "@/components/player-avatar";
+import { PlayerEvents } from "@/components/player-events";
 import { SectionCard } from "@/components/team/section-card";
 import { formatShortDate } from "@/lib/dates";
 import type { Position } from "@/lib/sportspress/types";
@@ -155,12 +156,9 @@ function MatchLine({ row, data }: { row: PlayerMatchRow; data: PlayerPageData })
   // so home or away is only the fixture order and is not shown.
   const own = isHome ? match.homeGoals : match.awayGoals;
   const against = isHome ? match.awayGoals : match.homeGoals;
-  const events = [
-    row.goals > 0 && (row.minutes.length ? row.minutes.map((m) => `● ${m}′`).join(" ") : "●".repeat(row.goals)),
-    row.assists > 0 && "◆".repeat(row.assists),
-    row.yellowCards > 0 && "▮".repeat(row.yellowCards),
-    row.redCards > 0 && "roja",
-  ].filter(Boolean);
+  const events = (
+    <PlayerEvents goals={row.goals} minutes={row.minutes} assists={row.assists} yellowCards={row.yellowCards} redCards={row.redCards} />
+  );
   return (
     <Link
       href={`/partidos/${match.id}`}
@@ -177,10 +175,10 @@ function MatchLine({ row, data }: { row: PlayerMatchRow; data: PlayerPageData })
         </span>
         <span className="flex gap-2 text-xs sm:hidden">
           <span className="whitespace-nowrap text-muted">{formatShortDate(match.date)}</span>
-          <span className="font-semibold text-accent-text">{events.join("  ")}</span>
+          {events}
         </span>
       </span>
-      <span className="text-xs font-semibold whitespace-nowrap text-accent-text max-sm:hidden">{events.join("  ")}</span>
+      <span className="max-sm:hidden">{events}</span>
       <span
         className="rounded-lg bg-canvas text-center font-display text-lg font-extrabold"
         title={match.played ? `${match.homeName} ${match.homeGoals}–${match.awayGoals} ${match.awayName}` : undefined}
