@@ -71,6 +71,7 @@ export async function getTeams(): Promise<TeamSummary[]> {
       name: schema.teams.name,
       logoUrl: schema.teams.logoUrl,
       seasonIds: schema.teams.seasonIds,
+      leagueIds: schema.teams.leagueIds,
     })
     .from(schema.teams);
   return rows.sort((a, b) => a.name.localeCompare(b.name, "es"));

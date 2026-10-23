@@ -2,9 +2,11 @@ import { cacheLife } from "next/cache";
 import { siteConfig } from "@/config/site";
 import { dayKey, formatLongDate, nowInMadrid } from "@/lib/dates";
 import { getCurrentSeason, getGroupSeasons, getLeagues, getPlayers, getSeasonMatches, getSeasons, getTeams } from "@/lib/data";
+import { expectedTotal } from "@/lib/expected-matches";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, StandingRow } from "@/lib/sportspress/types";
 import { computeStandings } from "@/lib/standings";
+import { expectedRulesFor } from "./expected-rules";
 
 export interface Crumb {
   name: string;
@@ -157,6 +159,9 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
   const seasonMatches = await getSeasonMatches(season.id);
   const matches = seasonMatches.filter((m) => m.groupId !== null && inSubtree(m.groupId));
   const focusTeamId = teams.find((t) => t.slug === siteConfig.focusTeamSlug)?.id ?? null;
+  // Rounds are published a week ahead: this season's totals are estimated; past ones are complete.
+  const rules = season.id === current.id ? await expectedRulesFor(season, tree, teams) : null;
+  const totalOf = (list: Match[]) => (rules ? expectedTotal(list, rules) : list.length);
 
   // Children with matches this season, with their leader if they are a group with standings.
   const children: ChildCard[] = tree
@@ -172,7 +177,7 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
         href: seasonHref(child.id, season),
         teams: teamIds.size,
         played: list.filter((m) => m.played).length,
-        total: list.length,
+        total: totalOf(list),
         leader: leader && leader.played > 0 ? { name: leader.name, points: leader.points } : null,
         hasFocusTeam: focusTeamId !== null && teamIds.has(focusTeamId),
       };
@@ -214,7 +219,7 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
     totals: {
       teams: new Set(matches.flatMap((m) => [m.homeId, m.awayId])).size,
       played: played.length,
-      total: matches.length,
+      total: totalOf(matches),
       goals: played.reduce((sum, m) => sum + (m.homeGoals ?? 0) + (m.awayGoals ?? 0), 0),
     },
     scorers: scorerTotals.map(toTally),

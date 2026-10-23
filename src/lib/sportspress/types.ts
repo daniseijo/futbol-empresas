@@ -22,6 +22,8 @@ export interface TeamSummary {
   name: string;
   logoUrl: string | null;
   seasonIds: number[];
+  /** Competitions and groups the team is registered in (the deepest is the current group). */
+  leagueIds: number[];
 }
 
 export interface Team extends TeamSummary {
@@ -29,8 +31,6 @@ export interface Team extends TeamSummary {
   photoUrl: string | null;
   video: { url: string; title: string; thumbnailUrl: string | null } | null;
   flickrAlbumUrl: string | null;
-  /** Competitions and groups the team is registered in (the deepest is the current group). */
-  leagueIds: number[];
 }
 
 export interface Scorer {

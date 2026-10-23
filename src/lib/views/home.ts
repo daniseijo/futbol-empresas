@@ -15,9 +15,11 @@ import {
 } from "@/lib/data";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season } from "@/lib/sportspress/types";
+import { expectedTotal } from "@/lib/expected-matches";
 import { computeStandings } from "@/lib/standings";
 import { getFeatured, type FeaturedTeam } from "./featured";
 import { buildDay, mainCompetitionId, pickDay, type Day } from "./day";
+import { expectedRulesFor } from "./expected-rules";
 import { buildTeamContext } from "./team-context";
 
 export interface CompetitionCard {
@@ -128,9 +130,12 @@ export async function getHomeData(): Promise<HomeData> {
     winners.set(t.competitionId, [...(winners.get(t.competitionId) ?? []), label]);
   }
   const roots = leagues.filter((l) => l.parentId === null);
+  const rules = await expectedRulesFor(season, tree, teams);
   const competitions: CompetitionCard[] = roots.map((root) => {
     const list = byCompetition.get(root.id) ?? [];
     const played = list.filter((m) => m.played).length;
+    // Rounds are published a week ahead: the total counts the ones still to come.
+    const total = expectedTotal(list, rules);
     const teamsInComp = new Set(list.flatMap((m) => [m.homeId, m.awayId])).size;
     const groups = new Set(list.map((m) => tree.deepest(m.leagueIds)?.id)).size;
     const champions = winners.get(root.id);
@@ -140,10 +145,10 @@ export async function getHomeData(): Promise<HomeData> {
       status = "finished";
       description = champions ? `Campeones: ${champions.join(", ")}.` : `${played} partidos jugados.`;
     } else if (list.length > 0) {
-      status = played / list.length < 0.25 ? "starting" : "live";
+      status = played / total < 0.25 ? "starting" : "live";
       description = `${teamsInComp} equipos${groups > 1 ? ` en ${groups} grupos` : ""}.`;
     }
-    return { id: root.id, name: root.name, href: tree.href(root.id), status, description, played, total: list.length };
+    return { id: root.id, name: root.name, href: tree.href(root.id), status, description, played, total };
   });
   const order = { live: 0, starting: 1, upcoming: 2, finished: 3 };
   competitions.sort((a, b) => order[a.status] - order[b.status] || b.total - a.total);

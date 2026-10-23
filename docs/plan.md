@@ -76,3 +76,11 @@ See the steps in the README.
 - The match sheet `position` is sometimes a string or an object instead of a list.
 - Requests with `content` for several teams return 504; `/players` takes more than 10 s; `_embed` is very slow.
 - Some matches make WordPress fail with a persistent 500 when rendering their `content` (e.g. 86748).
+- Rounds are published about a week ahead, so a phase in progress has far fewer matches than it will. Totals in
+  the current season are estimated (`src/lib/expected-matches.ts`): a round robin per group, for groups that were
+  one the season before.
+- Round numbers are unreliable: some matches are played early under a later round (round 9 in October), and some
+  have none.
+- A match can be tagged with the wrong group (IBO – PWC S.A.D Curve, two Grupo 4 teams, in Grupo 3). The teams'
+  `leagues` say where they really play, but only for the current season: they do not keep past groups.
+- League tables (`/tables`) are no longer kept per group and season, so they cannot list a group's teams.
