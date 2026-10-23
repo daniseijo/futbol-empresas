@@ -1,17 +1,11 @@
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
-import { getCurrentSeason, getTeams } from "@/lib/data";
+import { getCurrentSeason } from "@/lib/data";
 import { MainNav } from "./main-nav";
-import { TeamSearch, type SearchableTeam } from "./team-search";
+import { SiteSearch } from "./site-search";
 
 export async function SiteHeader() {
-  const [teams, season] = await Promise.all([getTeams(), getCurrentSeason()]);
-  const searchable: SearchableTeam[] = teams.map((team) => ({
-    slug: team.slug,
-    name: team.name,
-    logoUrl: team.logoUrl,
-    active: team.seasonIds.includes(season.id),
-  }));
+  const season = await getCurrentSeason();
 
   return (
     // Sticky on phones too: installed on an iPhone, iOS blurs whatever scrolls under the status bar unless a
@@ -25,7 +19,7 @@ export async function SiteHeader() {
           <span className="font-display text-[17px] font-bold tracking-[0.04em] sm:text-[23px]">FUTBOLEMPRESAS</span>
         </Link>
         <MainNav />
-        <TeamSearch teams={searchable} />
+        <SiteSearch />
         <span className="hidden text-sm font-semibold text-muted md:block">Temporada {season.name}</span>
       </div>
     </header>

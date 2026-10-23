@@ -57,7 +57,11 @@ See the steps in the README.
   match's preview (also on the team summary).
 - [ ] Match page: lineups on a pitch (optional). Plan: [10 · Lineups on a pitch](plans/10-lineups-on-pitch.md).
 - [ ] Team: a "Share" button in the site's style. Plan: [06 · Sharing and SEO](plans/06-share-and-seo.md).
-- [ ] Search: search players too. Plan: [05 · Player search](plans/05-player-search.md).
+- [x] Search: search players too. Plan: [05 · Player search](plans/05-player-search.md). One index of teams and
+  players (`/api/busqueda`, prerendered, ~80 KB with brotli) downloaded the first time the search box is used, and
+  searched in the browser, so a search never reads Turso. The index has its own cache tag (`search`), revalidated
+  only when the sync changes something it shows (~15,000 rows per rebuild). Players carry `last_team_id` and
+  `last_match_date`, which the sync updates from the matches it saves (one primary key lookup per player).
 - [ ] SEO: `sitemap.xml`, Open Graph images per match and team. Plan:
   [06 · Sharing and SEO](plans/06-share-and-seo.md).
 - [ ] A real 404 page: it currently answers 200 because the content is streamed. In development, the first load

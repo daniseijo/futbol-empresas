@@ -2,10 +2,11 @@
 // that (src/sync). Reads are cached with "use cache" and the sync invalidates
 // them through the "data" tag.
 
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { cacheLife, cacheTag } from "next/cache";
 import { db, schema } from "@/db/client";
+import { shortenUrl, type SearchIndexPayload } from "./search";
 import type {
   League,
   LineupPlayer,
@@ -20,6 +21,8 @@ import type {
 } from "./sportspress/types";
 
 export const DATA_TAG = "data";
+/** The header search's index, revalidated only when the sync changes what it shows. */
+export const SEARCH_TAG = "search";
 
 /**
  * The `players` columns the pages read. Listed, not `select()`ed whole, so a
@@ -82,6 +85,56 @@ export async function getTeams(): Promise<TeamSummary[]> {
     })
     .from(schema.teams);
   return rows.sort((a, b) => a.name.localeCompare(b.name, "es"));
+}
+
+/** Image URLs on the league's site share this prefix; the search index leaves it out. */
+const UPLOADS = "https://www.futbolempresas.es/wp-content/uploads/";
+
+/**
+ * Every team and every player with a name, for the header search, with the
+ * team the sync records for each player (`lastTeamId`). It is rebuilt only
+ * when the sync reports a change to what it shows (SEARCH_TAG), so it reads
+ * teams and seasons itself: calling the cached getters would also tie it to
+ * DATA_TAG, which every sync with any write invalidates. Each rebuild reads
+ * ~15,000 rows; a search reads none.
+ */
+export async function getSearchIndex(): Promise<SearchIndexPayload> {
+  "use cache";
+  // Long enough that only the sync's revalidation refreshes it.
+  cacheLife({ stale: 300, revalidate: 30 * 86400, expire: 30 * 86400 });
+  cacheTag(SEARCH_TAG);
+  const p = schema.players;
+  const sq = schema.squadPlayers;
+  const named = ne(p.name, "");
+  const [teams, seasons, rows] = await Promise.all([
+    db
+      .select({ id: schema.teams.id, slug: schema.teams.slug, name: schema.teams.name, logoUrl: schema.teams.logoUrl, seasonIds: schema.teams.seasonIds })
+      .from(schema.teams),
+    db.select().from(schema.seasons),
+    db
+      .select({ ...playerColumns, teamId: p.lastTeamId })
+      .from(p)
+      .where(named)
+      // Until the sync applies the migration that adds `last_team_id`, only the squad's team is known.
+      .catch(() =>
+        db
+          .select({ ...playerColumns, teamId: sq.teamId })
+          .from(p)
+          .leftJoin(sq, eq(sq.playerId, p.id))
+          .where(named),
+      ),
+  ]);
+  const current = seasons.sort((a, b) => a.name.localeCompare(b.name)).at(-1);
+  teams.sort((a, b) => a.name.localeCompare(b.name, "es"));
+  const position = new Map(teams.map((team, i) => [team.id, i]));
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return {
+    base: UPLOADS,
+    teams: teams.map((team) => [team.slug, team.name, shortenUrl(team.logoUrl, UPLOADS), current && team.seasonIds.includes(current.id) ? 1 : 0]),
+    players: [...byId.values()]
+      .sort((a, b) => a.name.localeCompare(b.name, "es"))
+      .map((row) => [row.id, row.name, shortenUrl(row.photoUrl, UPLOADS), row.teamId === null ? -1 : (position.get(row.teamId) ?? -1)]),
+  };
 }
 
 export async function getTeam(slug: string): Promise<Team | null> {
