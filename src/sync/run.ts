@@ -47,6 +47,8 @@ interface Context {
   lookup: LeagueLookup;
   /** Rows written (to know whether the site needs revalidating). */
   writes: number;
+  /** Something the header search shows changed (see `getSearchIndex`). */
+  searchChanged: boolean;
 }
 
 const hasTime = (ctx: Context) => ctx.deadline === null || Date.now() < ctx.deadline;
@@ -117,6 +119,72 @@ async function queueUnknownPlayers(playerIds: number[]) {
   await setState(PENDING_NAMES, JSON.stringify([...new Set([...(await pendingNames()), ...unknown])]));
 }
 
+/**
+ * Records each player's latest team from the matches just saved, with the
+ * dates already in hand: a primary key lookup per player, not a read of their
+ * lineups. Players without a row yet are skipped; `fillMissingTeams` covers
+ * them once `backfillPlayerNames` or a squad creates it.
+ */
+async function recordLatestTeams(ctx: Context, rows: { match: MatchRow; lineups: MatchPlayerRow[] }[]) {
+  const latest = new Map<number, { teamId: number; date: string }>();
+  for (const { match, lineups } of rows) {
+    for (const line of lineups) {
+      const seen = latest.get(line.playerId);
+      if (!seen || seen.date <= match.date) latest.set(line.playerId, { teamId: line.teamId, date: match.date });
+    }
+  }
+  const p = schema.players;
+  const ids = [...latest.keys()];
+  const current = new Map<number, { name: string; lastTeamId: number | null; lastMatchDate: string | null }>();
+  for (let i = 0; i < ids.length; i += BATCH) {
+    const found = await db
+      .select({ id: p.id, name: p.name, lastTeamId: p.lastTeamId, lastMatchDate: p.lastMatchDate })
+      .from(p)
+      .where(inArray(p.id, ids.slice(i, i + BATCH)));
+    for (const row of found) current.set(row.id, row);
+  }
+  // One statement per team and date, all sent at once.
+  const groups = new Map<string, { teamId: number; date: string; ids: number[] }>();
+  for (const [playerId, { teamId, date }] of latest) {
+    const row = current.get(playerId);
+    if (!row || (row.lastMatchDate !== null && row.lastMatchDate > date)) continue; // no row yet, or a later match is recorded
+    if (row.lastTeamId === teamId && row.lastMatchDate === date) continue;
+    if (row.lastTeamId !== teamId && row.name) ctx.searchChanged = true;
+    const key = `${teamId} ${date}`;
+    if (!groups.has(key)) groups.set(key, { teamId, date, ids: [] });
+    groups.get(key)!.ids.push(playerId);
+  }
+  const statements = [...groups.values()].map(({ teamId, date, ids }) =>
+    db.update(p).set({ lastTeamId: teamId, lastMatchDate: date }).where(inArray(p.id, ids)),
+  );
+  for (let i = 0; i < statements.length; i += BATCH) {
+    const chunk = statements.slice(i, i + BATCH);
+    await db.batch(chunk as [(typeof chunk)[number], ...typeof chunk]);
+  }
+}
+
+/**
+ * Latest team of players whose row was created after their lineups were saved.
+ * Only rows without a match date and with some lineup are worked out from the
+ * lineups, so a player who has not played keeps their squad's team.
+ */
+async function fillMissingTeams(playerIds: number[]): Promise<number> {
+  const ids = [...new Set(playerIds)];
+  let changed = 0;
+  for (let i = 0; i < ids.length; i += BATCH) {
+    const result = await db.run(sql`
+      UPDATE players SET (last_team_id, last_match_date) = (
+        SELECT mp.team_id, m.date FROM match_players mp JOIN matches m ON m.id = mp.match_id
+        WHERE mp.player_id = players.id ORDER BY m.date DESC, m.id DESC LIMIT 1
+      )
+      WHERE id IN (${sql.join(ids.slice(i, i + BATCH), sql`, `)})
+        AND last_match_date IS NULL
+        AND EXISTS (SELECT 1 FROM match_players WHERE player_id = players.id)`);
+    changed += result.rowsAffected;
+  }
+  return changed;
+}
+
 async function saveMatches(ctx: Context, rows: { match: MatchRow; lineups: MatchPlayerRow[] }[]): Promise<Set<number>> {
   const touched = new Set<number>();
   if (rows.length === 0) return touched;
@@ -134,6 +202,7 @@ async function saveMatches(ctx: Context, rows: { match: MatchRow; lineups: Match
   const lineups = rows.flatMap((r) => r.lineups);
   for (let i = 0; i < lineups.length; i += BATCH) await db.insert(schema.matchPlayers).values(lineups.slice(i, i + BATCH));
   await queueUnknownPlayers(lineups.map((l) => l.playerId));
+  await recordLatestTeams(ctx, rows);
   for (const { match } of rows) if (match.seasonId === ctx.current.id) touched.add(match.homeId).add(match.awayId);
   ctx.writes += rows.length;
   return touched;
@@ -157,7 +226,29 @@ async function syncSquad(ctx: Context, teamId: number) {
   const { squad, players } = await fetchSquad(team.id, team.listIds);
   await db.delete(schema.squadPlayers).where(eq(schema.squadPlayers.teamId, team.id));
   await upsert(schema.squadPlayers, squad, [schema.squadPlayers.teamId, schema.squadPlayers.playerId]);
-  await upsert(schema.players, players, [schema.players.id]);
+  const p = schema.players;
+  const ids = squad.map((s) => s.playerId);
+  const before = new Map(
+    (await db.select({ id: p.id, name: p.name, photoUrl: p.photoUrl, lastTeamId: p.lastTeamId, lastMatchDate: p.lastMatchDate }).from(p).where(inArray(p.id, ids))).map(
+      (row) => [row.id, row],
+    ),
+  );
+  await upsert(p, players, [p.id]);
+  for (const { id, name, photoUrl } of players) {
+    const old = id === undefined ? undefined : before.get(id);
+    if (name && (!old || old.name !== name || old.photoUrl !== (photoUrl ?? null))) ctx.searchChanged = true;
+  }
+  // A squad can bring a player's first row, after their lineups were saved;
+  // whoever has not played yet takes this team.
+  if ((await fillMissingTeams(ids)) > 0) ctx.searchChanged = true;
+  const newcomers = ids.filter((id) => {
+    const old = before.get(id);
+    return !old || (old.lastMatchDate === null && old.lastTeamId !== team.id);
+  });
+  if (newcomers.length > 0) {
+    await db.update(p).set({ lastTeamId: team.id }).where(and(inArray(p.id, newcomers), isNull(p.lastMatchDate)));
+    ctx.searchChanged = true;
+  }
   await db.update(schema.teams).set({ squadSyncedAt: ctx.startedAt }).where(eq(schema.teams.id, team.id));
   ctx.writes += 1;
 }
@@ -246,6 +337,8 @@ async function storePlayerNames(ctx: Context, ids: number[]) {
   // a name so they are not requested again on every run.
   const missing = ids.filter((id) => !names.some((n) => n.id === id)).map((id) => ({ id, name: "" }));
   await upsert(schema.players, [...names, ...missing], [schema.players.id]);
+  await fillMissingTeams(ids);
+  if (names.some((n) => n.name)) ctx.searchChanged = true;
   ctx.writes += names.length;
   ctx.log(`Players: ${names.length} new names`);
 }
@@ -370,6 +463,11 @@ async function backfillMatchVideos(ctx: Context, { current }: { current: boolean
   return hasTime(ctx);
 }
 
+async function countMigrations(): Promise<number> {
+  const rows = await db.all<{ n: number }>(sql`select count(*) as n from __drizzle_migrations`).catch(() => [{ n: 0 }]);
+  return rows[0]?.n ?? 0;
+}
+
 async function countMatches(where: SQL | undefined): Promise<number> {
   const [row] = await db.select({ n: sql<number>`count(*)` }).from(schema.matches).where(where);
   return row?.n ?? 0;
@@ -379,6 +477,8 @@ async function countMatches(where: SQL | undefined): Promise<number> {
 
 export interface SyncResult {
   writes: number;
+  /** The header search's index has to be rebuilt. */
+  searchChanged: boolean;
   pending: string[];
   seconds: number;
 }
@@ -390,7 +490,9 @@ export async function runSync({
   log = console.log,
 }: { reset?: boolean; budgetSeconds?: number; matchIds?: number[]; log?: Log } = {}): Promise<SyncResult> {
   const started = Date.now();
+  const migrationsBefore = await countMigrations();
   await migrate(db, { migrationsFolder: "drizzle" });
+  const migrationsAfter = await countMigrations();
   if (reset) {
     await db.delete(schema.syncState);
     await db.update(schema.teams).set({ detailSyncedAt: null, squadSyncedAt: null });
@@ -411,6 +513,8 @@ export async function runSync({
     current: seasons[seasons.length - 1],
     lookup: { deepest: (ids) => tree.deepest(ids)?.id ?? null, root: (id) => tree.competitionOf(id)?.id ?? null },
     writes: 0,
+    // A migration can change anything the index reads (as the one adding `last_team_id` did).
+    searchChanged: migrationsAfter > migrationsBefore,
   };
   log(`Current season ${ctx.current.name}${budgetSeconds ? ` · budget ${budgetSeconds} s` : ""}`);
 
@@ -427,6 +531,7 @@ export async function runSync({
     const after = minusMinutes(since, OVERLAP_MINUTES);
     const teams = await fetchTeams(after);
     await upsert(schema.teams, teams, [schema.teams.id]);
+    if (teams.length > 0) ctx.searchChanged = true; // name, crest or seasons may have changed
     const touched = new Set(teams.map((t) => t.id));
     let matches = 0;
     for (let page = 1, total = 1; page <= total; page += 1) {
@@ -443,6 +548,7 @@ export async function runSync({
   } else if (!(await getState("backfill:teams"))) {
     const teams = await fetchTeams();
     await upsert(schema.teams, teams, [schema.teams.id]);
+    ctx.searchChanged = true;
     await setState("backfill:teams", "done");
     log(`Teams: ${teams.length}`);
   }
@@ -505,6 +611,7 @@ export async function runSync({
   }
 
   const seconds = Math.round((Date.now() - started) / 1000);
+  if (ctx.searchChanged) log("Search index: to be rebuilt");
   log(pending.length ? `Paused after ${seconds} s. Pending: ${pending.join(", ")}` : `All up to date in ${seconds} s`);
-  return { writes: ctx.writes, pending, seconds };
+  return { writes: ctx.writes, searchChanged: ctx.searchChanged, pending, seconds };
 }
