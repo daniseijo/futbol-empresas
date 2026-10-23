@@ -14,28 +14,11 @@ import {
   type NewsItem,
 } from "@/lib/data";
 import { LeagueTree } from "@/lib/sportspress/leagues";
-import type { Match, Season, StandingRow } from "@/lib/sportspress/types";
-import { getVenue } from "@/lib/sportspress/venues";
+import type { Match, Season } from "@/lib/sportspress/types";
 import { computeStandings } from "@/lib/standings";
 import { getFeatured, type FeaturedTeam } from "./featured";
+import { buildDay, mainCompetitionId, pickDay, type Day } from "./day";
 import { buildTeamContext } from "./team-context";
-
-export interface DayMatch {
-  id: number;
-  time: string;
-  homeId: number;
-  awayId: number;
-  home: string;
-  away: string;
-  homePosition: number | null;
-  awayPosition: number | null;
-  homeGoals: number | null;
-  awayGoals: number | null;
-  venue: string;
-  /** Group and round, "Grupo 7 · J4", or the competition outside the main one. */
-  label: string | null;
-  isFocus: boolean;
-}
 
 export interface CompetitionCard {
   id: number;
@@ -78,7 +61,7 @@ export type FocusBlock = FeaturedTeam;
 export interface HomeData {
   now: string;
   season: Season;
-  day: { date: string; when: "today" | "upcoming" | "past"; matches: DayMatch[]; venues: number; competition: string | null };
+  day: Day & { when: "today" | "upcoming" | "past" };
   focus: FocusBlock | null;
   mainCompetition: { id: number | null; name: string; played: number; goals: number };
   competitions: CompetitionCard[];
@@ -87,14 +70,6 @@ export interface HomeData {
   scorers: ScorerRow[];
   week: { matches: number; goals: number; from: string; to: string; bigWins: BigWin[] };
   news: NewsItem | null;
-}
-
-function pickDay(matches: Match[], today: string): { date: string; when: HomeData["day"]["when"] } | null {
-  if (matches.some((m) => dayKey(m.date) === today)) return { date: today, when: "today" };
-  const next = matches.find((m) => dayKey(m.date) > today);
-  if (next) return { date: dayKey(next.date), when: "upcoming" };
-  const last = [...matches].reverse().find((m) => dayKey(m.date) < today);
-  return last ? { date: dayKey(last.date), when: "past" } : null;
 }
 
 function naturalCompare(a: string, b: string) {
@@ -119,14 +94,14 @@ export async function getHomeData(): Promise<HomeData> {
   const tree = new LeagueTree(leagues);
   const teamName = new Map(teams.map((t) => [t.id, t.name]));
 
-  // Main competition: the one with the most matches this season.
+  // Matches by competition; the main one is the one with the most matches this season.
   const byCompetition = new Map<number, Match[]>();
   for (const match of matches) {
     const id = match.competitionId;
     if (!id) continue;
     byCompetition.set(id, [...(byCompetition.get(id) ?? []), match]);
   }
-  const mainId = [...byCompetition.entries()].sort((a, b) => b[1].length - a[1].length)[0]?.[0];
+  const mainId = mainCompetitionId(matches);
   const mainMatches = mainId ? (byCompetition.get(mainId) ?? []) : [];
 
   // Focus team (Embat by default).
@@ -139,44 +114,9 @@ export async function getHomeData(): Promise<HomeData> {
 
   // Matches of the day (today or the next date with matches).
   const picked = pickDay(matches, today);
-  const dayMatches = picked ? matches.filter((m) => dayKey(m.date) === picked.date) : [];
-  const groupStandings = new Map<number, StandingRow[]>();
-  const positionIn = (groupId: number | null, teamId: number) => {
-    if (!groupId) return null;
-    if (!groupStandings.has(groupId)) groupStandings.set(groupId, computeStandings(matches.filter((m) => m.groupId === groupId)));
-    return groupStandings.get(groupId)!.find((r) => r.teamId === teamId)?.position ?? null;
-  };
-  const dayCompetitions = new Set(dayMatches.map((m) => m.competitionId));
-  const onlyCompetition = dayCompetitions.size === 1 ? [...dayCompetitions][0] : null;
   const day: HomeData["day"] = {
-    date: picked?.date ?? today,
+    ...buildDay(matches, tree, picked?.date ?? today, focusTeam?.id ?? null, mainId),
     when: picked?.when ?? "upcoming",
-    venues: new Set(dayMatches.map((m) => m.venueId)).size,
-    competition: onlyCompetition ? tree.name(onlyCompetition) : null,
-    matches: dayMatches.map((m) => {
-      const round = m.round ? ` · J${m.round}` : "";
-      const where =
-        m.competitionId && m.competitionId !== mainId
-          ? tree.name(m.competitionId)
-          : m.groupId && m.groupId !== m.competitionId
-            ? tree.name(m.groupId)
-            : null;
-      return {
-        id: m.id,
-        time: m.date.slice(11, 16),
-        homeId: m.homeId,
-        awayId: m.awayId,
-        home: m.homeName,
-        away: m.awayName,
-        homePosition: positionIn(m.groupId, m.homeId),
-        awayPosition: positionIn(m.groupId, m.awayId),
-        homeGoals: m.homeGoals,
-        awayGoals: m.awayGoals,
-        venue: getVenue(m.venueId)?.name ?? "",
-        label: where ? `${where}${round}` : null,
-        isFocus: focusTeam ? m.homeId === focusTeam.id || m.awayId === focusTeam.id : false,
-      };
-    }),
   };
 
   // The season's competitions.

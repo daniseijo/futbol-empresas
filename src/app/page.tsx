@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { Crest } from "@/components/crest";
+import { DayMatchCard } from "@/components/day-match-card";
 import { Eyebrow, FeaturedFooter, FeaturedHero } from "@/components/featured-match";
 import { FormBadges } from "@/components/form-badges";
 import { PlayerAvatar } from "@/components/player-avatar";
@@ -284,34 +285,10 @@ function DayStrip({ day, now, logos }: { day: HomeData["day"]; now: string; logo
       </div>
       <div className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:scroll-px-6 sm:px-6">
         {day.matches.map((match) => (
-          <Link
-            key={match.id}
-            href={`/partidos/${match.id}`}
-            className={`flex w-56 shrink-0 snap-start flex-col gap-2 rounded-2xl border px-3.5 py-3 ${
-              match.isFocus ? "border-accent bg-accent-soft" : "border-line bg-surface hover:border-ink"
-            }`}
-          >
-            <span className="flex justify-between gap-2 text-xs">
-              <b className="text-accent-text">{match.time}</b>
-              <span className="truncate text-muted">{match.venue}</span>
-            </span>
-            <DayTeam id={match.homeId} name={match.home} position={match.homePosition} goals={match.homeGoals} logos={logos} />
-            <DayTeam id={match.awayId} name={match.away} position={match.awayPosition} goals={match.awayGoals} logos={logos} />
-            {match.label && <span className="border-t border-line-soft pt-2 text-xs text-muted">{match.label}</span>}
-          </Link>
+          <DayMatchCard key={match.id} match={match} logos={logos} className="w-56 shrink-0 snap-start" />
         ))}
       </div>
     </section>
-  );
-}
-
-function DayTeam({ id, name, position, goals, logos }: { id: number; name: string; position: number | null; goals: number | null; logos: Logos }) {
-  return (
-    <span className="flex items-center gap-2 text-sm font-medium">
-      <Crest src={logos[id]} name={name} size={24} />
-      <span className="min-w-0 flex-1 truncate">{name}</span>
-      {goals !== null ? <b className="font-display text-lg">{goals}</b> : position && <span className="text-xs text-muted">{position}º</span>}
-    </span>
   );
 }
 
