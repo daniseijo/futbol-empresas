@@ -240,6 +240,8 @@ async function backfillPlayerNames(ctx: Context, { withStats }: { withStats: boo
 const VIDEO_RECHECK_MINUTES = 6 * 60;
 /** El resumen se publica uno o dos días después; pasadas dos semanas no se busca más a menudo. */
 const VIDEO_RECENT_DAYS = 14;
+/** Las páginas web tardan varios segundos: se piden tantas a la vez como deja el cliente. */
+const VIDEO_CONCURRENCY = 2;
 
 /**
  * Busca el resumen en vídeo en la página web de cada partido (la API no lo da).
@@ -269,21 +271,24 @@ async function backfillMatchVideos(ctx: Context, { current }: { current: boolean
   while (hasTime(ctx)) {
     const rows = await db.select({ id: m.id }).from(m).where(where).orderBy(desc(m.date)).limit(20);
     if (rows.length === 0) break;
-    for (const { id } of rows) {
-      if (!hasTime(ctx)) break;
-      const video = await fetchMatchVideo(id).catch((error) => {
-        if (error instanceof SportsPressError) return null; // página borrada o no publicada
-        throw error;
-      });
-      await db
-        .update(m)
-        .set({ videoId: video?.id ?? null, videoTitle: video?.title ?? null, videoCheckedAt: ctx.startedAt })
-        .where(eq(m.id, id));
-      checked += 1;
-      if (video) {
-        found += 1;
-        ctx.writes += 1;
-      }
+    for (let i = 0; i < rows.length && hasTime(ctx); i += VIDEO_CONCURRENCY) {
+      await Promise.all(
+        rows.slice(i, i + VIDEO_CONCURRENCY).map(async ({ id }) => {
+          const video = await fetchMatchVideo(id).catch((error) => {
+            if (error instanceof SportsPressError) return null; // página borrada o no publicada
+            throw error;
+          });
+          await db
+            .update(m)
+            .set({ videoId: video?.id ?? null, videoTitle: video?.title ?? null, videoCheckedAt: ctx.startedAt })
+            .where(eq(m.id, id));
+          checked += 1;
+          if (video) {
+            found += 1;
+            ctx.writes += 1;
+          }
+        }),
+      );
     }
     ctx.log(`Vídeos${current ? "" : " (histórico)"}: ${found} encontrados en ${checked} partidos`);
   }
