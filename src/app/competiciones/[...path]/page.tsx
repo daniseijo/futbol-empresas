@@ -82,7 +82,7 @@ async function CompetitionContent({ params, searchParams }: Props) {
       {(data.scorers.length > 0 || data.cracks.length > 0) && (
         <div className="grid gap-5 md:grid-cols-2">
           <TallyCard title="Pichichi" unit="goles" items={data.scorers} />
-          <TallyCard title="Crack" unit="veces" items={data.cracks} note="Veces elegido mejor jugador del partido." />
+          <TallyCard title="MVP" unit="veces" items={data.cracks} note="Veces elegido mejor jugador del partido." />
         </div>
       )}
       {data.totals.total === 0 && (

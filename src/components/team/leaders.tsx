@@ -7,7 +7,7 @@ const money = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximum
 const GROUPS = [
   { title: "Goles", key: "goals" as const, format: (v: number) => String(v) },
   { title: "Asistencias", key: "assists" as const, format: (v: number) => String(v) },
-  { title: "Puntos MVP", key: "mvpPoints" as const, format: (v: number) => v.toFixed(1) },
+  { title: "Valoración", key: "mvpPoints" as const, format: (v: number) => v.toFixed(1) },
 ];
 
 function topBy(squad: SquadPlayer[], key: "goals" | "assists" | "mvpPoints") {

@@ -74,13 +74,13 @@ function Header({ data }: { data: PlayerPageData }) {
     { value: String(totals.matches), label: totals.matches === 1 ? "partido" : "partidos" },
     { value: String(totals.goals), label: totals.goals === 1 ? "gol" : "goles" },
     { value: String(totals.assists), label: totals.assists === 1 ? "asistencia" : "asistencias" },
-    { value: String(totals.cracks), label: "veces Crack" },
+    { value: String(totals.cracks), label: "veces MVP" },
     { value: totals.matches ? decimal.format(totals.goals / totals.matches) : "—", label: "goles por partido" },
     { value: `${totals.yellowCards}/${totals.redCards}`, label: "amarillas/rojas" },
   ];
   if (data.current) {
     stats.push(
-      { value: decimal.format(data.current.mvpPoints), label: "puntos MVP" },
+      { value: decimal.format(data.current.mvpPoints), label: "puntos" },
       { value: `${money.format(data.current.marketValue)} M€`, label: "valor de mercado" },
     );
   }

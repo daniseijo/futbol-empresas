@@ -154,7 +154,7 @@ function ResultHero({
         )}
         {team.row && <Tile label="En el grupo" value={trend(team.row.position, team.previousPosition)} detail={gap(team.standings, team.row)} />}
         {team.mvpLeader && (
-          <Tile label="Más puntos MVP" value={team.mvpLeader.name} detail={`${decimal.format(team.mvpLeader.points)} en la temporada`} />
+          <Tile label="Mejor valoración" value={team.mvpLeader.name} detail={`${decimal.format(team.mvpLeader.points)} en la temporada`} />
         )}
       </div>
 

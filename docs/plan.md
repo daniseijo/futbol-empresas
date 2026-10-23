@@ -36,11 +36,11 @@ See the steps in the README.
 ## 3. New pages
 
 - [x] **Group / competition** (`/competiciones/...`): standings, browsable rounds, top scorers and the group's
-  Crack, linked from the home page, the match page and the team standings.
+  MVP, linked from the home page, the match page and the team standings.
   - [ ] Cups without groups (Corporate Cup): they now show a table with all their teams; a bracket or a list
     of knockout rounds would be better.
 - [x] **Player** (`/jugadores/[id]`): matches, goals with minute, MVP, teams per season and photo, linked from
-  lineups, top scorers, Crack, squad and team leaders.
+  lineups, top scorers, MVP, squad and team leaders.
 - [x] **Venue** (`/campos/[id]`, index at `/campos`): a map in the site's colours (MapLibre + OpenFreeMap), address, the next date with matches
   there, the rest of the season and who plays there most, linked from every venue name. Plan:
   [04 · Venue page](plans/04-venue-page.md).
