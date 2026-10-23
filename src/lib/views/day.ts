@@ -1,5 +1,8 @@
-import { dayKey } from "@/lib/dates";
-import type { LeagueTree } from "@/lib/sportspress/leagues";
+import { cacheLife } from "next/cache";
+import { siteConfig } from "@/config/site";
+import { addDays, dayKey, nowInMadrid } from "@/lib/dates";
+import { getCurrentSeason, getLeagues, getSeasonMatches, getTeam } from "@/lib/data";
+import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, StandingRow } from "@/lib/sportspress/types";
 import { getVenue } from "@/lib/sportspress/venues";
 import { computeStandings } from "@/lib/standings";
@@ -27,6 +30,14 @@ export interface Day {
   venues: number;
   /** The competition's name, only when every match of the day shares it. */
   competition: string | null;
+}
+
+export interface DayPageData {
+  now: string;
+  day: Day;
+  /** The previous and next dates with matches this season. */
+  previous: string | null;
+  next: string | null;
 }
 
 /** The competition with the most matches this season. */
@@ -88,5 +99,33 @@ export function buildDay(matches: Match[], tree: LeagueTree, date: string, focus
     matches: rows,
     venues: new Set(dayMatches.map((m) => m.venueId)).size,
     competition: onlyCompetition ? tree.name(onlyCompetition) : null,
+  };
+}
+
+function isValidDate(date: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && addDays(date, 0) === date;
+}
+
+/** Every match of one date of the current season, or null if the date is malformed or has none. */
+export async function getDayPageData(date: string): Promise<DayPageData | null> {
+  "use cache";
+  cacheLife("results");
+
+  if (!isValidDate(date)) return null;
+  const season = await getCurrentSeason();
+  const [matches, leagues, focusTeam] = await Promise.all([
+    getSeasonMatches(season.id),
+    getLeagues(),
+    getTeam(siteConfig.focusTeamSlug),
+  ]);
+  const day = buildDay(matches, new LeagueTree(leagues), date, focusTeam?.id ?? null, mainCompetitionId(matches));
+  if (day.matches.length === 0) return null;
+
+  const dates = [...new Set(matches.map((m) => dayKey(m.date)))].sort();
+  return {
+    now: nowInMadrid(),
+    day,
+    previous: dates.findLast((d) => d < date) ?? null,
+    next: dates.find((d) => d > date) ?? null,
   };
 }

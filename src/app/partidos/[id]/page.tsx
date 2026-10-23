@@ -482,7 +482,16 @@ function HeadToHead({ data }: { data: MatchPageData }) {
 function RestOfRound({ data }: { data: MatchPageData }) {
   if (data.round.length === 0) return null;
   return (
-    <Card title={`Resto de la jornada ${data.match.round}`}>
+    <Card
+      title={`Resto de la jornada ${data.match.round}`}
+      action={
+        data.dayHref && (
+          <Link href={data.dayHref} className="text-sm font-semibold whitespace-nowrap text-accent-text hover:underline">
+            Todos los del día →
+          </Link>
+        )
+      }
+    >
       {data.round.map((m) => (
         <Link
           key={m.id}

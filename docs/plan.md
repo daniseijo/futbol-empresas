@@ -40,8 +40,9 @@ See the steps in the README.
   [04 · Venue page](plans/04-venue-page.md).
 - [ ] **Women's league**: check that the home page and teams work well with its competitions. Plan:
   [07 · Women's league](plans/07-womens-league.md).
-- [ ] **Matches of a day** (`/partidos/dia/[fecha]`), linked from the home page's match strip. Plan:
-  [01 · Matches of a day](plans/01-day-matches-page.md).
+- [x] **Matches of a day** (`/partidos/dia/[fecha]`): grouped by time or venue (`?orden=campo`), with previous and
+  next dates with matches, linked from the home page's match strip and the match page's "Resto de la jornada".
+  Current season only.
 
 ## 4. Improvements to what exists
 

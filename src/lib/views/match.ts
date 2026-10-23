@@ -1,5 +1,5 @@
 import { cacheLife } from "next/cache";
-import { nowInMadrid } from "@/lib/dates";
+import { dayKey, nowInMadrid } from "@/lib/dates";
 import { getCurrentSeason, getHeadToHead, getLeagues, getMatch, getSeasonMatches, getSeasons, getSquad, getTeams } from "@/lib/data";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { LineupPlayer, Match, MatchDetail, SquadPlayer, StandingRow } from "@/lib/sportspress/types";
@@ -34,6 +34,8 @@ export interface MatchPageData {
   match: MatchDetail;
   now: string;
   path: { name: string; href: string }[];
+  /** The page with every match of that date; only for the current season. */
+  dayHref: string | null;
   home: TeamSide;
   away: TeamSide;
   goals: GoalEvent[];
@@ -142,6 +144,7 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
     match,
     now: nowInMadrid(),
     path,
+    dayHref: match.seasonId === current.id ? `/partidos/dia/${dayKey(match.date)}` : null,
     home,
     away,
     goals,

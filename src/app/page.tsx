@@ -273,15 +273,22 @@ function DayStrip({ day, now, logos }: { day: HomeData["day"]; now: string; logo
   const count = day.matches.length;
   return (
     <section aria-labelledby="partidos-del-dia" className="flex flex-col gap-3.5">
-      <div>
-        <Eyebrow>{eyebrow}</Eyebrow>
-        <h2 id="partidos-del-dia" className="mt-1 font-display text-[34px] leading-none font-extrabold uppercase sm:text-[40px]">
-          {capitalize(formatLongDate(day.date))}
-        </h2>
-        <p className="mt-1 text-sm text-muted">
-          {count} {count === 1 ? "partido" : "partidos"} en {day.venues} {day.venues === 1 ? "campo" : "campos"}
-          {day.competition && ` · ${day.competition}`}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <div>
+          <Eyebrow>{eyebrow}</Eyebrow>
+          <h2 id="partidos-del-dia" className="mt-1 font-display text-[34px] leading-none font-extrabold uppercase sm:text-[40px]">
+            {capitalize(formatLongDate(day.date))}
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            {count} {count === 1 ? "partido" : "partidos"} en {day.venues} {day.venues === 1 ? "campo" : "campos"}
+            {day.competition && ` · ${day.competition}`}
+          </p>
+        </div>
+        {count > 1 && (
+          <Link href={`/partidos/dia/${day.date}`} className="text-sm font-semibold text-accent-text hover:underline">
+            Ver los {count} →
+          </Link>
+        )}
       </div>
       <div className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:scroll-px-6 sm:px-6">
         {day.matches.map((match) => (
