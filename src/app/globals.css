@@ -25,6 +25,11 @@
   --font-display: var(--font-barlow), "Arial Narrow", sans-serif;
 }
 
+/* What shows when the page bounces past its top or bottom: the header's and footer's white, not grey. */
+html {
+  background: var(--color-surface);
+}
+
 body {
   background: var(--color-canvas);
   color: var(--color-ink);
@@ -44,22 +49,6 @@ body {
     margin-inline: 0;
     border: 1px solid var(--color-line);
     border-radius: 22px;
-  }
-}
-
-/*
- * Installed as an app, the page reaches under the iPhone's status bar (viewport-fit=cover)
- * and iOS blurs whatever scrolls beneath it. A fixed band in the header's colour keeps
- * that strip solid. Outside the installed app the inset is 0 and the band has no height.
- */
-@media (display-mode: standalone) {
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0 0 auto;
-    z-index: 50;
-    height: env(safe-area-inset-top, 0px);
-    background: var(--color-surface);
   }
 }
 
