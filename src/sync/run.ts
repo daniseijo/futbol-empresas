@@ -82,6 +82,41 @@ function minusMinutes(stamp: string, minutes: number): string {
   return date.toISOString().slice(0, 19);
 }
 
+/** Lineup players without a `players` row yet, waiting for `backfillPlayerNames`. */
+const PENDING_NAMES = "player-names:pending";
+/** Set once a scan of every lineup finds no unknown player; after that only the queue is checked. */
+const NAMES_SCANNED = "backfill:player-names";
+
+async function pendingNames(): Promise<number[]> {
+  return JSON.parse((await getState(PENDING_NAMES)) ?? "[]") as number[];
+}
+
+/** The ids, without repeats, that have no `players` row: a primary key lookup each. */
+async function withoutRow(playerIds: number[]): Promise<number[]> {
+  const ids = [...new Set(playerIds)];
+  const known = new Set<number>();
+  for (let i = 0; i < ids.length; i += BATCH) {
+    const rows = await db
+      .select({ id: schema.players.id })
+      .from(schema.players)
+      .where(inArray(schema.players.id, ids.slice(i, i + BATCH)));
+    for (const row of rows) known.add(row.id);
+  }
+  return ids.filter((id) => !known.has(id));
+}
+
+/**
+ * Queues the players of the lineups just saved who have no `players` row:
+ * a primary key lookup each, instead of `backfillPlayerNames` scanning every
+ * lineup on every run (~550,000 rows read). Kept in the database so a run that
+ * stops before fetching the names leaves them for the next one.
+ */
+async function queueUnknownPlayers(playerIds: number[]) {
+  const unknown = await withoutRow(playerIds);
+  if (unknown.length === 0) return;
+  await setState(PENDING_NAMES, JSON.stringify([...new Set([...(await pendingNames()), ...unknown])]));
+}
+
 async function saveMatches(ctx: Context, rows: { match: MatchRow; lineups: MatchPlayerRow[] }[]): Promise<Set<number>> {
   const touched = new Set<number>();
   if (rows.length === 0) return touched;
@@ -98,6 +133,7 @@ async function saveMatches(ctx: Context, rows: { match: MatchRow; lineups: Match
   );
   const lineups = rows.flatMap((r) => r.lineups);
   for (let i = 0; i < lineups.length; i += BATCH) await db.insert(schema.matchPlayers).values(lineups.slice(i, i + BATCH));
+  await queueUnknownPlayers(lineups.map((l) => l.playerId));
   for (const { match } of rows) if (match.seasonId === ctx.current.id) touched.add(match.homeId).add(match.awayId);
   ctx.writes += rows.length;
   return touched;
@@ -203,13 +239,40 @@ async function focusTeamIds(ctx: Context): Promise<number[]> {
   return [...new Set([focus.id, ...rivals.flatMap((r) => [r.home, r.away])])];
 }
 
+/** Downloads and stores the names of these players. */
+async function storePlayerNames(ctx: Context, ids: number[]) {
+  const names = await fetchPlayerNames(ids);
+  // Players the API no longer returns (deleted or private) are stored without
+  // a name so they are not requested again on every run.
+  const missing = ids.filter((id) => !names.some((n) => n.id === id)).map((id) => ({ id, name: "" }));
+  await upsert(schema.players, [...names, ...missing], [schema.players.id]);
+  ctx.writes += names.length;
+  ctx.log(`Players: ${names.length} new names`);
+}
+
 /**
  * Names of players who appear in lineups and are not known yet.
- * `withStats`: only those with something to show (goals, assists, awards),
- * which are the ones on the home page. `/players` takes ~10 s per call, so
- * the rest get lower priority.
+ * Until a scan of every lineup has found none (the initial backfill), it scans
+ * them, which reads ~550,000 rows each time; after that it only takes the
+ * players `saveMatches` queued.
+ * `withStats`: during the scan, only those with something to show (goals,
+ * assists, awards), which are the ones on the home page. `/players` takes
+ * ~10 s per call, so the rest get lower priority.
  */
 async function backfillPlayerNames(ctx: Context, { withStats }: { withStats: boolean }): Promise<boolean> {
+  if ((await getState(NAMES_SCANNED)) === "done") {
+    while (hasTime(ctx)) {
+      const queue = await pendingNames();
+      if (queue.length === 0) return true;
+      const batch = queue.slice(0, 100);
+      // A squad may have created some rows meanwhile: storing "" over their name would erase it.
+      const ids = await withoutRow(batch);
+      if (ids.length > 0) await storePlayerNames(ctx, ids);
+      const done = new Set(batch);
+      await setState(PENDING_NAMES, JSON.stringify((await pendingNames()).filter((id) => !done.has(id))));
+    }
+    return false;
+  }
   const mp = schema.matchPlayers;
   while (hasTime(ctx)) {
     const rows = await db
@@ -223,15 +286,18 @@ async function backfillPlayerNames(ctx: Context, { withStats }: { withStats: boo
         ),
       )
       .limit(100);
-    if (rows.length === 0) return true;
-    const ids = rows.map((r) => r.id);
-    const names = await fetchPlayerNames(ids);
-    // Players the API no longer returns (deleted or private) are stored without
-    // a name so they are not requested again on every run.
-    const missing = ids.filter((id) => !names.some((n) => n.id === id)).map((id) => ({ id, name: "" }));
-    await upsert(schema.players, [...names, ...missing], [schema.players.id]);
-    ctx.writes += names.length;
-    ctx.log(`Players: ${names.length} new names`);
+    if (rows.length === 0) {
+      if (!withStats) {
+        // Every lineup player is known: the queue (which the scan covered) is all there is from now on.
+        await setState(PENDING_NAMES, "[]");
+        await setState(NAMES_SCANNED, "done");
+      }
+      return true;
+    }
+    await storePlayerNames(
+      ctx,
+      rows.map((r) => r.id),
+    );
   }
   return false;
 }
