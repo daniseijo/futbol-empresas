@@ -49,7 +49,9 @@ futbolempresas.es (WordPress + SportsPress API)
 - **Never call the league API while rendering.** It takes 0.2–12 s per call and fails under load. The site only
   reads the database; anything new it needs from the API goes into the sync first.
 - **Do not hard-code Embat** or any team: use `siteConfig.focusTeamSlug` and the team context.
-- **Languages:** visible text and URLs in Spanish (Spain); code, comments, docs and commit messages in English.
+- **Languages:** only what the site's readers see is in Spanish (Spain): the pages' text, URLs and metadata.
+  Everything else is in English: code, comments, docs, plans, commit messages, PRs, and whatever the automation
+  writes (workflow logs, GitHub issues, labels and comments).
 - **Dates** are Madrid local time strings, `"YYYY-MM-DDTHH:mm"`. Use the helpers in `src/lib/dates.ts`
   (`nowInMadrid`, `dayKey`, `daysBetween`, `relativeDay`, `formatShortDate`, `formatLongDate`, `addDays`), never
   `Date` arithmetic on them.

@@ -28,8 +28,8 @@ results. Two risks:
    found in `docs/plan.md` (section 2, "Check the first scheduled runs").
 2. **Alert:** add `permissions: issues: write` to the job and two final steps:
    - `if: failure()`: with `gh` and `GITHUB_TOKEN`, look for an open issue labelled `sync-failure`; comment on it
-     with the run link if it exists, otherwise create it ("La sincronización ha fallado", run link, date). Create
-     the label if missing.
+     with the run link if it exists, otherwise create it ("The sync is failing", run link, date). Create the
+     label if missing. In English, like everything outside the site.
    - `if: success()`: close any open `sync-failure` issue with a comment linking the run that recovered.
 
    Opening an issue notifies the repository owner by email and in the GitHub app. Do not alert on a single
