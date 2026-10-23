@@ -49,18 +49,18 @@ jobs:
       - name: Report the failure
         if: failure()
         run: |
-          gh label create sync-failure --color d73a4a --description "La sincronización está fallando" 2>/dev/null || true
+          gh label create sync-failure --color d73a4a --description "The league data sync is failing" 2>/dev/null || true
           issue=$(gh issue list --label sync-failure --state open --json number --jq '.[0].number // empty')
-          when=$(TZ=Europe/Madrid date '+%d/%m/%Y %H:%M')
+          when=$(TZ=Europe/Madrid date '+%Y-%m-%d %H:%M')
           if [ -n "$issue" ]; then
-            gh issue comment "$issue" --body "Ha vuelto a fallar el $when: $RUN_URL"
+            gh issue comment "$issue" --body "Failed again on $when (Madrid time): $RUN_URL"
           else
-            gh issue create --label sync-failure --title "La sincronización ha fallado" \
-              --body "La sincronización con futbolempresas.es ha fallado el $when (hora de Madrid): $RUN_URL. La web sigue mostrando los datos de la última sincronización correcta. Esta incidencia se cerrará sola cuando vuelva a funcionar."
+            gh issue create --label sync-failure --title "The sync is failing" \
+              --body "The futbolempresas.es sync failed on $when (Madrid time): $RUN_URL. The site keeps showing the data from the last successful sync. This issue closes itself when a run succeeds again."
           fi
       - name: Close the failure report
         if: success()
         run: |
           for issue in $(gh issue list --label sync-failure --state open --json number --jq '.[].number'); do
-            gh issue close "$issue" --comment "Vuelve a funcionar: $RUN_URL"
+            gh issue close "$issue" --comment "Working again: $RUN_URL"
           done
