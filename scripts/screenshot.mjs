@@ -4,7 +4,8 @@
 //
 // Uses Chrome through the DevTools protocol with device emulation, because
 // `chrome --headless --window-size` does not go below ~500 px wide and so
-// cannot show the 390 px phone layout. Set CHROME_PATH if Chrome is elsewhere.
+// cannot show the 390 px phone layout. WebGL runs in software (SwiftShader) so maps
+// render. Set CHROME_PATH if Chrome is elsewhere.
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -19,7 +20,7 @@ if (!url || !out) {
 const chromePath = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const port = 9300 + Math.floor(Math.random() * 600);
 const profile = mkdtempSync(join(tmpdir(), "screenshot-"));
-const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--hide-scrollbars", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], {
+const chrome = spawn(chromePath, ["--headless=new", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--hide-scrollbars", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], {
   stdio: "ignore",
 });
 
