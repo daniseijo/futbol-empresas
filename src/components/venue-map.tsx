@@ -8,7 +8,18 @@ import { useEffect, useRef } from "react";
  * directions are on "Cómo llegar". MapLibre loads only in the browser, after the page; without
  * WebGL the placeholder (the marker on the canvas colour) stays.
  */
-export function VenueMap({ lat, lng, name }: { lat: number; lng: number; name: string }) {
+export function VenueMap({
+  lat,
+  lng,
+  name,
+  className = "h-[280px] rounded-[22px]",
+}: {
+  lat: number;
+  lng: number;
+  name: string;
+  /** Height and corners. */
+  className?: string;
+}) {
   const container = useRef<HTMLDivElement>(null);
 
   // Next.js hides the previous page (React <Activity>) instead of unmounting it: the map is removed
@@ -28,8 +39,10 @@ export function VenueMap({ lat, lng, name }: { lat: number; lng: number; name: s
           attributionControl: { compact: true },
         });
         new Marker({ element: pin() }).setLngLat([lng, lat]).addTo(map);
-        // The compact attribution opens on load; keep it folded behind its ⓘ button.
-        map.once("load", () => container.current?.querySelector(".maplibregl-compact-show")?.classList.remove("maplibregl-compact-show"));
+        // The compact attribution starts open, and opens again on load; keep it folded behind its ⓘ button.
+        const fold = () => container.current?.querySelector(".maplibregl-compact-show")?.classList.remove("maplibregl-compact-show");
+        fold();
+        map.once("load", fold);
       })
       .catch(() => {
         // No WebGL or the tiles failed: the placeholder stays.
@@ -44,7 +57,7 @@ export function VenueMap({ lat, lng, name }: { lat: number; lng: number; name: s
     <div
       role="img"
       aria-label={`Mapa de ${name}`}
-      className="relative h-[280px] overflow-hidden rounded-[22px] border border-line bg-canvas"
+      className={`relative overflow-hidden border border-line bg-canvas ${className}`}
     >
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" aria-hidden="true">
         <Pin />

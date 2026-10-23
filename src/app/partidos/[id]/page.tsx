@@ -9,6 +9,7 @@ import { MatchTimeline } from "@/components/match-timeline";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PlayerEvents, PlayerEventsLegend } from "@/components/player-events";
 import { VenueLink } from "@/components/venue-link";
+import { VenueMap } from "@/components/venue-map";
 import { VideoEmbed } from "@/components/video-embed";
 import { siteConfig } from "@/config/site";
 import { calendarUrl } from "@/lib/calendar";
@@ -429,7 +430,19 @@ function VenueCard({ data }: { data: MatchPageData }) {
   if (!venue) return null;
   const location = venue.address ? `${venue.name}, ${venue.address}` : venue.name;
   return (
-    <Card title="El campo">
+    <Card
+      title="El campo"
+      action={
+        <Link href={`/campos/${venue.id}`} className="text-sm font-semibold text-accent-text hover:underline">
+          Ver el campo →
+        </Link>
+      }
+    >
+      {venue.lat !== null && venue.lng !== null && (
+        <Link href={`/campos/${venue.id}`} aria-label={`Ver ${venue.name}`} className="block transition-opacity hover:opacity-90">
+          <VenueMap lat={venue.lat} lng={venue.lng} name={venue.name} className="h-[180px] rounded-[14px]" />
+        </Link>
+      )}
       <div>
         <VenueLink venue={venue} className="font-semibold" />
         {venue.address && <div className="text-sm text-muted">{venue.address}</div>}
