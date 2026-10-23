@@ -18,6 +18,7 @@ export interface DayMatch {
   awayPosition: number | null;
   homeGoals: number | null;
   awayGoals: number | null;
+  venueId: number | null;
   venue: string;
   /** Group and round, "Grupo 7 · J4", or the competition outside the main one. */
   label: string | null;
@@ -88,6 +89,7 @@ export function buildDay(matches: Match[], tree: LeagueTree, date: string, focus
       awayPosition: positionIn(m.groupId, m.awayId),
       homeGoals: m.homeGoals,
       awayGoals: m.awayGoals,
+      venueId: getVenue(m.venueId)?.id ?? null,
       venue: getVenue(m.venueId)?.name ?? "",
       label: where ? `${where}${round}` : null,
       isFocus: focusTeamId !== null && (m.homeId === focusTeamId || m.awayId === focusTeamId),

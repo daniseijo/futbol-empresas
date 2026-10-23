@@ -29,6 +29,11 @@ const VENUES: Venue[] = [
 
 const BY_ID = new Map(VENUES.map((venue) => [venue.id, venue]));
 
+/** Every known venue, sorted by name. */
+export function getVenues(): Venue[] {
+  return [...VENUES].sort((a, b) => a.name.localeCompare(b.name, "es"));
+}
+
 export function getVenue(id: number | null): Venue | null {
   return id === null ? null : (BY_ID.get(id) ?? null);
 }
