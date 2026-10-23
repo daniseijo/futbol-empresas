@@ -13,7 +13,7 @@ export async function SiteHeader() {
   }));
 
   return (
-    <header className="border-b border-line bg-surface">
+    <header className="z-40 border-b border-line bg-surface md:sticky md:top-0">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5">
           <span className="flex size-9 items-center justify-center rounded-[9px] bg-accent font-display text-[19px] font-extrabold text-on-accent">
@@ -23,9 +23,7 @@ export async function SiteHeader() {
         </Link>
         <MainNav />
         <TeamSearch teams={searchable} />
-        <span className="hidden h-11 items-center rounded-[10px] border border-line px-3.5 text-sm font-semibold md:flex">
-          Temporada {season.name}
-        </span>
+        <span className="hidden text-sm font-semibold text-muted md:block">Temporada {season.name}</span>
       </div>
     </header>
   );
