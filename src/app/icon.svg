@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <clipPath id="ball"><circle cx="32" cy="32" r="21"/></clipPath>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#f0533b"/>
+  <circle cx="32" cy="32" r="21" fill="#ffffff"/>
+  <g clip-path="url(#ball)" fill="#0b0f14">
+    <polygon points="32.00,24.50 39.13,29.68 36.41,38.07 27.59,38.07 24.87,29.68"/>
+    <polygon points="32.00,17.00 24.87,11.82 27.59,3.43 36.41,3.43 39.13,11.82"/>
+    <polygon points="46.27,27.36 48.99,18.98 57.81,18.98 60.53,27.36 53.40,32.55"/>
+    <polygon points="40.82,44.14 49.63,44.14 52.36,52.52 45.23,57.70 38.09,52.52"/>
+    <polygon points="23.18,44.14 25.91,52.52 18.77,57.70 11.64,52.52 14.37,44.14"/>
+    <polygon points="17.73,27.36 10.60,32.55 3.47,27.36 6.19,18.98 15.01,18.98"/>
+    <g stroke="#0b0f14" stroke-width="2.2" stroke-linecap="round">
+      <line x1="32.00" y1="24.50" x2="32.00" y2="17.00"/>
+      <line x1="39.13" y1="29.68" x2="46.27" y2="27.36"/>
+      <line x1="36.41" y1="38.07" x2="40.82" y2="44.14"/>
+      <line x1="27.59" y1="38.07" x2="23.18" y2="44.14"/>
+      <line x1="24.87" y1="29.68" x2="17.73" y2="27.36"/>
+    </g>
+  </g>
+  <circle cx="32" cy="32" r="21" fill="none" stroke="#0b0f14" stroke-width="3"/>
+</svg>
