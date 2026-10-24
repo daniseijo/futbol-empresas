@@ -2,6 +2,7 @@ import { cacheLife } from "next/cache";
 import { dayKey, nowInMadrid } from "@/lib/dates";
 import { getCurrentSeason, getHeadToHead, getLeagues, getMatch, getSeasonMatches, getSeasons, getSquad, getTeams } from "@/lib/data";
 import { LeagueTree } from "@/lib/sportspress/leagues";
+import { playerDisplayName } from "@/lib/players";
 import type { LineupPlayer, Match, MatchDetail, SquadPlayer, StandingRow } from "@/lib/sportspress/types";
 import { computeStandings, outcomeFor } from "@/lib/standings";
 
@@ -46,10 +47,6 @@ export interface MatchPageData {
   round: Match[];
   restingTeam: string | null;
   headToHead: { matches: Match[]; homeWins: number; draws: number; awayWins: number };
-}
-
-function playerName(player: LineupPlayer) {
-  return player.name || (player.number ? `Dorsal ${player.number}` : "Jugador");
 }
 
 export async function getMatchPageData(id: number): Promise<MatchPageData | null> {
@@ -106,7 +103,7 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
 
   // Goal timeline with the running score.
   const raw = lineups
-    .flatMap((p) => p.minutes.map((minute) => ({ minute, teamId: p.teamId, playerName: playerName(p) })))
+    .flatMap((p) => p.minutes.map((minute) => ({ minute, teamId: p.teamId, playerName: playerDisplayName(p.name, p.number) })))
     .sort((a, b) => a.minute - b.minute);
   let homeScore = 0;
   let awayScore = 0;

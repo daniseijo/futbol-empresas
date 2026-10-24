@@ -14,6 +14,7 @@ import { VideoEmbed } from "@/components/video-embed";
 import { siteConfig } from "@/config/site";
 import { calendarUrl } from "@/lib/calendar";
 import { getMatch, getSeasonMatches, getCurrentSeason, getTeam } from "@/lib/data";
+import { playerDisplayName } from "@/lib/players";
 import { capitalize, formatLongDate, formatShortDate, relativeDay } from "@/lib/dates";
 import type { Position } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
@@ -250,7 +251,7 @@ function Mvp({ data }: { data: MatchPageData }) {
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="text-xs font-extrabold tracking-[0.14em]">MVP DEL PARTIDO</span>
         <Link href={`/jugadores/${p.playerId}`} className="font-display text-[34px] leading-none font-extrabold uppercase hover:underline">
-          {p.name || "Jugador"}
+          {playerDisplayName(p.name, p.number)}
         </Link>
         <span className="text-[13px]">{[team.name, ...facts].join(" · ")}</span>
       </div>
@@ -288,7 +289,7 @@ function Lineups({ data }: { data: MatchPageData }) {
                 >
                   <PlayerAvatar name={p.name} photoUrl={p.photoUrl} number={p.number} position={p.position} size={34} />
                   <span className="min-w-0 text-sm">
-                    <span className="font-semibold">{p.name || "Sin nombre"}</span>{" "}
+                    <span className="font-semibold">{playerDisplayName(p.name, p.number)}</span>{" "}
                     <span className="text-xs text-muted">{[p.position, p.photoUrl && p.number ? `#${p.number}` : null].filter(Boolean).join(" · ")}</span>
                     {p.crack && (
                       <span className="ml-1.5 rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent-text">MVP</span>

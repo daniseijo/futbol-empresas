@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { Position, SquadPlayer } from "@/lib/sportspress/types";
+import { playerDisplayName } from "@/lib/players";
 import { PlayerAvatar } from "../player-avatar";
 
 const money = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -17,7 +18,7 @@ function PlayerRow({ player, rank }: { player: SquadPlayer; rank?: number }) {
       <PlayerAvatar name={player.name} photoUrl={player.photoUrl} number={player.number} position={player.position} size={36} />
       <span className="min-w-0 truncate font-semibold">
         {rank !== undefined && <span className="mr-2 font-normal text-muted">{rank}.</span>}
-        {player.name || "Sin nombre"}
+        {playerDisplayName(player.name, player.number)}
         {player.photoUrl && player.number ? <span className="ml-1.5 font-normal text-muted">#{player.number}</span> : null}
       </span>
       <span className="text-right">{player.appearances}</span>

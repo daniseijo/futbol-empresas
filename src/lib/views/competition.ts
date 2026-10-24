@@ -2,6 +2,7 @@ import { cacheLife } from "next/cache";
 import { siteConfig } from "@/config/site";
 import { dayKey, formatLongDate, nowInMadrid } from "@/lib/dates";
 import { getCurrentSeason, getGroupSeasons, getLeagues, getPlayers, getSeasonMatches, getSeasons, getTeams } from "@/lib/data";
+import { playerDisplayName } from "@/lib/players";
 import { expectedTotal } from "@/lib/expected-matches";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, StandingRow } from "@/lib/sportspress/types";
@@ -200,7 +201,7 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
   const teamName = new Map(teams.map((t) => [t.id, t.name]));
   const toTally = ([playerId, entry]: [number, { value: number; teamId: number }]): PlayerTally => ({
     playerId,
-    name: players[playerId]?.name || "Jugador",
+    name: playerDisplayName(players[playerId]?.name),
     photoUrl: players[playerId]?.photoUrl ?? null,
     team: teamName.get(entry.teamId) ?? "",
     value: entry.value,

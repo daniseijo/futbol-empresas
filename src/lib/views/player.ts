@@ -2,6 +2,7 @@ import { cacheLife } from "next/cache";
 import { getCurrentSeason, getPlayerCareer, getSeasons, getTeams } from "@/lib/data";
 import type { Match, Outcome, Position } from "@/lib/sportspress/types";
 import { nowInMadrid } from "@/lib/dates";
+import { playerDisplayName } from "@/lib/players";
 import { outcomeFor } from "@/lib/standings";
 
 export interface PlayerTotals {
@@ -102,7 +103,7 @@ export async function getPlayerPageData(id: number): Promise<PlayerPageData | nu
     id,
     now: nowInMadrid(),
     name: player.name,
-    displayName: player.name || (number ? `Dorsal ${number}` : "Jugador"),
+    displayName: playerDisplayName(player.name, number),
     photoUrl: player.photoUrl,
     number,
     position: mostCommon(lines.map((l) => l.line.position).filter((p) => p !== null)) ?? ((squads[0]?.position as Position | null) ?? null),

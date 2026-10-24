@@ -1,6 +1,7 @@
 import { cacheLife } from "next/cache";
 import { siteConfig } from "@/config/site";
 import { addDays, dayKey, nowInMadrid } from "@/lib/dates";
+import { playerDisplayName } from "@/lib/players";
 import {
   getCurrentSeason,
   getLatestNews,
@@ -194,7 +195,7 @@ export async function getHomeData(): Promise<HomeData> {
   const players = await getPlayers(top.map(([id]) => id));
   const scorers = top.map(([playerId, entry]) => ({
     playerId,
-    name: players[playerId]?.name ?? "Jugador",
+    name: playerDisplayName(players[playerId]?.name),
     team: teamName.get(entry.teamId) ?? "",
     goals: entry.goals,
     photoUrl: players[playerId]?.photoUrl ?? null,
