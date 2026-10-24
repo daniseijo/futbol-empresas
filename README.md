@@ -63,7 +63,8 @@ Move `futbol-copy.db` over (AirDrop, Drive...), save it as `data/futbol.db` on t
 3. **Vercel:** import the repository and set `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, `REVALIDATE_SECRET`
    and, for another focus team, `NEXT_PUBLIC_FOCUS_TEAM_SLUG`. Also set `ENABLE_EXPERIMENTAL_COREPACK=1` so
    Vercel uses the pnpm version pinned in `packageManager`. `vercel.json` runs the functions in Dublin
-   (`dub1`), next to the Turso database.
+   (`dub1`), next to the Turso database, and skips deployments of pushes that only change docs, Markdown,
+   workflows or agent config (`scripts/vercel-ignore-build.sh`).
 4. **GitHub:** under *Settings › Secrets and variables › Actions*, create the secrets `DATABASE_URL`,
    `DATABASE_AUTH_TOKEN`, `REVALIDATE_SECRET` (same as in Vercel) and `REVALIDATE_URL`
    (`https://<domain>/api/revalidate`), and the variable `SYNC_ENABLED=true`. Without that variable the
