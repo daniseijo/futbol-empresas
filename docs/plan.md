@@ -44,8 +44,16 @@ See the steps in the README.
 - [x] **Venue** (`/campos/[id]`, index at `/campos`): a map in the site's colours (MapLibre + OpenFreeMap), address, the next date with matches
   there, the rest of the season and who plays there most, linked from every venue name. Plan:
   [04 · Venue page](plans/04-venue-page.md).
-- [ ] **Women's league**: check that the home page and teams work well with its competitions. Plan:
-  [07 · Women's league](plans/07-womens-league.md).
+- [x] **Women's league**: checked on 24 Oct 2026 with `telefonica-femenino` as the focus team (local data): the
+  home page, every team tab, the match pages (including a goalkeeper in both lineups) and the competition pages
+  work. The competition's group cards now wrap long names ("Segunda Fase - Grupo de Oro / de Plata" were cut to
+  the same text). Plan: [07 · Women's league](plans/07-womens-league.md). Left as is:
+  - The home page's top scorers, group leaders and big wins stay on the main competition (the men's Liga
+    Apertura). With 5 teams and one group the women's league adds little there, and it is one click away from the
+    focus team's standings card and the "Competiciones" card.
+  - The finals played on the last day (matches tagged only with the competition, 539 and 542 in 24/25) show as a
+    "Clasificación" table on the competition page. The men's Liga Clausura and the Copa de las Empresas have the
+    same problem with their knockout matches: part of [09 · Cup brackets](plans/09-cup-brackets.md).
 - [x] **Matches of a day** (`/partidos/dia/[fecha]`): grouped by time or venue (`?orden=campo`), with previous and
   next dates with matches, linked from the home page's match strip and the match page's "Resto de la jornada".
   Current season only.

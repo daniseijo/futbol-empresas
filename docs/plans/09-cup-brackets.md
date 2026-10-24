@@ -18,6 +18,11 @@ Two cup competitions (production, Oct 2026):
   rounds 1–3), then a knockout: in 22/23 per division (391, 392, 393, 698, 699: ~15 matches each), since 23/24 all
   under 378 itself (74–90 matches).
 
+The same shape, group matches in the children and knockout matches tagged only with the competition, shows up in
+two leagues too: the men's **Liga Clausura** (115: 274–290 matches on the root in 24/25 and 25/26) and the women's
+**Liga Apertura / Clausura Femenina** (539, 542: 3 placement finals on the last day of 24/25). Their competition
+pages show those matches as a standings table too.
+
 None of the knockout matches has a `round`. Some details seen:
 
 - A final can end in a draw (Securitas Direct 1–1 Grupo Cobra, 25 Sep 2023): penalties are not in the score.
