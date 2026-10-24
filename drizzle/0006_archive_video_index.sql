@@ -1,0 +1,1 @@
+CREATE INDEX `matches_video_unchecked` ON `matches` (`date`) WHERE "matches"."video_checked_at" is null;

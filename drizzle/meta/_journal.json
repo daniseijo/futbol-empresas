@@ -43,6 +43,13 @@
       "when": 1792774002324,
       "tag": "0005_player_last_team",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1792830282588,
+      "tag": "0006_archive_video_index",
+      "breakpoints": true
     }
   ]
 }

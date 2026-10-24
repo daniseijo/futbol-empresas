@@ -1,4 +1,5 @@
 import { index, integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 
 // Local copy of the futbolempresas.es API. `pnpm sync` (src/sync) fills it and
 // pages only read from here: they never call the API while rendering.
@@ -75,6 +76,11 @@ export const matches = sqliteTable(
     index("matches_group").on(t.groupId, t.seasonId),
     index("matches_home").on(t.homeId),
     index("matches_away").on(t.awayId),
+    // Matches whose video was never checked: the archive backfill finds them
+    // without scanning the whole table (~10,000 rows on every run).
+    index("matches_video_unchecked")
+      .on(t.date)
+      .where(sql`${t.videoCheckedAt} is null`),
   ],
 );
 
