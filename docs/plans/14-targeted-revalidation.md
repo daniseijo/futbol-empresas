@@ -23,11 +23,37 @@ anything:
 1. **Count revalidations.** Over a few days after "Videos (archive)" stops appearing as pending, count the sync runs
    that log "Site revalidation" against those that do not (`gh run list --workflow sync.yml`, `gh run view <id>
    --log`). Note what caused the writes in each.
-2. **Measure the site's reads.** `turso plan show` gives the month's total. The sync now reads ~20,000–25,000 rows a
-   run (~11–14M a month at ~570 runs); the rest is the site. `turso db inspect futbolempresas --queries` shows the
+2. **Measure the site's reads.** `turso plan show` gives the month's total. A quiet sync read ~14,000 rows a run on 24 Oct
+   (~3,000 expected with the new index); the rest is the site. `turso db inspect futbolempresas --queries` shows the
    heaviest queries. Compare a day with many revalidations against a quiet one.
 3. **Decide.** If the site's reads are a small share of the quota, or most runs no longer revalidate, stop here and
    do only the cheap fix in step 1 below (accurate change detection). Write the numbers in `docs/plan.md` either way.
+
+### First measurement (24 Oct 2026)
+
+Taken right after the archive video backfill finished, so it still reflects two unusual days (the initial load,
+a 3-hour backfill run and many manual syncs, each revalidating the whole site). Repeat it after a few normal days
+before deciding.
+
+- **Turso** (`turso plan show`; hourly figures from the Platform API, `GET
+  /v1/organizations/daniseijo/databases/futbolempresas/usage?from=…&to=…`): 92.2M of 500M rows read this month,
+  all since the database was created on 22 Oct (10.1M on the 22nd, 81.2M on the 23rd). A quiet sync read 13,719
+  rows (the 04:00 UTC hour on 24 Oct, nothing else ran); ~10,600 of them were a full scan of `matches` for the
+  archive videos, now served by the `matches_video_unchecked` index (~3,000 rows expected per run). The rest of
+  the reads come from the site: ~44M between 14:00 and 18:00 UTC on 23 Oct with no sync running.
+- **Site reads per render**: `expectedRulesFor` loaded the whole previous season with scorers (~3,000 matches +
+  ~45,000 lineup rows) on every home and competition render that missed the cache. It now reads only
+  `getSeasonPairings`. On Vercel, `"use cache"` is in memory per instance, so misses are frequent.
+- **Vercel** (Usage page, whole Hobby team, in practice 22–24 Oct): Fast Data Transfer 165 MB, Fast Origin
+  Transfer 181 MB, CDN requests 15K, function invocations 1.2K, Fluid Active CPU 11 min 17 s, provisioned memory
+  0.61 GB-h, ISR reads 12K, **ISR writes 10K**. ISR writes are the closest to a Hobby limit (~5% of ~200K in
+  two or three days), and whole-site revalidations are what drive them. The CLI's `vercel metrics` and
+  `vercel usage` need Observability Plus or a paid plan, so these numbers come from the dashboard.
+- Not adopted for now: `"use cache: remote"` would cut Turso reads but adds Vercel cache operations, which is
+  where the margin is smallest.
+
+**Next check:** after about a week of normal runs (from ~1 Nov 2026), read Vercel's ISR writes and Active CPU
+and Turso's daily rows read again. If ISR writes still project above ~50% of the monthly limit, build this plan.
 
 ## What to build
 

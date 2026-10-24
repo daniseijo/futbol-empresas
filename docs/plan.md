@@ -13,8 +13,8 @@ names. Only the archive videos are left; the scheduled GitHub action keeps check
 - [x] ~~Names of players with a private profile~~: they cannot be fetched. The league hides them everywhere:
   the API returns 404, they are missing from the match page and the squad lists, and their web profile is a 404.
   Only their id remains on the API match sheet, so the site shows them by shirt number ("Dorsal 7").
-- [ ] Past season videos: the "Videos (archive)" task is last in the queue; check how many it finds
-  (about 3 in 4 matches so far). Plan: [08 · Archive videos](plans/08-archive-videos.md).
+- [x] Past season videos: the archive backfill finished on 23 Oct 2026 (4,762 matches checked in one run,
+  4,138 with video). Plan: [08 · Archive videos](plans/08-archive-videos.md).
 
 ## 2. Deployment (Vercel + Turso + GitHub Actions)
 
@@ -76,9 +76,9 @@ See the steps in the README.
 - [ ] End-to-end test of the sync against recorded API responses. Plan: [12 · End-to-end sync test](plans/12-sync-e2e-test.md).
 - [ ] Accessibility review (coral on white contrast, focus, screen readers on the timeline). Plan:
   [13 · Accessibility review](plans/13-accessibility.md).
-- [ ] Revalidate only what a sync changed, not the whole site: today almost every run invalidates every page (an
-  archive video counts as a change). Measure first, once the archive video backfill ends. Plan:
-  [14 · Targeted revalidation](plans/14-targeted-revalidation.md).
+- [ ] Revalidate only what a sync changed, not the whole site. First measurement taken on 24 Oct 2026 (Turso
+  reads, Vercel ISR writes and Active CPU, in the plan); measure again after a week of normal runs (~1 Nov) and
+  build it if ISR writes are still high. Plan: [14 · Targeted revalidation](plans/14-targeted-revalidation.md).
 - [x] Alerts when the sync fails: a `sync-failure` issue that opens on failure and closes on the next success,
   and the footer's last sync date in red after 12 hours. Plan: [03 · Sync monitoring](plans/03-sync-monitoring.md).
 
