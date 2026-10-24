@@ -7,6 +7,8 @@ import { OutcomeBadge } from "@/components/form-badges";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PlayerEvents } from "@/components/player-events";
 import { SectionCard } from "@/components/team/section-card";
+import { siteConfig } from "@/config/site";
+import { getSquad, getTeam } from "@/lib/data";
 import { formatShortDate } from "@/lib/dates";
 import type { Position } from "@/lib/sportspress/types";
 import { getPlayerPageData, type PlayerMatchRow, type PlayerPageData } from "@/lib/views/player";
@@ -19,6 +21,18 @@ const POSITION_LABEL: Record<Position, string> = { POR: "Portero", DEF: "Defensa
 /** Ids arrive as URL text: anything that is not a number is a 404. */
 function parseId(raw: string): number | null {
   return /^\d+$/.test(raw) ? Number(raw) : null;
+}
+
+/**
+ * The build generates the focus team's squad; the rest, on first visit. Without
+ * this list the route never caches a player's page, and a missing player keeps
+ * answering 200 instead of 404 after its first visit.
+ */
+export async function generateStaticParams() {
+  const team = await getTeam(siteConfig.focusTeamSlug);
+  const squad = team ? await getSquad(team.id) : [];
+  // At least one param is required: "0" is never a player, so it prerenders as a 404.
+  return squad.length > 0 ? squad.map((p) => ({ id: String(p.id) })) : [{ id: "0" }];
 }
 
 export async function generateMetadata({ params }: PageProps<"/jugadores/[id]">): Promise<Metadata> {
