@@ -1,4 +1,4 @@
-import { getSeasonMatches, getSeasons } from "@/lib/data";
+import { getSeasonPairings, getSeasons } from "@/lib/data";
 import { roundRobinGroups, type ExpectedRules } from "@/lib/expected-matches";
 import type { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Season, TeamSummary } from "@/lib/sportspress/types";
@@ -12,7 +12,7 @@ import type { Season, TeamSummary } from "@/lib/sportspress/types";
 export async function expectedRulesFor(season: Season, tree: LeagueTree, teams: TeamSummary[]): Promise<ExpectedRules> {
   const seasons = await getSeasons();
   const previous = seasons.filter((s) => s.name < season.name).at(-1);
-  const previousMatches = previous ? await getSeasonMatches(previous.id) : [];
+  const previousMatches = previous ? await getSeasonPairings(previous.id) : [];
   const roundRobins = roundRobinGroups(previousMatches);
   const seen = new Set(previousMatches.map((m) => m.groupId));
   const leagueIds = new Map(teams.map((t) => [t.id, t.leagueIds]));

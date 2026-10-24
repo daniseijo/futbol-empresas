@@ -6,6 +6,7 @@ import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { cacheLife, cacheTag } from "next/cache";
 import { db, schema } from "@/db/client";
+import type { Pairing } from "./expected-matches";
 import { shortenUrl, type SearchIndexPayload } from "./search";
 import type {
   League,
@@ -244,6 +245,18 @@ export async function getSeasonMatches(seasonId: number): Promise<Match[]> {
   const rows = await selectMatches().where(eq(schema.matches.seasonId, seasonId)).orderBy(schema.matches.date);
   const scorers = await scorersFor(rows.map((r) => r.match.id));
   return rows.map((row) => toMatch(row, scorers.get(row.match.id) ?? []));
+}
+
+/**
+ * Who played whom in each group of a season, without scorers or team names: a
+ * whole season's lineups are ~45,000 rows, its matches ~3,000.
+ */
+export async function getSeasonPairings(seasonId: number): Promise<Pairing[]> {
+  "use cache";
+  cacheLife("results");
+  cacheTag(DATA_TAG);
+  const m = schema.matches;
+  return db.select({ groupId: m.groupId, homeId: m.homeId, awayId: m.awayId }).from(m).where(eq(m.seasonId, seasonId));
 }
 
 /** A group's matches with their photos. */

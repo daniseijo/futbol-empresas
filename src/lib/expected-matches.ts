@@ -10,8 +10,11 @@ export function roundRobin(teams: number): number {
   return (teams * (teams - 1)) / 2;
 }
 
-function byGroup(matches: Match[]): Map<number, Match[]> {
-  const groups = new Map<number, Match[]>();
+/** The only fields these rules read from a match. */
+export type Pairing = Pick<Match, "groupId" | "homeId" | "awayId">;
+
+function byGroup<T extends Pairing>(matches: T[]): Map<number, T[]> {
+  const groups = new Map<number, T[]>();
   for (const match of matches) {
     if (match.groupId === null) continue;
     groups.set(match.groupId, [...(groups.get(match.groupId) ?? []), match]);
@@ -19,7 +22,7 @@ function byGroup(matches: Match[]): Map<number, Match[]> {
   return groups;
 }
 
-function teamsOf(matches: Match[]): Set<number> {
+function teamsOf(matches: Pairing[]): Set<number> {
   return new Set(matches.flatMap((m) => [m.homeId, m.awayId]));
 }
 
@@ -29,7 +32,7 @@ function teamsOf(matches: Match[]): Set<number> {
  * counts). Knockouts and the Champions league phase, where each team plays a
  * few rivals, are not.
  */
-export function roundRobinGroups(matches: Match[]): Set<number> {
+export function roundRobinGroups(matches: Pairing[]): Set<number> {
   const result = new Set<number>();
   for (const [groupId, list] of byGroup(matches)) {
     const total = roundRobin(teamsOf(list).size);
