@@ -37,17 +37,19 @@ See the steps in the README.
 
 - [x] **Group / competition** (`/competiciones/...`): standings, browsable rounds, top scorers and the group's
   MVP, linked from the home page, the match page and the team standings.
-  - [ ] Cups without groups (Corporate Cup): they now show a table with all their teams; a bracket or a list
-    of knockout rounds would be better. Plan: [09 · Cup brackets](plans/09-cup-brackets.md).
+  - [ ] Cups without groups (Corporate Cup), and knockout or final matches tagged only with the competition
+    (Copa de las Empresas, Liga Clausura, the women's leagues): they now show a standings table; a bracket or a
+    list of knockout rounds would be better. Plan: [09 · Cup brackets](plans/09-cup-brackets.md).
 - [x] **Player** (`/jugadores/[id]`): matches, goals with minute, MVP, teams per season and photo, linked from
   lineups, top scorers, MVP, squad and team leaders.
 - [x] **Venue** (`/campos/[id]`, index at `/campos`): a map in the site's colours (MapLibre + OpenFreeMap), address, the next date with matches
   there, the rest of the season and who plays there most, linked from every venue name. Plan:
   [04 · Venue page](plans/04-venue-page.md).
-- [x] **Women's league**: checked on 24 Oct 2026 with `telefonica-femenino` as the focus team (production data, read-only): the
-  home page, every team tab, the match pages (including a goalkeeper in both lineups) and the competition pages
-  work. The competition's group cards now wrap long names ("Segunda Fase - Grupo de Oro / de Plata" were cut to
-  the same text). Plan: [07 · Women's league](plans/07-womens-league.md). Left as is:
+- [x] **Women's league**: checked on 24 Oct 2026 with `telefonica-femenino` as the focus team (production data,
+  read-only): the home page, every team tab, the match pages (including a goalkeeper in both lineups) and the
+  competition pages work. The competition's group cards now wrap long names ("Segunda Fase - Grupo de Oro / de
+  Plata" were cut to the same text), and private players show as "Dorsal 7" everywhere (`playerDisplayName`)
+  instead of "Sin nombre" in lineups and squads. Plan: [07 · Women's league](plans/07-womens-league.md). Left as is:
   - The home page's top scorers, group leaders and big wins stay on the main competition (the men's Liga
     Apertura). With 5 teams and one group the women's league adds little there, and it is one click away from the
     focus team's standings card and the "Competiciones" card.
