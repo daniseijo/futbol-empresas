@@ -44,7 +44,7 @@ See the steps in the README.
 - [x] **Venue** (`/campos/[id]`, index at `/campos`): a map in the site's colours (MapLibre + OpenFreeMap), address, the next date with matches
   there, the rest of the season and who plays there most, linked from every venue name. Plan:
   [04 · Venue page](plans/04-venue-page.md).
-- [x] **Women's league**: checked on 24 Oct 2026 with `telefonica-femenino` as the focus team (local data): the
+- [x] **Women's league**: checked on 24 Oct 2026 with `telefonica-femenino` as the focus team (production data, read-only): the
   home page, every team tab, the match pages (including a goalkeeper in both lineups) and the competition pages
   work. The competition's group cards now wrap long names ("Segunda Fase - Grupo de Oro / de Plata" were cut to
   the same text). Plan: [07 · Women's league](plans/07-womens-league.md). Left as is:
