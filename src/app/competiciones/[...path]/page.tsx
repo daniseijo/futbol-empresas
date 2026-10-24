@@ -163,7 +163,7 @@ function Children({ items }: { items: ChildCard[] }) {
           }`}
         >
           <span className={`flex justify-between gap-2 text-xs font-semibold ${child.hasFocusTeam ? "" : "text-muted"}`}>
-            <span className="truncate">{child.name.toUpperCase()}</span>
+            <span className="line-clamp-2">{child.name.toUpperCase()}</span>
             {child.leader && <span className="shrink-0">{child.leader.points} pts</span>}
           </span>
           <span className="truncate text-[15px] font-bold">{child.leader?.name ?? `${child.teams} equipos`}</span>
