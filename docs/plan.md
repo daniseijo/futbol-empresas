@@ -74,9 +74,21 @@ See the steps in the README.
   `last_match_date`, which the sync updates from the matches it saves (one primary key lookup per player).
 - [ ] SEO: `sitemap.xml`, Open Graph images per match and team. Plan:
   [06 · Sharing and SEO](plans/06-share-and-seo.md).
-- [ ] A real 404 page: it currently answers 200 because the content is streamed. In development, the first load
-  of a 404 sometimes throws "cannot have a negative time stamp" in `performance.measure` (from React, not the site).
-  Plan: [11 · A real 404](plans/11-real-404.md).
+- [x] A real 404 page, as far as it goes without slowing pages down (24 Oct 2026). Plan:
+  [11 · A real 404](plans/11-real-404.md). Measured on a production build:
+  - Matches, teams (every tab) and venues answer 200 on the **first** visit of a missing URL and 404 from then on:
+    with Partial Prefetching the first visit gets the skeleton straight away, then Next renders the URL in the
+    background, reaches `notFound()` and caches a 404. Players now do the same: the route had no
+    `generateStaticParams`, so it never cached a page and always answered 200. It now prerenders the focus team's
+    squad, and visited players are cached too (more ISR entries: keep an eye on it in plan 14).
+  - Competitions and day pages always answer 200: they read `searchParams` (`?temporada`, `?orden`), which keeps
+    them dynamic. Fixing that means moving those options into the path.
+  - Not done: a check before the `<Suspense>` would make every first visit wait for the database instead of
+    showing the skeleton, which is what the Next docs warn against. A check in Proxy would run before the CDN cache
+    on every page load of those routes (one function call and one Turso read each). Both cost every visitor to
+    fix a case that `noindex` already keeps out of search engines.
+  - The dev-only "cannot have a negative time stamp" error did not show up in five cold loads of 404 pages with
+    Next 16.4.2 (browser console and server log); no upstream issue linked.
 
 ## 5. Quality
 
