@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useSyncExternalStore } from "react";
 import { siteConfig } from "@/config/site";
 
 const LINKS = [
@@ -27,11 +27,14 @@ const LINKS = [
  *
  * On routes with params not generated at build time, the URL is unknown while
  * prerendering and usePathname() suspends: meanwhile the same links render
- * without the active one marked, so the menu stays in the static shell.
+ * without the active one marked, so the menu stays in the static shell. That
+ * shell is shared by every route and is not re-rendered on a full page load
+ * (opening the installed app, a reload), so once hydrated the fallback marks
+ * the active link from the browser's URL.
  */
 export function MainNav() {
   return (
-    <Suspense fallback={<NavLinks pathname={null} />}>
+    <Suspense fallback={<ShellNav />}>
       <ActiveNav />
     </Suspense>
   );
@@ -39,6 +42,17 @@ export function MainNav() {
 
 function ActiveNav() {
   return <NavLinks pathname={usePathname()} />;
+}
+
+const noSubscription = () => () => {};
+
+function ShellNav() {
+  const pathname = useSyncExternalStore(
+    noSubscription,
+    () => window.location.pathname,
+    () => null,
+  );
+  return <NavLinks pathname={pathname} />;
 }
 
 function NavLinks({ pathname }: { pathname: string | null }) {
