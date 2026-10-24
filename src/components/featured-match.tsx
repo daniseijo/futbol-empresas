@@ -48,23 +48,33 @@ function Chip({ className, children }: { className: string; children: React.Reac
   return <span className={`rounded-md px-2 py-1 text-[11px] font-bold tracking-[0.08em] uppercase ${className}`}>{children}</span>;
 }
 
+/**
+ * The big scoreboard. On a phone, crests and score share the first row, so a name on two lines does not push its
+ * crest up; from `sm` each side is a single block centred next to the score.
+ */
+function Scoreboard({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-3 gap-y-2 sm:items-center sm:gap-5">{children}</div>;
+}
+
 /** One side of the big scoreboard: crest, name and position in the group. */
 function Side({ side, isFocus, logos, slugs, form = false }: { side: TeamSide; isFocus: boolean; logos: Logos; slugs: Slugs; form?: boolean }) {
   return (
-    <Link href={`/equipos/${slugs[side.id] ?? ""}`} className="flex min-w-0 flex-col items-center gap-2 text-center">
+    <Link href={`/equipos/${slugs[side.id] ?? ""}`} className="row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center sm:row-span-1 sm:flex sm:flex-col sm:items-center sm:gap-2">
       <Crest
         src={logos[side.id]}
         name={side.name}
         size={72}
-        className={isFocus ? "outline-3 outline-offset-2 outline-accent" : ""}
+        className={`self-center ${isFocus ? "outline-3 outline-offset-2 outline-accent" : ""}`}
       />
-      <span className="text-[15px] leading-tight font-bold [overflow-wrap:break-word] sm:text-[19px]">{side.name}</span>
-      {side.standing && (
-        <span className="text-[13px] text-muted">
-          {side.standing.position}º · {side.standing.points} pts
-        </span>
-      )}
-      {form && side.standing && <FormBadges form={side.standing.form.slice(-3)} size={20} />}
+      <span className="flex min-w-0 max-w-full flex-col items-center gap-2">
+        <span className="max-w-full text-[15px] leading-tight font-bold [overflow-wrap:break-word] sm:text-[19px]">{side.name}</span>
+        {side.standing && (
+          <span className="text-[13px] text-muted">
+            {side.standing.position}º · {side.standing.points} pts
+          </span>
+        )}
+        {form && side.standing && <FormBadges form={side.standing.form.slice(-3)} size={20} />}
+      </span>
     </Link>
   );
 }
@@ -103,23 +113,25 @@ function ResultHero({
         </span>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:gap-5">
+      <Scoreboard>
         <Side side={data.home} isFocus={data.home.id === team.teamId} logos={logos} slugs={slugs} />
-        <div className="text-center">
-          {venue && (
-            <div className="mx-auto mb-1.5 max-w-36 text-[13px] text-muted sm:max-w-60">
-              <VenueLink venue={venue} />
-            </div>
-          )}
-          <Link href={`/partidos/${match.id}`} className="block font-display text-[56px] leading-[0.88] font-extrabold sm:text-[104px]">
-            {match.homeGoals}
-            <span className="px-1.5 text-line sm:px-2.5">–</span>
-            {match.awayGoals}
-          </Link>
-          {data.halftime && <div className="mt-1.5 text-[13px] text-muted">Descanso {data.halftime}</div>}
+        <div className="row-span-2 grid grid-rows-subgrid text-center sm:row-span-1 sm:block">
+          <div className="self-center">
+            {venue && (
+              <div className="mx-auto mb-1.5 max-w-36 text-[13px] text-muted sm:max-w-60">
+                <VenueLink venue={venue} />
+              </div>
+            )}
+            <Link href={`/partidos/${match.id}`} className="block font-display text-[56px] leading-[0.88] font-extrabold sm:text-[104px]">
+              {match.homeGoals}
+              <span className="px-1.5 text-line sm:px-2.5">–</span>
+              {match.awayGoals}
+            </Link>
+          </div>
+          {data.halftime && <div className="text-[13px] text-muted sm:mt-1.5">Descanso {data.halftime}</div>}
         </div>
         <Side side={data.away} isFocus={data.away.id === team.teamId} logos={logos} slugs={slugs} />
-      </div>
+      </Scoreboard>
 
       {hasEvents && (
         <div className="grid grid-cols-2 gap-x-4 border-y border-line-soft py-3.5 text-[13px] sm:gap-x-8 sm:text-sm">
@@ -196,9 +208,9 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
         <Chip className={today ? "bg-accent text-on-accent" : "bg-accent-soft text-accent-text"}>{today ? "Hoy" : "Previa"}</Chip>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:gap-5">
+      <Scoreboard>
         <Side side={home} isFocus={home.id === team.teamId} logos={logos} slugs={slugs} form />
-        <div className="text-center">
+        <div className="self-center text-center">
           <Link href={`/partidos/${match.id}`} className="block">
             <div className="text-[13px] font-semibold tracking-[0.04em] text-muted uppercase">{relativeDay(match.date, now)}</div>
             <div className="font-display text-[48px] leading-[0.9] font-extrabold sm:text-[104px]">{match.date.slice(11, 16)}</div>
@@ -210,7 +222,7 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
           )}
         </div>
         <Side side={away} isFocus={away.id === team.teamId} logos={logos} slugs={slugs} form />
-      </div>
+      </Scoreboard>
 
       {rows.length > 0 && (
         <div className="grid grid-cols-[minmax(0,1fr)_130px_minmax(0,1fr)] border-y border-line-soft py-3 text-center text-sm sm:grid-cols-[minmax(0,1fr)_150px_minmax(0,1fr)]">
