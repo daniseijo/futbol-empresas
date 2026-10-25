@@ -139,6 +139,40 @@ TELEGRAM_BOT_TOKEN=… TELEGRAM_CHAT_ID=… pnpm notify -- --match=104101   # se
 ```
 
 `--dry-run` and `--match` work with a read-only database token. Without a channel set, `pnpm notify` only prints.
+`--match` also sends to the Slack subscriptions of either team in that match (it needs `NOTIFY_ENCRYPTION_KEY`).
+
+#### Slack subscriptions to any team
+
+Every team page has a "Recibir convocatorias en Slack" button, so anyone can get any team's call-ups in a Slack
+channel, with no accounts:
+
+1. The button links to `/api/slack/instalar?equipo=<slug>`, which starts Slack's OAuth v2 with only the
+   `incoming-webhook` scope. The team and a nonce travel in `state`, signed with the client secret; the nonce is
+   also kept in a cookie, so the callback only accepts the browser that started the flow, within 10 minutes.
+2. Slack's consent screen picks the workspace and the channel and sends the visitor back to
+   `/api/slack/autorizado`, which trades the code for the channel's webhook, stores it in `subscriptions`
+   **encrypted** (AES-256-GCM, `src/notify/secrets.ts`), says hello in the channel and shows `/slack`.
+3. `pnpm notify` loads every subscription, the upcoming matches of all the followed teams in one query, and sends
+   each one its team's call-ups. Each target keeps its own record in `notifications`: `telegram` and `slack` for the
+   env-configured channels, `sub:<id>` for the subscriptions. One target failing never stops the others.
+4. To unsubscribe, remove the app from the channel or the workspace: Slack then answers the webhook with
+   `no_service`, `channel_not_found`… and `pnpm notify` deletes the subscription.
+
+That route is the site's only write to the database. Vercel's `DATABASE_AUTH_TOKEN` stays read-only; the callback
+uses `DATABASE_WRITE_AUTH_TOKEN` (`turso db tokens create futbolempresas`), which nothing else gets. The table
+itself is created by the migrations that `pnpm sync` and `pnpm notify` apply.
+
+Setup:
+
+1. At [api.slack.com/apps](https://api.slack.com/apps), *Create New App › From scratch*, then *Incoming Webhooks*:
+   on.
+2. *OAuth & Permissions › Redirect URLs*: add `https://<site>/api/slack/autorizado` for each address it runs on
+   (production and, to try it, a preview's branch alias). Slack only accepts HTTPS, so it cannot be tried on
+   `localhost` without a tunnel. Under *Scopes › Bot Token Scopes*, add `incoming-webhook`.
+3. *Manage Distribution*: tick the checklist and *Activate Public Distribution*, so other workspaces can add it.
+4. On Vercel: `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` (*Basic Information › App Credentials*),
+   `NOTIFY_ENCRYPTION_KEY` (`openssl rand -base64 32`) and `DATABASE_WRITE_AUTH_TOKEN`. In GitHub, the same
+   `NOTIFY_ENCRYPTION_KEY`. The button only shows when the Slack app is set.
 
 ## Pages
 

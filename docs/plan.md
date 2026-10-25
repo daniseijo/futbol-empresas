@@ -84,6 +84,11 @@ See the steps in the README.
   announces the focus team's matches from 14 days before and again if they are rescheduled, with a "¿Vas?" poll on
   Telegram. See "Match call-ups" in the README. Possible next steps: a reminder the day before, the result after
   the match, the standings context ("A 1 punto de…") in the message.
+- [x] Slack subscriptions to any team's call-ups (25 Oct 2026): "Recibir convocatorias en Slack" on every team
+  page, OAuth with the `incoming-webhook` scope, the webhook stored encrypted in `subscriptions`, and `pnpm notify`
+  sends per target and drops revoked webhooks. See "Slack subscriptions" in the README. Next: the same for
+  Telegram (a `?startgroup=<slug>` deep link to the bot), and maybe Slack's `app_uninstalled` event to drop
+  subscriptions straight away instead of on the next call-up.
 - [x] A real 404 page, as far as it goes without slowing pages down (24 Oct 2026). Plan:
   [11 · A real 404](plans/11-real-404.md). Measured on a production build:
   - Matches, teams (every tab) and venues answer 200 on the **first** visit of a missing URL and 404 from then on:
