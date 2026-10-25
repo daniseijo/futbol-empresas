@@ -8,6 +8,7 @@ import { FormBadges, OutcomeBadge } from "@/components/form-badges";
 import { MatchTimeline } from "@/components/match-timeline";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PlayerEvents, PlayerEventsLegend } from "@/components/player-events";
+import { ShareButton } from "@/components/share-button";
 import { VenueLink } from "@/components/venue-link";
 import { VenueMap } from "@/components/venue-map";
 import { VideoEmbed } from "@/components/video-embed";
@@ -131,22 +132,25 @@ function Scoreboard({ data }: { data: MatchPageData }) {
   return (
     <section className="border-b border-line bg-surface">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-6 pb-8 sm:px-6">
-        <nav aria-label="Competición" className="flex flex-wrap items-center gap-2 text-sm text-muted">
-          {data.path.map((part, index) => (
-            <span key={part.href} className="flex items-center gap-2">
-              {index > 0 && <span aria-hidden="true">›</span>}
-              <Link
-                href={part.href}
-                className={`hover:text-accent-text hover:underline ${index === data.path.length - 1 ? "font-semibold text-ink" : ""}`}
-              >
-                {part.name}
-              </Link>
-            </span>
-          ))}
-          {match.round && (
-            <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent-text">Jornada {match.round}</span>
-          )}
-        </nav>
+        <div className="flex items-start justify-between gap-3">
+          <nav aria-label="Competición" className="flex flex-wrap items-center gap-2 text-sm text-muted">
+            {data.path.map((part, index) => (
+              <span key={part.href} className="flex items-center gap-2">
+                {index > 0 && <span aria-hidden="true">›</span>}
+                <Link
+                  href={part.href}
+                  className={`hover:text-accent-text hover:underline ${index === data.path.length - 1 ? "font-semibold text-ink" : ""}`}
+                >
+                  {part.name}
+                </Link>
+              </span>
+            ))}
+            {match.round && (
+              <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent-text">Jornada {match.round}</span>
+            )}
+          </nav>
+          <ShareButton title={`${home.name} – ${away.name}`} />
+        </div>
 
         <div className="flex flex-wrap justify-center gap-x-2.5 text-[13px] text-muted">
           <span>{capitalize(formatLongDate(match.date, data.now))}</span>

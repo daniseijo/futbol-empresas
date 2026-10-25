@@ -4,6 +4,7 @@ import type { Match } from "@/lib/sportspress/types";
 import { getVenue } from "@/lib/sportspress/venues";
 import type { TeamPageData } from "@/lib/views/team";
 import { Crest } from "../crest";
+import { ShareButton } from "../share-button";
 import { VenueLink } from "../venue-link";
 import { TeamTabs } from "./team-tabs";
 
@@ -88,13 +89,16 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-5 gap-px self-start overflow-hidden rounded-[14px] border border-line bg-line">
-          {stats.map((stat) => (
-            <div key={stat.label} className="bg-white px-3 py-3 sm:px-4">
-              <div className={`font-display text-[32px] leading-none font-extrabold sm:text-[38px] ${stat.accent ? "text-accent-text" : ""}`}>{stat.value}</div>
-              <div className="text-xs whitespace-nowrap text-muted">{stat.label}</div>
-            </div>
-          ))}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="grid grid-cols-5 gap-px overflow-hidden rounded-[14px] border border-line bg-line">
+            {stats.map((stat) => (
+              <div key={stat.label} className="bg-white px-3 py-3 sm:px-4">
+                <div className={`font-display text-[32px] leading-none font-extrabold sm:text-[38px] ${stat.accent ? "text-accent-text" : ""}`}>{stat.value}</div>
+                <div className="text-xs whitespace-nowrap text-muted">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+          <ShareButton title={team.name} />
         </div>
       </div>
       <TeamTabs slug={team.slug} />
