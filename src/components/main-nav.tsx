@@ -25,12 +25,14 @@ const LINKS = [
  * bottom of the screen on phones, within thumb reach (and clear of the home
  * indicator when the site is installed as an app).
  *
- * On routes with params not generated at build time, the URL is unknown while
- * prerendering and usePathname() suspends: meanwhile the same links render
- * without the active one marked, so the menu stays in the static shell. That
- * shell is shared by every route and is not re-rendered on a full page load
- * (opening the installed app, a reload), so once hydrated the fallback marks
- * the active link from the browser's URL.
+ * The active link is only marked once hydrated, never in the server HTML. The
+ * HTML can come from the static shell shared by every route (usePathname()
+ * suspends while prerendering routes with params not generated at build time)
+ * or from a page Vercel regenerated after a sync, which rendered no link as
+ * active. React does not fix attributes that differ from the server HTML on
+ * hydration, so a server-rendered active state that is wrong stays wrong until
+ * the next navigation: rendering none on the server and during hydration, then
+ * the real one, always ends up right.
  */
 export function MainNav() {
   return (
@@ -41,18 +43,24 @@ export function MainNav() {
 }
 
 function ActiveNav() {
-  return <NavLinks pathname={usePathname()} />;
+  const pathname = usePathname();
+  return <NavLinks pathname={useHydrated() ? pathname : null} />;
+}
+
+/** Until hydrated, the fallback renders the links as the shell has them. */
+function ShellNav() {
+  return <NavLinks pathname={useHydrated() ? window.location.pathname : null} />;
 }
 
 const noSubscription = () => () => {};
 
-function ShellNav() {
-  const pathname = useSyncExternalStore(
+/** False on the server and while hydrating, true from then on. */
+function useHydrated() {
+  return useSyncExternalStore(
     noSubscription,
-    () => window.location.pathname,
-    () => null,
+    () => true,
+    () => false,
   );
-  return <NavLinks pathname={pathname} />;
 }
 
 function NavLinks({ pathname }: { pathname: string | null }) {
