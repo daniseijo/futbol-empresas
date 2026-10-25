@@ -2,7 +2,7 @@ import Image from "next/image";
 import { Fragment } from "react";
 import type { Match } from "@/lib/sportspress/types";
 import { getVenue } from "@/lib/sportspress/venues";
-import { longestWord } from "@/lib/text";
+import { fitFontSize } from "@/lib/text";
 import type { TeamPageData } from "@/lib/views/team";
 import { Crest } from "../crest";
 import { ShareButton } from "../share-button";
@@ -17,14 +17,6 @@ function homeVenue(matches: Match[], teamId: number) {
   }
   const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
   return best ? getVenue(best[0]) : null;
-}
-
-/** The name's size: a long word ("Telecomunicaciones") gets a smaller one so it fits a phone without being cut. */
-function nameSize(name: string) {
-  const longest = longestWord(name);
-  if (longest <= 11) return "text-[64px] sm:text-[96px]";
-  if (longest <= 15) return "text-[48px] sm:text-[96px]";
-  return "text-[40px] sm:text-[80px]";
 }
 
 /** Header shared by all of a team's tabs. */
@@ -61,7 +53,7 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
           <Image src={team.logoUrl} alt="" width={420} height={420} className="absolute top-[-60px] right-[-40px] opacity-10 blur-[2px]" />
         )
       )}
-      <div className="relative mx-auto flex max-w-7xl flex-col gap-6.5 px-4 pt-12 pb-6 sm:px-6">
+      <div className="@container relative mx-auto flex max-w-7xl flex-col gap-6.5 px-4 pt-12 pb-6 sm:px-6">
         <div className="flex flex-wrap items-center gap-5.5">
           <Crest src={team.logoUrl} name={team.name} size={108} />
           <div className="flex min-w-0 flex-col gap-2.5">
@@ -78,7 +70,13 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
                 </span>
               )}
             </div>
-            <h1 className={`font-display leading-[0.88] font-extrabold uppercase [overflow-wrap:break-word] hyphens-auto ${nameSize(team.name)}`}>{team.name}</h1>
+            {/* Its usual size, smaller only when the longest word would not fit (the crest sits beside it from `sm`). */}
+            <h1
+              className="font-display leading-[0.88] font-extrabold uppercase [overflow-wrap:break-word] [--base:64px] [--fit-width:100cqi] [--min:32px] sm:[--base:96px] sm:[--fit-width:calc(100cqi_-_130px)] sm:[--min:48px]"
+              style={{ fontSize: fitFontSize(team.name, 0.48) }}
+            >
+              {team.name}
+            </h1>
             <p className="text-[15px] text-muted">
               {[
                 venue && (

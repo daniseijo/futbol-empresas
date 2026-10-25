@@ -20,7 +20,7 @@ import { capitalize, formatLongDate, formatShortDate, relativeDay } from "@/lib/
 import type { Position } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import { outcomeFor } from "@/lib/standings";
-import { longestWord } from "@/lib/text";
+import { fitFontSize } from "@/lib/text";
 import { getMatchPageData, matchSummary, type MatchPageData, type TeamSide } from "@/lib/views/match";
 
 const decimal = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 });
@@ -109,16 +109,6 @@ function scorersOf(data: MatchPageData, teamId: number) {
   return [...byPlayer].map(([name, minutes]) => ({ name, minutes }));
 }
 
-/** The name's size in the scoreboard: the longer its longest word, the smaller, so no word is cut in two. */
-function scoreboardNameSize(name: string) {
-  const longest = longestWord(name);
-  if (longest <= 7) return "text-[26px] sm:text-[44px]";
-  if (longest <= 9) return "text-[21px] sm:text-[44px]";
-  if (longest <= 12) return "text-[17px] sm:text-[34px] lg:text-[44px]";
-  if (longest <= 18) return "text-[15px] sm:text-[28px] lg:text-[44px]";
-  return "text-[15px] sm:text-[28px] lg:text-[36px]";
-}
-
 /**
  * One side of the scoreboard. On phones it takes two rows of the scoreboard's
  * grid (subgrid): crests share the first and names the second, so a name on
@@ -131,9 +121,12 @@ function TeamLink({ side, align, smallCrest }: { side: TeamSide; align: "left" |
   const content = (
     <>
       <Crest src={side.logoUrl} name={side.name} size={96} className={`max-sm:self-center ${smallCrest ? "max-sm:size-18!" : ""}`} />
-      <span className="flex min-w-0 max-w-full flex-col gap-3 sm:contents">
+      {/* The container the name fits: this full-width wrapper on phones (a subgrid item cannot be one), the column from `sm`. */}
+      <span className="@container flex w-full min-w-0 flex-col gap-3 sm:contents">
         <span
-          className={`font-display leading-none font-extrabold text-balance [overflow-wrap:break-word] hyphens-auto uppercase ${scoreboardNameSize(side.name)}`}
+          // Its usual size, smaller only when the longest word would not fit the column.
+          className="font-display leading-none font-extrabold [overflow-wrap:break-word] uppercase [--base:26px] [--min:15px] sm:[--base:44px] sm:[--min:24px]"
+          style={{ fontSize: fitFontSize(side.name, 0.46) }}
         >
           {side.name}
         </span>
@@ -145,7 +138,7 @@ function TeamLink({ side, align, smallCrest }: { side: TeamSide; align: "left" |
       </span>
     </>
   );
-  const className = `row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center sm:row-span-1 sm:flex sm:flex-col sm:gap-3 ${
+  const className = `row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center sm:@container sm:row-span-1 sm:flex sm:flex-col sm:gap-3 ${
     align === "left" ? "sm:items-end sm:text-right" : "sm:items-start sm:text-left"
   }`;
   return side.slug ? (
@@ -332,7 +325,7 @@ function Lineups({ data }: { data: MatchPageData }) {
                 <span className="text-[13px] whitespace-nowrap text-muted">
                   {side.lineup.length} {side.lineup.length === 1 ? "jugador" : "jugadores"}
                 </span>
-                <span className="ml-auto text-xs text-muted" title="Puntuación que da la liga a cada jugador en el partido">
+                <span className="ml-auto self-center text-xs text-muted" title="Puntuación que da la liga a cada jugador en el partido">
                   Puntos
                 </span>
               </div>
@@ -352,7 +345,7 @@ function Lineups({ data }: { data: MatchPageData }) {
                     )}
                   </span>
                   {/* Always a cell, even when empty, so the points stay in their column; narrow, so events wrap and the name keeps its room. */}
-                  <span className="max-w-28 sm:max-w-40">
+                  <span className="max-w-36 sm:max-w-48">
                     <PlayerEvents goals={p.goals} minutes={p.minutes} assists={p.assists} yellowCards={p.yellowCards} redCards={p.redCards} />
                   </span>
                   <span className="text-right text-[13px] text-muted">{p.points ? decimal.format(p.points) : ""}</span>

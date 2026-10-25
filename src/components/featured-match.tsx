@@ -5,7 +5,7 @@ import { CardIcon } from "@/components/player-events";
 import { calendarUrl } from "@/lib/calendar";
 import { sendingOff } from "@/lib/cards";
 import { daysBetween, formatShortDate, relativeDay } from "@/lib/dates";
-import { longestWord } from "@/lib/text";
+import { fitFontSize } from "@/lib/text";
 import { playerDisplayName } from "@/lib/players";
 import type { Match, Outcome } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
@@ -55,33 +55,31 @@ function Chip({ className, children }: { className: string; children: React.Reac
  * crest up; from `sm` each side is a single block centred next to the score.
  */
 function Scoreboard({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-3 gap-y-2 sm:gap-x-5">{children}</div>;
+  return <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-3 gap-y-2 sm:items-center sm:gap-5">{children}</div>;
 }
 
-/** The name's size: a long word ("Internacionales") gets a smaller one so it is not cut in two. */
-function sideNameSize(name: string) {
-  const longest = longestWord(name);
-  if (longest <= 11) return "text-[15px] sm:text-[19px]";
-  if (longest <= 14) return "text-[13px] sm:text-[17px]";
-  return "text-[12px] sm:text-[16px]";
-}
-
-/**
- * One side of the big scoreboard: crest, name and position in the group. It
- * takes two rows of the scoreboard's grid (subgrid), crest in the first, so
- * crests stay in line whatever the names' length.
- */
+/** One side of the big scoreboard: crest, name and position in the group. */
 function Side({ side, isFocus, logos, slugs, form = false }: { side: TeamSide; isFocus: boolean; logos: Logos; slugs: Slugs; form?: boolean }) {
   return (
-    <Link href={`/equipos/${slugs[side.id] ?? ""}`} className="row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center">
+    <Link
+      href={`/equipos/${slugs[side.id] ?? ""}`}
+      className="row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center sm:row-span-1 sm:flex sm:flex-col sm:items-center sm:gap-2"
+    >
       <Crest
         src={logos[side.id]}
         name={side.name}
         size={72}
         className={`self-center ${isFocus ? "outline-3 outline-offset-2 outline-accent" : ""}`}
       />
-      <span className="flex min-w-0 max-w-full flex-col items-center gap-2">
-        <span className={`max-w-full leading-tight font-bold text-balance [overflow-wrap:break-word] hyphens-auto ${sideNameSize(side.name)}`}>{side.name}</span>
+      {/* Full width so the name can fit it; a container (the subgrid item itself cannot be one). */}
+      <span className="@container flex w-full min-w-0 flex-col items-center gap-2">
+        {/* Its usual size, smaller only when the longest word would not fit the column. */}
+        <span
+          className="max-w-full leading-tight font-bold [overflow-wrap:break-word] [--base:15px] [--min:11px] sm:[--base:19px]"
+          style={{ fontSize: fitFontSize(side.name, 0.62) }}
+        >
+          {side.name}
+        </span>
         {side.standing && (
           <span className="text-[13px] text-muted">
             {side.standing.position}º · {side.standing.points} pts
@@ -129,7 +127,7 @@ function ResultHero({
 
       <Scoreboard>
         <Side side={data.home} isFocus={data.home.id === team.teamId} logos={logos} slugs={slugs} />
-        <div className="row-span-2 grid grid-rows-subgrid text-center">
+        <div className="row-span-2 grid grid-rows-subgrid text-center sm:row-span-1 sm:block">
           <div className="self-center">
             {venue && (
               <div className="mx-auto mb-1.5 max-w-36 text-[13px] text-muted sm:max-w-60">

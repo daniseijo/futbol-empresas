@@ -57,7 +57,7 @@ function halfHeight(goals: PlacedGoal[]) {
 
 function lastName(name: string) {
   // A private player is "Dorsal 19": the number alone would read as a minute.
-  if (/^Dorsal \d+$/.test(name)) return name;
+  if (/^Dorsal\s\d+$/.test(name)) return name;
   const parts = name.trim().split(/\s+/);
   return parts.length > 1 ? parts.slice(1).join(" ") : name;
 }
