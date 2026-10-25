@@ -4,7 +4,6 @@ const MATCH_MINUTES = 50;
 const HALF_MINUTES = 25;
 /** Minimum gap between labels on the same side, in % of the width (~5 minutes). */
 const MIN_GAP_PERCENT = 11;
-const LEVELS = 5;
 /** Stem height per level and label height, in px. */
 const STEM_BASE = 20;
 const STEM_STEP = 44;
@@ -34,16 +33,17 @@ const percentOf = (minute: number) => (Math.min(Math.max(minute, 0), MATCH_MINUT
 
 /**
  * Places one side's goals on levels: each goal takes the lowest level whose
- * last label is far enough away, so they do not overlap.
+ * last label is far enough away, or a new level above them all, so labels
+ * never overlap (a goal-fest makes the timeline taller instead).
  */
 function place(goals: TimelineGoal[]): PlacedGoal[] {
-  const lastPercent: number[] = Array(LEVELS).fill(-Infinity);
+  const lastPercent: number[] = [];
   return [...goals]
     .sort((a, b) => a.minute - b.minute)
     .map((goal) => {
       const percent = percentOf(goal.minute);
       let level = lastPercent.findIndex((last) => percent - last >= MIN_GAP_PERCENT);
-      if (level === -1) level = lastPercent.indexOf(Math.min(...lastPercent));
+      if (level === -1) level = lastPercent.length;
       lastPercent[level] = percent;
       return { ...goal, percent, level };
     });
@@ -56,6 +56,8 @@ function halfHeight(goals: PlacedGoal[]) {
 }
 
 function lastName(name: string) {
+  // A private player is "Dorsal 19": the number alone would read as a minute.
+  if (/^Dorsal \d+$/.test(name)) return name;
   const parts = name.trim().split(/\s+/);
   return parts.length > 1 ? parts.slice(1).join(" ") : name;
 }
@@ -76,7 +78,7 @@ function GoalMark({ goal, side }: { goal: PlacedGoal; side: "home" | "away" }) {
         className={`absolute left-0 z-10 flex w-max max-w-28 flex-col gap-px rounded-md bg-surface px-1 py-0.5 ${align}`}
         style={side === "home" ? { bottom: `calc(50% + ${stem + 2}px)` } : { top: `calc(50% + ${stem + 2}px)` }}
       >
-        <span className="truncate text-[13px] leading-tight font-bold">{lastName(goal.playerName)}</span>
+        <span className="max-w-full truncate text-[13px] leading-tight font-bold">{lastName(goal.playerName)}</span>
         <span className="text-xs leading-tight text-muted">
           <b className={side === "home" ? "text-accent-text" : "text-ink"}>{goal.minute}′</b> · {goal.score}
         </span>

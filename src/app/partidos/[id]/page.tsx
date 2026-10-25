@@ -20,6 +20,7 @@ import { capitalize, formatLongDate, formatShortDate, relativeDay } from "@/lib/
 import type { Position } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import { outcomeFor } from "@/lib/standings";
+import { longestWord } from "@/lib/text";
 import { getMatchPageData, matchSummary, type MatchPageData, type TeamSide } from "@/lib/views/match";
 
 const decimal = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 });
@@ -99,27 +100,50 @@ async function MatchContent({ params }: Pick<PageProps<"/partidos/[id]">, "param
 
 // --- Header -----------------------------------------------------------------------
 
+/** A side's scorers, one line each with all their minutes: "Javier Paradinas 21′, 45′". */
+function scorersOf(data: MatchPageData, teamId: number) {
+  const byPlayer = new Map<string, number[]>();
+  for (const goal of data.goals) {
+    if (goal.teamId === teamId) byPlayer.set(goal.playerName, [...(byPlayer.get(goal.playerName) ?? []), goal.minute]);
+  }
+  return [...byPlayer].map(([name, minutes]) => ({ name, minutes }));
+}
+
+/** The name's size in the scoreboard: the longer its longest word, the smaller, so no word is cut in two. */
+function scoreboardNameSize(name: string) {
+  const longest = longestWord(name);
+  if (longest <= 7) return "text-[26px] sm:text-[44px]";
+  if (longest <= 9) return "text-[21px] sm:text-[44px]";
+  if (longest <= 12) return "text-[17px] sm:text-[34px] lg:text-[44px]";
+  if (longest <= 18) return "text-[15px] sm:text-[28px] lg:text-[44px]";
+  return "text-[15px] sm:text-[28px] lg:text-[36px]";
+}
+
 /**
- * One side of the scoreboard. On phones it takes two rows of the scoreboard's
- * grid (subgrid): crests share the first and names the second, so a name on
- * two lines does not push its crest below the other one.
+ * One side of the scoreboard. It takes two rows of the scoreboard's grid
+ * (subgrid): crests share the first and names the second, so a name on more
+ * lines than the other does not push its crest out of line.
  */
 function TeamLink({ side, align }: { side: TeamSide; align: "left" | "right" }) {
   const content = (
     <>
-      <Crest src={side.logoUrl} name={side.name} size={96} className="max-sm:self-center" />
-      <span className="font-display text-[26px] leading-none font-extrabold [overflow-wrap:anywhere] uppercase sm:text-[44px]">
-        {side.name}
-      </span>
-      {side.standing && (
-        <span className="flex items-center gap-2 text-[13px] text-muted max-sm:hidden">
-          {side.standing.position}º · {side.standing.points} pts
+      <Crest src={side.logoUrl} name={side.name} size={96} className="self-center max-sm:size-18!" />
+      <span className="flex min-w-0 max-w-full flex-col gap-3">
+        <span
+          className={`font-display leading-none font-extrabold text-balance [overflow-wrap:break-word] hyphens-auto uppercase ${scoreboardNameSize(side.name)}`}
+        >
+          {side.name}
         </span>
-      )}
+        {side.standing && (
+          <span className="text-[13px] text-muted max-sm:hidden">
+            {side.standing.position}º · {side.standing.points} pts
+          </span>
+        )}
+      </span>
     </>
   );
-  const className = `row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center sm:row-span-1 sm:flex sm:flex-col sm:items-center sm:gap-3 ${
-    align === "left" ? "sm:items-end sm:text-right" : "sm:items-start sm:text-left"
+  const className = `row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center ${
+    align === "left" ? "sm:justify-items-end sm:text-right" : "sm:justify-items-start sm:text-left"
   }`;
   return side.slug ? (
     <Link href={`/equipos/${side.slug}`} className={`${className} hover:opacity-80`}>
@@ -133,8 +157,8 @@ function TeamLink({ side, align }: { side: TeamSide; align: "left" | "right" }) 
 function Scoreboard({ data }: { data: MatchPageData }) {
   const { match, home, away } = data;
   const venue = getVenue(match.venueId);
-  const homeScorers = data.goals.filter((g) => g.teamId === match.homeId);
-  const awayScorers = data.goals.filter((g) => g.teamId === match.awayId);
+  const homeScorers = scorersOf(data, match.homeId);
+  const awayScorers = scorersOf(data, match.awayId);
   return (
     <section className="border-b border-line bg-surface">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-6 pb-8 sm:px-6">
@@ -160,12 +184,12 @@ function Scoreboard({ data }: { data: MatchPageData }) {
         </div>
 
         {/* Two blocks that never split: on phones one per line, so no line starts with "·". */}
-        <div className="flex flex-col items-center text-center text-[13px] text-muted sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-2.5">
+        <div className="flex flex-col items-center text-center text-[13px] text-muted sm:flex-row sm:flex-wrap sm:justify-center">
           <span>
             {capitalize(formatLongDate(match.date, data.now))} · {match.date.slice(11, 16)}
           </span>
           <span>
-            <span className="max-sm:hidden">· </span>
+            <span className="max-sm:hidden">{"\u00a0· "}</span>
             {venue && (
               <>
                 <VenueLink venue={venue} /> ·{" "}
@@ -175,18 +199,29 @@ function Scoreboard({ data }: { data: MatchPageData }) {
           </span>
         </div>
 
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-4 gap-y-3 sm:items-center sm:gap-8">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-4 gap-y-3 sm:gap-x-8">
           <TeamLink side={home} align="left" />
           <div className="flex flex-col items-center gap-2 self-center">
             {match.played ? (
               <>
-                <div className="font-display text-[72px] leading-[0.9] font-extrabold tracking-tight sm:text-[120px]">
+                {/* A two-digit score takes the width the names need on a phone: draw it smaller. */}
+                <div
+                  className={`font-display leading-[0.9] font-extrabold tracking-tight ${
+                    Math.max(match.homeGoals!, match.awayGoals!) >= 10 ? "text-[52px] sm:text-[96px]" : "text-[72px] sm:text-[120px]"
+                  }`}
+                >
                   <span className={match.homeGoals! >= match.awayGoals! ? "" : "text-muted"}>{match.homeGoals}</span>
                   <span className="text-line"> – </span>
                   <span className={match.awayGoals! >= match.homeGoals! ? "" : "text-muted"}>{match.awayGoals}</span>
                 </div>
                 <span className="rounded-full bg-ink px-2.5 py-1 text-xs font-bold tracking-[0.12em] text-white">FINAL</span>
                 {data.halftime && <span className="text-[13px] text-muted">Descanso {data.halftime}</span>}
+              </>
+            ) : match.date < data.now ? (
+              // Its time has passed and the league has not published the score: not an upcoming match.
+              <>
+                <span className="rounded-full bg-line-soft px-3 py-1 text-xs font-bold tracking-[0.1em] text-muted uppercase">Sin resultado</span>
+                <span className="max-w-32 text-center text-[13px] text-muted sm:max-w-none">La liga no lo ha publicado</span>
               </>
             ) : (
               <>
@@ -203,17 +238,17 @@ function Scoreboard({ data }: { data: MatchPageData }) {
         {match.played && (homeScorers.length > 0 || awayScorers.length > 0) && (
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4 text-[13px] leading-relaxed text-muted sm:gap-8">
             <ul className="text-right">
-              {homeScorers.map((g, i) => (
-                <li key={i}>
-                  {g.playerName} {g.minute}′
+              {homeScorers.map(({ name, minutes }) => (
+                <li key={name}>
+                  {name} <span className="whitespace-nowrap">{minutes.map((m) => `${m}′`).join(", ")}</span>
                 </li>
               ))}
             </ul>
             <span className="w-[72px] sm:w-[160px]" />
             <ul>
-              {awayScorers.map((g, i) => (
-                <li key={i}>
-                  {g.playerName} {g.minute}′
+              {awayScorers.map(({ name, minutes }) => (
+                <li key={name}>
+                  {name} <span className="whitespace-nowrap">{minutes.map((m) => `${m}′`).join(", ")}</span>
                 </li>
               ))}
             </ul>
@@ -286,10 +321,11 @@ function Lineups({ data }: { data: MatchPageData }) {
           const sorted = POSITION_ORDER.flatMap((position) => side.lineup.filter((p) => p.position === position));
           return (
             <div key={side.id} className="flex flex-col">
-              <div className="flex items-center gap-2.5 border-b border-line pb-2.5">
+              {/* Top-aligned (the name's line is the crest's height) so both columns' crests line up when a name wraps. */}
+              <div className="flex items-start gap-2.5 border-b border-line pb-2.5 leading-7">
                 <Crest src={side.logoUrl} name={side.name} size={28} />
-                <span className="font-bold">{side.name}</span>
-                <span className="text-[13px] text-muted">
+                <span className="min-w-0 font-bold">{side.name}</span>
+                <span className="text-[13px] whitespace-nowrap text-muted">
                   {side.lineup.length} {side.lineup.length === 1 ? "jugador" : "jugadores"}
                 </span>
                 <span className="ml-auto text-xs text-muted" title="Puntuación que da la liga a cada jugador en el partido">
@@ -306,13 +342,13 @@ function Lineups({ data }: { data: MatchPageData }) {
                   <PlayerAvatar name={p.name} photoUrl={p.photoUrl} number={p.number} position={p.position} size={34} />
                   <span className="min-w-0 text-sm">
                     <span className="font-semibold">{playerDisplayName(p.name, p.number)}</span>{" "}
-                    <span className="text-xs whitespace-nowrap text-muted">{[p.position, p.photoUrl && p.number ? `#${p.number}` : null].filter(Boolean).join(" · ")}</span>
+                    <span className="text-xs whitespace-nowrap text-muted">{[p.position, p.name && p.photoUrl && p.number ? `#${p.number}` : null].filter(Boolean).join(" · ")}</span>
                     {p.crack && (
                       <span className="ml-1.5 rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent-text">MVP</span>
                     )}
                   </span>
-                  {/* Always a cell, even when empty, so the points stay in their column. */}
-                  <span>
+                  {/* Always a cell, even when empty, so the points stay in their column; narrow, so events wrap and the name keeps its room. */}
+                  <span className="max-w-28 sm:max-w-40">
                     <PlayerEvents goals={p.goals} minutes={p.minutes} assists={p.assists} yellowCards={p.yellowCards} redCards={p.redCards} />
                   </span>
                   <span className="text-right text-[13px] text-muted">{p.points ? decimal.format(p.points) : ""}</span>
@@ -349,13 +385,13 @@ function Photos({ data }: { data: MatchPageData }) {
 function Preview({ data }: { data: MatchPageData }) {
   const sides = [data.home, data.away];
   return (
-    <Card title="Previa">
+    <Card title={data.match.date < data.now ? "Los equipos" : "Previa"}>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
         {sides.map((side) => (
           <div key={side.id} className="flex flex-col gap-3 rounded-2xl bg-canvas p-4">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-start gap-2.5 leading-9">
               <Crest src={side.logoUrl} name={side.name} size={36} />
-              <b>{side.name}</b>
+              <b className="min-w-0">{side.name}</b>
             </div>
             {side.standing ? (
               <div className="grid grid-cols-3 gap-2 text-center">
@@ -389,7 +425,7 @@ function Preview({ data }: { data: MatchPageData }) {
                 {side.keyPlayers.map((p) => (
                   <Link key={p.id} href={`/jugadores/${p.id}`} className="flex items-center gap-2.5 text-sm hover:text-accent-text">
                     <PlayerAvatar name={p.name} photoUrl={p.photoUrl} number={p.number} position={p.position} size={32} />
-                    <span className="flex-1 font-semibold">{p.name}</span>
+                    <span className="flex-1 font-semibold">{playerDisplayName(p.name, p.number)}</span>
                     <span className="text-muted">
                       {p.goals > 0 ? `${p.goals} ${p.goals === 1 ? "gol" : "goles"}` : `${decimal.format(p.mvpPoints)} pts`}
                     </span>

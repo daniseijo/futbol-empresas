@@ -5,6 +5,8 @@ import { CardIcon } from "@/components/player-events";
 import { calendarUrl } from "@/lib/calendar";
 import { sendingOff } from "@/lib/cards";
 import { daysBetween, formatShortDate, relativeDay } from "@/lib/dates";
+import { longestWord } from "@/lib/text";
+import { playerDisplayName } from "@/lib/players";
 import type { Match, Outcome } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import { VenueLink } from "./venue-link";
@@ -53,13 +55,25 @@ function Chip({ className, children }: { className: string; children: React.Reac
  * crest up; from `sm` each side is a single block centred next to the score.
  */
 function Scoreboard({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-3 gap-y-2 sm:items-center sm:gap-5">{children}</div>;
+  return <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-3 gap-y-2 sm:gap-x-5">{children}</div>;
 }
 
-/** One side of the big scoreboard: crest, name and position in the group. */
+/** The name's size: a long word ("Internacionales") gets a smaller one so it is not cut in two. */
+function sideNameSize(name: string) {
+  const longest = longestWord(name);
+  if (longest <= 11) return "text-[15px] sm:text-[19px]";
+  if (longest <= 14) return "text-[13px] sm:text-[17px]";
+  return "text-[12px] sm:text-[16px]";
+}
+
+/**
+ * One side of the big scoreboard: crest, name and position in the group. It
+ * takes two rows of the scoreboard's grid (subgrid), crest in the first, so
+ * crests stay in line whatever the names' length.
+ */
 function Side({ side, isFocus, logos, slugs, form = false }: { side: TeamSide; isFocus: boolean; logos: Logos; slugs: Slugs; form?: boolean }) {
   return (
-    <Link href={`/equipos/${slugs[side.id] ?? ""}`} className="row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center sm:row-span-1 sm:flex sm:flex-col sm:items-center sm:gap-2">
+    <Link href={`/equipos/${slugs[side.id] ?? ""}`} className="row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center">
       <Crest
         src={logos[side.id]}
         name={side.name}
@@ -67,7 +81,7 @@ function Side({ side, isFocus, logos, slugs, form = false }: { side: TeamSide; i
         className={`self-center ${isFocus ? "outline-3 outline-offset-2 outline-accent" : ""}`}
       />
       <span className="flex min-w-0 max-w-full flex-col items-center gap-2">
-        <span className="max-w-full text-[15px] leading-tight font-bold [overflow-wrap:break-word] sm:text-[19px]">{side.name}</span>
+        <span className={`max-w-full leading-tight font-bold text-balance [overflow-wrap:break-word] hyphens-auto ${sideNameSize(side.name)}`}>{side.name}</span>
         {side.standing && (
           <span className="text-[13px] text-muted">
             {side.standing.position}º · {side.standing.points} pts
@@ -115,14 +129,19 @@ function ResultHero({
 
       <Scoreboard>
         <Side side={data.home} isFocus={data.home.id === team.teamId} logos={logos} slugs={slugs} />
-        <div className="row-span-2 grid grid-rows-subgrid text-center sm:row-span-1 sm:block">
+        <div className="row-span-2 grid grid-rows-subgrid text-center">
           <div className="self-center">
             {venue && (
               <div className="mx-auto mb-1.5 max-w-36 text-[13px] text-muted sm:max-w-60">
                 <VenueLink venue={venue} />
               </div>
             )}
-            <Link href={`/partidos/${match.id}`} className="block font-display text-[56px] leading-[0.88] font-extrabold sm:text-[104px]">
+            <Link
+              href={`/partidos/${match.id}`}
+              className={`block font-display leading-[0.88] font-extrabold ${
+                Math.max(match.homeGoals!, match.awayGoals!) >= 10 ? "text-[42px] sm:text-[80px]" : "text-[56px] sm:text-[104px]"
+              }`}
+            >
               {match.homeGoals}
               <span className="px-1.5 text-line sm:px-2.5">–</span>
               {match.awayGoals}
@@ -150,7 +169,7 @@ function ResultHero({
                 <span key={player.playerId} className="flex items-start gap-1.5">
                   {index === 1 && <SendingOffIcon how={how} />}
                   <span>
-                    {player.name} <span className="text-muted">({how})</span>
+                    {playerDisplayName(player.name, player.number)} <span className="text-muted">({how})</span>
                   </span>
                   {index === 0 && <SendingOffIcon how={how} />}
                 </span>
@@ -162,7 +181,7 @@ function ResultHero({
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5">
         {data.mvp && (
-          <Tile label="MVP del partido" value={data.mvp.name} detail={mvpDetail(data.mvp.goals, mvpTeam?.name)} />
+          <Tile label="MVP del partido" value={playerDisplayName(data.mvp.name, data.mvp.number)} detail={mvpDetail(data.mvp.goals, mvpTeam?.name)} />
         )}
         {team.row && <Tile label="En el grupo" value={trend(team.row.position, team.previousPosition)} detail={gap(team.standings, team.row)} />}
         {team.mvpLeader && (
@@ -197,7 +216,7 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
   const watch = (side: TeamSide) => {
     const player = side.keyPlayers[0];
     // Non-breaking spaces keep the goals with the last word of the name when it wraps.
-    return player && player.goals > 0 ? `${player.name}\u00a0·\u00a0${player.goals}` : "—";
+    return player && player.goals > 0 ? `${playerDisplayName(player.name, player.number)}\u00a0·\u00a0${player.goals}` : "—";
   };
   return (
     <>

@@ -187,7 +187,7 @@ function MatchLine({ row, data }: { row: PlayerMatchRow; data: PlayerPageData })
           <span className="truncate">{opponent}</span>
           {row.crack && <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent-text">MVP</span>}
         </span>
-        <span className="flex gap-2 text-xs sm:hidden">
+        <span className="flex min-w-0 flex-wrap gap-x-2 gap-y-0.5 text-xs sm:hidden">
           <span className="whitespace-nowrap text-muted">{formatShortDate(match.date, data.now)}</span>
           {events}
         </span>

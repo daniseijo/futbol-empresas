@@ -1,4 +1,5 @@
 import type { Match, SquadPlayer } from "@/lib/sportspress/types";
+import { playerDisplayName } from "@/lib/players";
 import { featuredMode, positionBefore } from "./featured-rules";
 import { getMatchPageData, type MatchPageData } from "./match";
 import type { TeamContext } from "./team-context";
@@ -31,6 +32,6 @@ export async function getFeatured(context: TeamContext, seasonMatches: Match[], 
     featured,
     previousPosition,
     daysToNext,
-    mvpLeader: mvp && mvp.mvpPoints > 0 ? { name: mvp.name, points: mvp.mvpPoints } : null,
+    mvpLeader: mvp && mvp.mvpPoints > 0 ? { name: playerDisplayName(mvp.name, mvp.number), points: mvp.mvpPoints } : null,
   };
 }
