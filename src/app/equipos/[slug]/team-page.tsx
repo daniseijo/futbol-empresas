@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { getTeam } from "@/lib/data";
-import { getTeamPageData, type TeamPageData } from "@/lib/views/team";
+import { getTeamPageData, teamSummary, type TeamPageData } from "@/lib/views/team";
 
 type Params = Promise<{ slug: string }>;
 
-/** A tab's metadata: "Plantilla de Embat · Futbolempresas". */
+/**
+ * A tab's metadata: "Plantilla de Embat · Futbolempresas", described by the
+ * team's position ("9º de 9 · Liga Apertura 26/27 · Grupo 20") for link previews.
+ */
 export async function tabMetadata(params: Params, label: string | null): Promise<Metadata> {
   const { slug } = await params;
-  const team = await getTeam(slug);
-  const name = team?.name ?? "Equipo";
-  return { title: label ? `${label} de ${name}` : name };
+  const data = await getTeamPageData(slug);
+  if (!data) return { title: label ?? "Equipo" };
+  const name = data.team.name;
+  const position = data.row ? `${data.row.position}º de ${data.standings.length} · ` : "";
+  return { title: label ? `${label} de ${name}` : name, description: position + teamSummary(data) };
 }
 
 /**

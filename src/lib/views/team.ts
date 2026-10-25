@@ -144,3 +144,11 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
     competitions,
   };
 }
+
+/** Where the team plays this season, for link previews: "Liga Apertura 26/27 · Grupo 20". */
+export function teamSummary(data: TeamPageData): string {
+  const { group, season } = data;
+  if (!group) return `Temporada ${season.name}`;
+  const competition = `${group.competition} ${season.name}`;
+  return group.name === group.competition ? competition : `${competition} · ${group.name}`;
+}

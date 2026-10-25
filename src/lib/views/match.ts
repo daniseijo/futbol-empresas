@@ -2,6 +2,7 @@ import { cacheLife } from "next/cache";
 import { dayKey, nowInMadrid } from "@/lib/dates";
 import { getCurrentSeason, getHeadToHead, getLeagues, getMatch, getSeasonMatches, getSeasons, getSquad, getTeams } from "@/lib/data";
 import { LeagueTree } from "@/lib/sportspress/leagues";
+import { getVenue } from "@/lib/sportspress/venues";
 import { playerDisplayName } from "@/lib/players";
 import type { LineupPlayer, Match, MatchDetail, SquadPlayer, StandingRow } from "@/lib/sportspress/types";
 import { computeStandings, outcomeFor } from "@/lib/standings";
@@ -151,4 +152,15 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
     restingTeam: resting?.name ?? null,
     headToHead: { matches: previous.slice(0, 6), ...record },
   };
+}
+
+/**
+ * Where the match fits, for link previews: "Liga Apertura · Grupo 20 ·
+ * Jornada 4 · RUPE Rodríguez Sahagún". The phase between competition and
+ * group is left out to keep it short.
+ */
+export function matchSummary(data: MatchPageData): string {
+  const { match, path } = data;
+  const league = path.length > 1 ? [path[0].name, path[path.length - 1].name] : path.map((p) => p.name);
+  return [...league, match.round ? `Jornada ${match.round}` : null, getVenue(match.venueId)?.name].filter(Boolean).join(" · ");
 }

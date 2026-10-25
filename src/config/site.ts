@@ -6,6 +6,8 @@ export const siteConfig = {
    * "Tu equipo". Set NEXT_PUBLIC_FOCUS_TEAM_SLUG to change it.
    */
   focusTeamSlug: process.env.NEXT_PUBLIC_FOCUS_TEAM_SLUG ?? "embat",
+  /** Public address, for absolute links: shared images, the sitemap. Set NEXT_PUBLIC_SITE_URL to change it. */
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://futbol-empresas.vercel.app",
   apiBase: "https://www.futbolempresas.es/wp-json",
   sourceSite: "https://www.futbolempresas.es",
   youtubeChannel: "https://www.youtube.com/@Futbolempresas",

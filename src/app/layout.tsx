@@ -15,8 +15,11 @@ const barlow = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.url),
   title: { default: siteConfig.name, template: `%s · ${siteConfig.name}` },
   description: siteConfig.description,
+  // The preview when a link is shared (WhatsApp, Slack…); pages add their image and description.
+  openGraph: { siteName: siteConfig.name, locale: "es_ES", type: "website" },
   // Installed on an iPhone's home screen, it opens without Safari's bars.
   appleWebApp: { capable: true, title: siteConfig.name, statusBarStyle: "default" },
 };

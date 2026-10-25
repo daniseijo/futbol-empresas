@@ -14,13 +14,13 @@ import { VenueMap } from "@/components/venue-map";
 import { VideoEmbed } from "@/components/video-embed";
 import { siteConfig } from "@/config/site";
 import { calendarUrl } from "@/lib/calendar";
-import { getMatch, getSeasonMatches, getCurrentSeason, getTeam } from "@/lib/data";
+import { getSeasonMatches, getCurrentSeason, getTeam } from "@/lib/data";
 import { playerDisplayName } from "@/lib/players";
 import { capitalize, formatLongDate, formatShortDate, relativeDay } from "@/lib/dates";
 import type { Position } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import { outcomeFor } from "@/lib/standings";
-import { getMatchPageData, type MatchPageData, type TeamSide } from "@/lib/views/match";
+import { getMatchPageData, matchSummary, type MatchPageData, type TeamSide } from "@/lib/views/match";
 
 const decimal = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 });
 
@@ -34,11 +34,12 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<"/partidos/[id]">): Promise<Metadata> {
   const { id } = await params;
-  const result = Number.isInteger(Number(id)) ? await getMatch(Number(id)) : null;
-  if (!result) return { title: "Partido" };
-  const { match } = result;
+  const data = Number.isInteger(Number(id)) ? await getMatchPageData(Number(id)) : null;
+  if (!data) return { title: "Partido" };
+  const { match } = data;
   const score = match.played ? ` ${match.homeGoals}–${match.awayGoals} ` : " – ";
-  return { title: `${match.homeName}${score}${match.awayName}` };
+  const when = match.played ? "" : `${capitalize(formatLongDate(match.date, data.now))}, ${match.date.slice(11, 16)} · `;
+  return { title: `${data.home.name}${score}${data.away.name}`, description: when + matchSummary(data) };
 }
 
 export default function MatchPage({ params }: PageProps<"/partidos/[id]">) {
