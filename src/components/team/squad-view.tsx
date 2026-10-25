@@ -10,20 +10,21 @@ const money = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximum
 
 const POSITION_LABEL: Record<Position, string> = { POR: "Porteros", DEF: "Defensas", MED: "Medios", DEL: "Delanteros" };
 const ORDER: (Position | null)[] = ["POR", "DEF", "MED", "DEL", null];
-const COLUMNS = "grid-cols-[44px_1fr_32px_40px_40px_84px]";
+// Phones drop the assists column so names have room to show in full (they wrap instead of being cut).
+const COLUMNS = "grid-cols-[44px_1fr_32px_40px_84px] sm:grid-cols-[44px_1fr_32px_40px_40px_84px]";
 
 function PlayerRow({ player, rank }: { player: SquadPlayer; rank?: number }) {
   return (
     <Link href={`/jugadores/${player.id}`} className={`grid ${COLUMNS} items-center gap-2 border-t border-line-soft py-2 text-sm hover:bg-canvas`}>
       <PlayerAvatar name={player.name} photoUrl={player.photoUrl} number={player.number} position={player.position} size={36} />
-      <span className="min-w-0 truncate font-semibold">
+      <span className="min-w-0 font-semibold [overflow-wrap:break-word]">
         {rank !== undefined && <span className="mr-2 font-normal text-muted">{rank}.</span>}
         {playerDisplayName(player.name, player.number)}
-        {player.photoUrl && player.number ? <span className="ml-1.5 font-normal text-muted">#{player.number}</span> : null}
+        {player.name && player.photoUrl && player.number ? <span className="ml-1.5 font-normal whitespace-nowrap text-muted">#{player.number}</span> : null}
       </span>
       <span className="text-right">{player.appearances}</span>
       <span className="text-right">{player.goals}</span>
-      <span className="text-right">{player.assists}</span>
+      <span className="text-right max-sm:hidden">{player.assists}</span>
       <span className="text-right font-semibold">{money.format(player.marketValue)} M€</span>
     </Link>
   );
@@ -68,7 +69,7 @@ export function SquadView({ squad }: { squad: SquadPlayer[] }) {
         <span />
         <span className="text-right">PJ</span>
         <span className="text-right">GOL</span>
-        <span className="text-right">ASIS</span>
+        <span className="text-right max-sm:hidden">ASIS</span>
         <span className="text-right">VALOR</span>
       </div>
 

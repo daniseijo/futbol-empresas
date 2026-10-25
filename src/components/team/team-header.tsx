@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Fragment } from "react";
 import type { Match } from "@/lib/sportspress/types";
 import { getVenue } from "@/lib/sportspress/venues";
+import { longestWord } from "@/lib/text";
 import type { TeamPageData } from "@/lib/views/team";
 import { Crest } from "../crest";
 import { ShareButton } from "../share-button";
@@ -16,6 +17,14 @@ function homeVenue(matches: Match[], teamId: number) {
   }
   const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
   return best ? getVenue(best[0]) : null;
+}
+
+/** The name's size: a long word ("Telecomunicaciones") gets a smaller one so it fits a phone without being cut. */
+function nameSize(name: string) {
+  const longest = longestWord(name);
+  if (longest <= 11) return "text-[64px] sm:text-[96px]";
+  if (longest <= 15) return "text-[48px] sm:text-[96px]";
+  return "text-[40px] sm:text-[80px]";
 }
 
 /** Header shared by all of a team's tabs. */
@@ -55,7 +64,7 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
       <div className="relative mx-auto flex max-w-7xl flex-col gap-6.5 px-4 pt-12 pb-6 sm:px-6">
         <div className="flex flex-wrap items-center gap-5.5">
           <Crest src={team.logoUrl} name={team.name} size={108} />
-          <div className="flex flex-col gap-2.5">
+          <div className="flex min-w-0 flex-col gap-2.5">
             <div className="flex flex-wrap gap-2">
               {group && (
                 <span className="rounded-full bg-accent px-2.5 py-1 text-xs font-bold tracking-[0.06em] text-on-accent uppercase">
@@ -69,7 +78,7 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
                 </span>
               )}
             </div>
-            <h1 className="font-display text-[64px] leading-[0.88] font-extrabold uppercase sm:text-[96px]">{team.name}</h1>
+            <h1 className={`font-display leading-[0.88] font-extrabold uppercase [overflow-wrap:break-word] hyphens-auto ${nameSize(team.name)}`}>{team.name}</h1>
             <p className="text-[15px] text-muted">
               {[
                 venue && (
