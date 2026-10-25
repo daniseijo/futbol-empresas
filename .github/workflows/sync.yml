@@ -76,9 +76,12 @@ jobs:
             gh issue close "$issue" --comment "Working again: $RUN_URL"
           done
 
-  # Announces the focus team's new or rescheduled matches (`pnpm notify`). A job
-  # of its own, so a failure here never marks the sync as failed. Channels are on
-  # when their secrets exist: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID, SLACK_WEBHOOK_URL.
+  # Announces new or rescheduled matches (`pnpm notify`): the focus team's on the
+  # channels whose secrets exist (TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID,
+  # SLACK_WEBHOOK_URL), and each subscribed team's on the Slack channels that
+  # subscribed from the site (their webhooks are decrypted with
+  # NOTIFY_ENCRYPTION_KEY). A job of its own, so a failure here never marks the
+  # sync as failed.
   notify:
     needs: sync
     runs-on: ubuntu-latest
@@ -100,3 +103,4 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          NOTIFY_ENCRYPTION_KEY: ${{ secrets.NOTIFY_ENCRYPTION_KEY }}

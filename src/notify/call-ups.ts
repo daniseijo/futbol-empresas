@@ -1,4 +1,4 @@
-// Which of the focus team's matches to announce, and the message, kept apart
+// Which of a team's matches to announce, and the message, kept apart
 // from run.ts (which reads the database and sends) so they can be tested.
 
 import { siteConfig } from "@/config/site";
@@ -69,7 +69,7 @@ export function callUpMessage({ match, kind }: CallUp, teamId: number, today: st
   };
 }
 
-const escapeHtml = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+export const escapeHtml = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /** Telegram's HTML formatting (parse_mode "HTML"). */
 export function toTelegramHtml(message: CallUpMessage): string {

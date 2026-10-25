@@ -1,9 +1,10 @@
 // Usage:
-//   pnpm notify                     announces the focus team's new or rescheduled matches
+//   pnpm notify                     announces new or rescheduled matches (focus team and Slack subscriptions)
 //   pnpm notify -- --dry-run        prints what it would send, sends and records nothing
 //   pnpm notify -- --match=104101   sends that match's call-up now (a test), records nothing
-// Channels: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID, SLACK_WEBHOOK_URL. With none
-// set it only prints. GitHub Actions runs it after every sync.
+// Channels: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID, SLACK_WEBHOOK_URL, plus the
+// subscriptions table (NOTIFY_ENCRYPTION_KEY decrypts its webhooks). With none
+// it only prints. GitHub Actions runs it after every sync.
 
 import { runNotify } from "@/notify/run";
 
