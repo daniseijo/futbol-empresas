@@ -99,10 +99,15 @@ async function MatchContent({ params }: Pick<PageProps<"/partidos/[id]">, "param
 
 // --- Header -----------------------------------------------------------------------
 
+/**
+ * One side of the scoreboard. On phones it takes two rows of the scoreboard's
+ * grid (subgrid): crests share the first and names the second, so a name on
+ * two lines does not push its crest below the other one.
+ */
 function TeamLink({ side, align }: { side: TeamSide; align: "left" | "right" }) {
   const content = (
     <>
-      <Crest src={side.logoUrl} name={side.name} size={96} />
+      <Crest src={side.logoUrl} name={side.name} size={96} className="max-sm:self-center" />
       <span className="font-display text-[26px] leading-none font-extrabold [overflow-wrap:anywhere] uppercase sm:text-[44px]">
         {side.name}
       </span>
@@ -113,7 +118,7 @@ function TeamLink({ side, align }: { side: TeamSide; align: "left" | "right" }) 
       )}
     </>
   );
-  const className = `flex min-w-0 flex-col items-center gap-3 text-center ${
+  const className = `row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center sm:row-span-1 sm:flex sm:flex-col sm:items-center sm:gap-3 ${
     align === "left" ? "sm:items-end sm:text-right" : "sm:items-start sm:text-left"
   }`;
   return side.slug ? (
@@ -135,15 +140,16 @@ function Scoreboard({ data }: { data: MatchPageData }) {
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-6 pb-8 sm:px-6">
         <div className="flex items-start justify-between gap-3">
           <nav aria-label="Competición" className="flex flex-wrap items-center gap-2 text-sm text-muted">
+            {/* The "›" follows each part, so a wrapped line ends with it instead of starting with it. */}
             {data.path.map((part, index) => (
               <span key={part.href} className="flex items-center gap-2">
-                {index > 0 && <span aria-hidden="true">›</span>}
                 <Link
                   href={part.href}
                   className={`hover:text-accent-text hover:underline ${index === data.path.length - 1 ? "font-semibold text-ink" : ""}`}
                 >
                   {part.name}
                 </Link>
+                {index < data.path.length - 1 && <span aria-hidden="true">›</span>}
               </span>
             ))}
             {match.round && (
@@ -153,20 +159,25 @@ function Scoreboard({ data }: { data: MatchPageData }) {
           <ShareButton title={`${home.name} – ${away.name}`} />
         </div>
 
-        <div className="flex flex-wrap justify-center gap-x-2.5 text-[13px] text-muted">
-          <span>{capitalize(formatLongDate(match.date, data.now))}</span>
-          <span>· {match.date.slice(11, 16)}</span>
-          {venue && (
-            <span>
-              · <VenueLink venue={venue} />
-            </span>
-          )}
-          <span>· 2 × 25 min</span>
+        {/* Two blocks that never split: on phones one per line, so no line starts with "·". */}
+        <div className="flex flex-col items-center text-center text-[13px] text-muted sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-2.5">
+          <span>
+            {capitalize(formatLongDate(match.date, data.now))} · {match.date.slice(11, 16)}
+          </span>
+          <span>
+            <span className="max-sm:hidden">· </span>
+            {venue && (
+              <>
+                <VenueLink venue={venue} /> ·{" "}
+              </>
+            )}
+            2 × 25 min
+          </span>
         </div>
 
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 sm:gap-8">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-4 gap-y-3 sm:items-center sm:gap-8">
           <TeamLink side={home} align="left" />
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-2 self-center">
             {match.played ? (
               <>
                 <div className="font-display text-[72px] leading-[0.9] font-extrabold tracking-tight sm:text-[120px]">
@@ -295,7 +306,7 @@ function Lineups({ data }: { data: MatchPageData }) {
                   <PlayerAvatar name={p.name} photoUrl={p.photoUrl} number={p.number} position={p.position} size={34} />
                   <span className="min-w-0 text-sm">
                     <span className="font-semibold">{playerDisplayName(p.name, p.number)}</span>{" "}
-                    <span className="text-xs text-muted">{[p.position, p.photoUrl && p.number ? `#${p.number}` : null].filter(Boolean).join(" · ")}</span>
+                    <span className="text-xs whitespace-nowrap text-muted">{[p.position, p.photoUrl && p.number ? `#${p.number}` : null].filter(Boolean).join(" · ")}</span>
                     {p.crack && (
                       <span className="ml-1.5 rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent-text">MVP</span>
                     )}
@@ -506,7 +517,7 @@ function RestOfRound({ data }: { data: MatchPageData }) {
   if (data.round.length === 0) return null;
   return (
     <Card
-      title={`Resto de la jornada ${data.match.round}`}
+      title={`Resto de la jornada\u00a0${data.match.round}`}
       action={
         data.dayHref && (
           <Link href={data.dayHref} className="text-sm font-semibold whitespace-nowrap text-accent-text hover:underline">
