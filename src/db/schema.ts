@@ -1,4 +1,4 @@
-import { index, integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 // Local copy of the futbolempresas.es API. `pnpm sync` (src/sync) fills it and
@@ -170,11 +170,36 @@ export const notifications = sqliteTable(
   "notifications",
   {
     matchId: integer("match_id").notNull(),
-    /** "telegram", "slack". */
+    /** Where it was sent: "telegram" and "slack" (the env-configured channels) or "sub:<subscription id>". */
     channel: text("channel").notNull(),
     fingerprint: text("fingerprint").notNull(),
     /** Madrid local time. */
     sentAt: text("sent_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.matchId, t.channel] })],
+);
+
+/**
+ * Slack channels subscribed to a team's call-ups from its page ("Recibir
+ * convocatorias en Slack"). Written by the OAuth callback, read by `pnpm notify`,
+ * which deletes the row when Slack says the webhook is gone (app removed,
+ * channel deleted). No accounts: the channel itself is the subscriber.
+ */
+export const subscriptions = sqliteTable(
+  "subscriptions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    teamId: integer("team_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    workspaceName: text("workspace_name").notNull(),
+    channelId: text("channel_id").notNull(),
+    /** "#futbol", as Slack gives it. */
+    channelName: text("channel_name").notNull(),
+    /** The Incoming Webhook URL, encrypted (src/notify/secrets.ts): whoever has it can post to the channel. */
+    webhookUrl: text("webhook_url").notNull(),
+    /** Madrid local time. */
+    createdAt: text("created_at").notNull(),
+  },
+  // Subscribing the same channel to the same team again replaces its webhook.
+  (t) => [uniqueIndex("subscriptions_team_channel").on(t.teamId, t.workspaceId, t.channelId)],
 );
