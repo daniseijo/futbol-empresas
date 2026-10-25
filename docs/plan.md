@@ -89,6 +89,12 @@ See the steps in the README.
   sends per target and drops revoked webhooks. See "Slack subscriptions" in the README. Next: the same for
   Telegram (a `?startgroup=<slug>` deep link to the bot), and maybe Slack's `app_uninstalled` event to drop
   subscriptions straight away instead of on the next call-up.
+- [ ] Let each visitor pick their own company (separate PR, after the Slack subscriptions): today "Mi equipo", the
+  home page's "Tu equipo" and the app shortcut all come from the fixed `NEXT_PUBLIC_FOCUS_TEAM_SLUG`. A choice kept
+  in a cookie, no accounts, would personalise them and could show the Slack button on the home page too. Watch the
+  cost: the home page is prerendered with the fixed team, so the personal parts need `<Suspense>` (or the client)
+  without slowing it down. The env-configured Telegram/Slack channels keep following the fixed team. Write a plan
+  in `docs/plans/` first (how and when the visitor picks: first visit, menu…).
 - [x] A real 404 page, as far as it goes without slowing pages down (24 Oct 2026). Plan:
   [11 · A real 404](plans/11-real-404.md). Measured on a production build:
   - Matches, teams (every tab) and venues answer 200 on the **first** visit of a missing URL and 404 from then on:
