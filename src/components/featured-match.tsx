@@ -196,7 +196,8 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
       : [];
   const watch = (side: TeamSide) => {
     const player = side.keyPlayers[0];
-    return player && player.goals > 0 ? `${player.name} · ${player.goals}` : "—";
+    // Non-breaking spaces keep the goals with the last word of the name when it wraps.
+    return player && player.goals > 0 ? `${player.name}\u00a0·\u00a0${player.goals}` : "—";
   };
   return (
     <>

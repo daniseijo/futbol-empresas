@@ -40,6 +40,13 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Headings wrap into lines of similar length, so a phone never leaves one word ("4") on its own line. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
 /*
  * A white section card. On phones it spans the whole width (it cancels the
  * page's 16px gutter) and drops the side borders and corners, so the content

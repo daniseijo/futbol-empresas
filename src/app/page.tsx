@@ -230,7 +230,7 @@ function FocusSection({ focus, logos, slugs, now }: { focus: FocusBlock; logos: 
             </div>
             {focus.mode === "preview" && featured && featured.round.length > 0 && (
               <div className="flex flex-col">
-                <h3 className="mb-1 text-sm font-bold">Resto de la jornada {featured.match.round}</h3>
+                <h3 className="mb-1 text-sm font-bold">Resto de la jornada{"\u00a0"}{featured.match.round}</h3>
                 {featured.round.map((match) => (
                   <Link
                     key={match.id}
