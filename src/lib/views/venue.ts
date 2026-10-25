@@ -72,7 +72,7 @@ export async function getVenuePageData(id: number): Promise<VenuePageData | null
   let day: VenuePageData["day"] = null;
   if (picked) {
     // Built from the whole season so the positions in each group are right.
-    const all = buildDay(matches, new LeagueTree(leagues), picked.date, focusTeam?.id ?? null, mainCompetitionId(matches));
+    const all = buildDay(matches, new LeagueTree(leagues), picked.date, focusTeam?.id ?? null, mainCompetitionId(matches), now);
     const dayMatches = all.matches.filter((m) => m.venueId === id);
     day = { ...all, matches: dayMatches, venues: 1, when: picked.when };
   }

@@ -23,6 +23,8 @@ export interface DayMatch {
   /** Group and round, "Grupo 7 · J4", or the competition outside the main one. */
   label: string | null;
   isFocus: boolean;
+  /** Its time has passed and the league has not published a score. */
+  noResult: boolean;
 }
 
 export interface Day {
@@ -59,8 +61,8 @@ export function pickDay(matches: Match[], today: string): { date: string; when: 
   return last ? { date: dayKey(last.date), when: "past" } : null;
 }
 
-/** The matches of one date, sorted by kick-off time and then venue. */
-export function buildDay(matches: Match[], tree: LeagueTree, date: string, focusTeamId: number | null, mainId: number | null): Day {
+/** The matches of one date, sorted by kick-off time and then venue. `now` tells past matches without a score apart. */
+export function buildDay(matches: Match[], tree: LeagueTree, date: string, focusTeamId: number | null, mainId: number | null, now = ""): Day {
   const dayMatches = matches.filter((m) => dayKey(m.date) === date);
   const groupStandings = new Map<number, StandingRow[]>();
   const positionIn = (groupId: number | null, teamId: number) => {
@@ -93,6 +95,7 @@ export function buildDay(matches: Match[], tree: LeagueTree, date: string, focus
       venue: getVenue(m.venueId)?.name ?? "",
       label: where ? `${where}${round}` : null,
       isFocus: focusTeamId !== null && (m.homeId === focusTeamId || m.awayId === focusTeamId),
+      noResult: !m.played && now !== "" && m.date < now,
     };
   });
   rows.sort((a, b) => a.time.localeCompare(b.time) || a.venue.localeCompare(b.venue, "es"));
@@ -120,7 +123,7 @@ export async function getDayPageData(date: string): Promise<DayPageData | null> 
     getLeagues(),
     getTeam(siteConfig.focusTeamSlug),
   ]);
-  const day = buildDay(matches, new LeagueTree(leagues), date, focusTeam?.id ?? null, mainCompetitionId(matches));
+  const day = buildDay(matches, new LeagueTree(leagues), date, focusTeam?.id ?? null, mainCompetitionId(matches), nowInMadrid());
   if (day.matches.length === 0) return null;
 
   const dates = [...new Set(matches.map((m) => dayKey(m.date)))].sort();
