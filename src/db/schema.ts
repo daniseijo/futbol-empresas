@@ -160,3 +160,21 @@ export const syncState = sqliteTable("sync_state", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
 });
+
+/**
+ * Call-ups already sent (`pnpm notify`), one row per match and channel. The
+ * fingerprint is the date and venue it announced: when they change, the match
+ * is announced again as rescheduled.
+ */
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    matchId: integer("match_id").notNull(),
+    /** "telegram", "slack". */
+    channel: text("channel").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    /** Madrid local time. */
+    sentAt: text("sent_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.matchId, t.channel] })],
+);
