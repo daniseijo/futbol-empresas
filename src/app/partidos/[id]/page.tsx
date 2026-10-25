@@ -120,15 +120,18 @@ function scoreboardNameSize(name: string) {
 }
 
 /**
- * One side of the scoreboard. It takes two rows of the scoreboard's grid
- * (subgrid): crests share the first and names the second, so a name on more
- * lines than the other does not push its crest out of line.
+ * One side of the scoreboard. On phones it takes two rows of the scoreboard's
+ * grid (subgrid): crests share the first and names the second, so a name on
+ * two lines does not push its crest below the other one. From `sm` up it is a
+ * column (crest, name, position) and the columns align to the top, which keeps
+ * the crests in line too. A two-digit score leaves no room for the full crest
+ * on a phone, so it is drawn smaller then.
  */
-function TeamLink({ side, align }: { side: TeamSide; align: "left" | "right" }) {
+function TeamLink({ side, align, smallCrest }: { side: TeamSide; align: "left" | "right"; smallCrest: boolean }) {
   const content = (
     <>
-      <Crest src={side.logoUrl} name={side.name} size={96} className="self-center max-sm:size-18!" />
-      <span className="flex min-w-0 max-w-full flex-col gap-3">
+      <Crest src={side.logoUrl} name={side.name} size={96} className={`max-sm:self-center ${smallCrest ? "max-sm:size-18!" : ""}`} />
+      <span className="flex min-w-0 max-w-full flex-col gap-3 sm:contents">
         <span
           className={`font-display leading-none font-extrabold text-balance [overflow-wrap:break-word] hyphens-auto uppercase ${scoreboardNameSize(side.name)}`}
         >
@@ -142,8 +145,8 @@ function TeamLink({ side, align }: { side: TeamSide; align: "left" | "right" }) 
       </span>
     </>
   );
-  const className = `row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center ${
-    align === "left" ? "sm:justify-items-end sm:text-right" : "sm:justify-items-start sm:text-left"
+  const className = `row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center sm:row-span-1 sm:flex sm:flex-col sm:gap-3 ${
+    align === "left" ? "sm:items-end sm:text-right" : "sm:items-start sm:text-left"
   }`;
   return side.slug ? (
     <Link href={`/equipos/${side.slug}`} className={`${className} hover:opacity-80`}>
@@ -157,6 +160,7 @@ function TeamLink({ side, align }: { side: TeamSide; align: "left" | "right" }) 
 function Scoreboard({ data }: { data: MatchPageData }) {
   const { match, home, away } = data;
   const venue = getVenue(match.venueId);
+  const twoDigits = match.played && Math.max(match.homeGoals!, match.awayGoals!) >= 10;
   const homeScorers = scorersOf(data, match.homeId);
   const awayScorers = scorersOf(data, match.awayId);
   return (
@@ -199,15 +203,15 @@ function Scoreboard({ data }: { data: MatchPageData }) {
           </span>
         </div>
 
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-4 gap-y-3 sm:gap-x-8">
-          <TeamLink side={home} align="left" />
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-4 gap-y-3 sm:items-start sm:gap-8">
+          <TeamLink side={home} align="left" smallCrest={twoDigits} />
           <div className="flex flex-col items-center gap-2 self-center">
             {match.played ? (
               <>
                 {/* A two-digit score takes the width the names need on a phone: draw it smaller. */}
                 <div
                   className={`font-display leading-[0.9] font-extrabold tracking-tight ${
-                    Math.max(match.homeGoals!, match.awayGoals!) >= 10 ? "text-[52px] sm:text-[96px]" : "text-[72px] sm:text-[120px]"
+                    twoDigits ? "text-[52px] sm:text-[96px]" : "text-[72px] sm:text-[120px]"
                   }`}
                 >
                   <span className={match.homeGoals! >= match.awayGoals! ? "" : "text-muted"}>{match.homeGoals}</span>
@@ -232,7 +236,7 @@ function Scoreboard({ data }: { data: MatchPageData }) {
               </>
             )}
           </div>
-          <TeamLink side={away} align="right" />
+          <TeamLink side={away} align="right" smallCrest={twoDigits} />
         </div>
 
         {match.played && (homeScorers.length > 0 || awayScorers.length > 0) && (
@@ -240,7 +244,7 @@ function Scoreboard({ data }: { data: MatchPageData }) {
             <ul className="text-right">
               {homeScorers.map(({ name, minutes }) => (
                 <li key={name}>
-                  {name} <span className="whitespace-nowrap">{minutes.map((m) => `${m}′`).join(", ")}</span>
+                  {name}{"\u00a0"}<span className="whitespace-nowrap">{minutes.map((m) => `${m}′`).join(", ")}</span>
                 </li>
               ))}
             </ul>
@@ -248,7 +252,7 @@ function Scoreboard({ data }: { data: MatchPageData }) {
             <ul>
               {awayScorers.map(({ name, minutes }) => (
                 <li key={name}>
-                  {name} <span className="whitespace-nowrap">{minutes.map((m) => `${m}′`).join(", ")}</span>
+                  {name}{"\u00a0"}<span className="whitespace-nowrap">{minutes.map((m) => `${m}′`).join(", ")}</span>
                 </li>
               ))}
             </ul>
