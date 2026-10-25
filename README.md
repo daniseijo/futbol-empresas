@@ -114,6 +114,32 @@ keeps it, and the script never prints it. To set a new one (it expired, or the j
 `GITHUB_DISPATCH_TOKEN=github_pat_… pnpm cron-job apply`. cron-job.org emails the owner when a call fails, for
 example with `401` once the token expires.
 
+### Match call-ups (Telegram, Slack)
+
+`pnpm notify` announces the focus team's upcoming matches: when, where, against whom and a link to the match
+page, plus a "¿Vas?" poll on Telegram (Slack asks for ✅/❌ reactions instead). It runs as its own job after every
+sync in `sync.yml`, reads only the database and records what it sent in `notifications`, one row per match and
+channel. So a match is announced once per channel, again as "Cambio de horario" if its date or venue changes, and
+only from `NOTIFY_DAYS` (14) before it, so a batch of new fixtures does not arrive all at once. A channel added
+later starts with the matches inside that window.
+
+A channel is on when its GitHub secrets exist (*Settings › Secrets and variables › Actions*):
+
+- **Telegram:** `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`. Create the bot with
+  [@BotFather](https://t.me/BotFather) (`/newbot`), add it to the group, send a message there and read the
+  group's `chat.id` (negative, `-100…` for supergroups) from `https://api.telegram.org/bot<token>/getUpdates`.
+- **Slack:** `SLACK_WEBHOOK_URL`. Create an app at [api.slack.com/apps](https://api.slack.com/apps) (*From
+  scratch*), turn on *Incoming Webhooks*, *Add New Webhook to Workspace* and pick the channel.
+
+To try it from a laptop, without sending what the job would send (nothing is recorded in either case):
+
+```sh
+pnpm notify -- --dry-run                                         # what the job would send now
+TELEGRAM_BOT_TOKEN=… TELEGRAM_CHAT_ID=… pnpm notify -- --match=104101   # send that match's call-up
+```
+
+`--dry-run` and `--match` work with a read-only database token. Without a channel set, `pnpm notify` only prints.
+
 ## Pages
 
 - `/`: home page with the day's matches, the focus team block, the season's competitions, each group's leader,
@@ -135,6 +161,7 @@ src/
   config/site.ts         focus team, API URL, time zone
   db/                    Drizzle schema (SQLite) and libSQL client
   sync/                  API → database sync (fetch.ts downloads, run.ts stores)
+  notify/                call-ups for the focus team's matches on Telegram and Slack
   lib/data.ts            database reads for the pages ("use cache")
   lib/views/             precomputed data for each page
   lib/sportspress/       API client, parsers and domain types
@@ -142,6 +169,7 @@ src/
   app/api/revalidate     endpoint the sync calls when it finishes
   test/fixtures.ts       builders for test data (tests live next to the code as *.test.ts)
 scripts/sync.ts          `pnpm sync` (see the options above)
+scripts/notify.ts        `pnpm notify` (see "Match call-ups")
 drizzle/                 migrations (generated with `pnpm db:generate`)
 ```
 
