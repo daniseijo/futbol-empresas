@@ -66,13 +66,19 @@ See the steps in the README.
   "0 partidos". The home page now shows the next date with matches, and the focus team's last result or next
   match's preview (also on the team summary).
 - [ ] Match page: lineups on a pitch (optional). Plan: [10 · Lineups on a pitch](plans/10-lineups-on-pitch.md).
-- [ ] Team: a "Share" button in the site's style. Plan: [06 · Sharing and SEO](plans/06-share-and-seo.md).
+- [x] Match and team: a "Compartir" button in the header (`ShareButton`): the native share sheet where there is one
+  (phones, Safari, Chrome on macOS), otherwise it copies the link. Plan: [06 · Sharing and SEO](plans/06-share-and-seo.md).
 - [x] Search: search players too. Plan: [05 · Player search](plans/05-player-search.md). One index of teams and
   players (`/api/busqueda`, prerendered, ~80 KB with brotli) downloaded the first time the search box is used, and
   searched in the browser, so a search never reads Turso. The index has its own cache tag (`search`), revalidated
   only when the sync changes something it shows (~15,000 rows per rebuild). Players carry `last_team_id` and
   `last_match_date`, which the sync updates from the matches it saves (one primary key lookup per player).
-- [ ] SEO: `sitemap.xml`, Open Graph images per match and team. Plan:
+- [x] SEO and link previews (25 Oct 2026): `metadataBase` from `NEXT_PUBLIC_SITE_URL`, descriptions on match and
+  team pages, Open Graph images (`opengraph-image.tsx`) for matches (score, or date and time), teams (every tab:
+  position, points, last five results) and the rest of the site, drawn with the site's fonts in `src/assets/fonts/`
+  (Latin subsets). Match and team images reuse the pages' `generateStaticParams`, so they are cached and revalidated
+  like the pages (5 min / 1 day) instead of drawn on every request. `sitemap.xml` (~7,900 URLs: current season
+  competitions and matches, every team and venue, players with a name) and `robots.txt`. Plan:
   [06 · Sharing and SEO](plans/06-share-and-seo.md).
 - [x] A real 404 page, as far as it goes without slowing pages down (24 Oct 2026). Plan:
   [11 · A real 404](plans/11-real-404.md). Measured on a production build:
