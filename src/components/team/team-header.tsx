@@ -5,6 +5,7 @@ import { getVenue } from "@/lib/sportspress/venues";
 import type { TeamPageData } from "@/lib/views/team";
 import { Crest } from "../crest";
 import { ShareButton } from "../share-button";
+import { SlackButton } from "../slack-button";
 import { VenueLink } from "../venue-link";
 import { TeamTabs } from "./team-tabs";
 
@@ -98,7 +99,10 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
               </div>
             ))}
           </div>
-          <ShareButton title={team.name} />
+          <div className="flex flex-wrap gap-2">
+            <ShareButton title={team.name} />
+            <SlackButton slug={team.slug} />
+          </div>
         </div>
       </div>
       <TeamTabs slug={team.slug} />
