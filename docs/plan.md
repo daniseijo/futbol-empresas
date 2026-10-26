@@ -147,9 +147,10 @@ See the steps in the README.
   local copy. Still open:
   - [ ] Views compute "now" inside `"use cache"`, so they keep `revalidate: 300`; an inline `cacheLife` lasting
     until the next kickoff or midnight would let pages hold for hours outside match nights.
-  - [ ] The sync's 60-minute overlap saves each changed match ~4 times on match nights and refreshes both squads
+  - [x] The sync's 60-minute overlap saved each changed match ~4 times on match nights and refreshed both squads
     each time (~13 s each against the API; 124 squads took 26 min, past the 15-minute budget, which that loop
-    does not check). Skip squads whose matches' `modified` did not change.
+    did not check). Since 26 Oct 2026 a match whose `modified` is already stored is skipped (no squads, no
+    revalidation), and squads past the budget are left to the "Squads" task of the next run.
   - [ ] Preview builds read production. A staging database only saves quota in another Turso organization.
 - [x] Alerts when the sync fails: a `sync-failure` issue that opens on failure and closes on the next success,
   and the footer's last sync date in red after 12 hours. Plan: [03 · Sync monitoring](plans/03-sync-monitoring.md).

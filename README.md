@@ -249,7 +249,10 @@ drizzle/                 migrations (generated with `pnpm db:generate`)
   from the team's lists (`/lists`): the "Plantilla" list gives the stats, the per-position lists give the
   position, and photos are fetched with `media?parent=`. `_embed` is very slow too.
 - **Incremental sync:** `modified_after` returns only what changed since the last run (Madrid local time;
-  requested with one hour of overlap).
+  requested with one hour of overlap). The overlap brings each changed match back several times on a match
+  night: a match whose `modified` is the one already stored is skipped, so its squads are not downloaded again
+  and the site is not revalidated for nothing. Squads that do not fit in the time budget are left to the
+  "Squads" task of a later run.
 - **Group standings are reused every season.** The site computes them from the matches (3 points for a win,
   1 for a draw), which also works for past seasons.
 - **A match with a score counts as played**, even if its `status` is `future` (administrative results).
