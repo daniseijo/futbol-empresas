@@ -75,8 +75,8 @@ See the steps in the README.
   goalkeeper, two defenders, two midfielders and two forwards by the league's own score (match points, +1 per
   goal, +0.5 per assist, +2 per MVP, +1 per Dandy, +2 per clean sheet for goalkeepers; worked out from the
   league's "7 ideal" on futbolempresas.es/LIGA-APERTURA, which it matched exactly). On every competition page
-  (any node and season), on the home page for the main competition, and on each team's Plantilla tab for its
-  season.
+  (any node and season), on the home page for the main competition, and on each team's summary (sidebar, under
+  the standings) and Plantilla tab for its season.
 - [x] Match and team: a "Compartir" button in the header (`ShareButton`): the native share sheet where there is one
   (phones, Safari, Chrome on macOS), otherwise it copies the link. Plan: [06 · Sharing and SEO](plans/06-share-and-seo.md).
 - [x] Search: search players too. Plan: [05 · Player search](plans/05-player-search.md). One index of teams and
