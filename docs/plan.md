@@ -70,7 +70,11 @@ See the steps in the README.
 - [x] Home page: if there are no matches today, show the next round and the latest results instead of
   "0 partidos". The home page now shows the next date with matches, and the focus team's last result or next
   match's preview (also on the team summary).
-- [ ] Match page: lineups on a pitch (optional). Plan: [10 · Lineups on a pitch](plans/10-lineups-on-pitch.md).
+- [x] Match page: lineups on a pitch (26 Oct 2026). A "Lista · Campo" switch on the lineups (remembered in
+  `localStorage`): a horizontal pitch with both teams on large screens, one team at a time on a vertical half on
+  phones, players in their line (POR, DEF, MED, DEL; more than 6, or 4 across on phones, split in two) with their
+  goals, cards and MVP. Only offered when both teams have players with a position. Plan:
+  [10 · Lineups on a pitch](plans/10-lineups-on-pitch.md).
 - [x] Match and team: a "Compartir" button in the header (`ShareButton`): the native share sheet where there is one
   (phones, Safari, Chrome on macOS), otherwise it copies the link. Plan: [06 · Sharing and SEO](plans/06-share-and-seo.md).
 - [x] Search: search players too. Plan: [05 · Player search](plans/05-player-search.md). One index of teams and
