@@ -187,7 +187,7 @@ function ResultHero({
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2.5">
+      <div className="mt-auto flex flex-wrap gap-2.5 border-t border-line-soft pt-5">
         <Link href={`/partidos/${match.id}`} className="rounded-full bg-ink px-4.5 py-3 text-sm font-semibold text-white">
           Ver el partido
         </Link>
@@ -251,7 +251,15 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5">
+        {team.row && <Tile label="En el grupo" value={`${team.row.position}º`} detail={gap(team.standings, team.row)} />}
+        <Tile label="Cara a cara" {...headToHeadTile(data, team.teamId)} />
+        {team.mvpLeader && (
+          <Tile label="Mejor valoración" value={team.mvpLeader.name} detail={`${decimal.format(team.mvpLeader.points)} en la temporada`} />
+        )}
+      </div>
+
+      <div className="mt-auto flex flex-wrap items-center gap-2.5 border-t border-line-soft pt-5">
         {venue?.address && <span className="flex-[1_1_240px] text-sm text-muted">{venue.address}</span>}
         <Link href={`/partidos/${match.id}`} className="rounded-full bg-ink px-4.5 py-3 text-sm font-semibold text-white">
           Ver la previa
@@ -368,6 +376,22 @@ function goalsByPlayer(data: MatchPageData, teamId: number) {
     byPlayer.set(goal.playerName, [...(byPlayer.get(goal.playerName) ?? []), goal.minute]);
   }
   return [...byPlayer].map(([name, minutes]) => ({ name, minutes }));
+}
+
+/** The team's record against the opponent, and how their last meeting ended. */
+function headToHeadTile({ headToHead, match }: MatchPageData, teamId: number) {
+  const last = headToHead.matches[0];
+  if (!last) return { value: "Primer duelo", detail: "Nunca se han enfrentado" };
+  const isHome = match.homeId === teamId;
+  const record = [
+    [isHome ? headToHead.homeWins : headToHead.awayWins, "V"],
+    [headToHead.draws, "E"],
+    [isHome ? headToHead.awayWins : headToHead.homeWins, "D"],
+  ];
+  return {
+    value: record.map(([count, label]) => `${count}${label}`).join(" · "),
+    detail: `Último: ${last.homeName} ${last.homeGoals}–${last.awayGoals} ${last.awayName}`,
+  };
 }
 
 function mvpDetail(goals: number, team: string | undefined) {
