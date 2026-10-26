@@ -177,7 +177,7 @@ function ResultHero({
         </div>
       )}
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5">
+      <Tiles>
         {data.mvp && (
           <Tile label="MVP del partido" value={playerDisplayName(data.mvp.name, data.mvp.number)} detail={mvpDetail(data.mvp.goals, mvpTeam?.name)} />
         )}
@@ -185,7 +185,7 @@ function ResultHero({
         {team.mvpLeader && (
           <Tile label="Mejor valoración" value={team.mvpLeader.name} detail={`${decimal.format(team.mvpLeader.points)} en la temporada`} />
         )}
-      </div>
+      </Tiles>
 
       <div className="mt-auto flex flex-wrap gap-2.5 border-t border-line-soft pt-5">
         <Link href={`/partidos/${match.id}`} className="rounded-full bg-ink px-4.5 py-3 text-sm font-semibold text-white">
@@ -251,30 +251,31 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
         </div>
       )}
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5">
-        {team.row && <Tile label="En el grupo" value={`${team.row.position}º`} detail={gap(team.standings, team.row)} />}
+      <Tiles>
         <Tile label="Cara a cara" {...headToHeadTile(data, team.teamId)} />
         {team.mvpLeader && (
           <Tile label="Mejor valoración" value={team.mvpLeader.name} detail={`${decimal.format(team.mvpLeader.points)} en la temporada`} />
         )}
-      </div>
+      </Tiles>
 
-      <div className="mt-auto flex flex-wrap items-center gap-2.5 border-t border-line-soft pt-5">
-        {venue?.address && <span className="flex-[1_1_240px] text-sm text-muted">{venue.address}</span>}
+      <div className="mt-auto flex items-center gap-2.5 border-t border-line-soft pt-5 sm:flex-wrap">
+        {venue?.address && <span className="hidden flex-[1_1_240px] text-sm text-muted sm:block">{venue.address}</span>}
         <Link href={`/partidos/${match.id}`} className="rounded-full bg-ink px-4.5 py-3 text-sm font-semibold text-white">
           Ver la previa
         </Link>
-        {venue && (
-          <a href={mapsUrl(venue)} className="rounded-full border border-line px-4.5 py-3 text-sm font-semibold hover:border-ink">
-            Cómo llegar
-          </a>
-        )}
-        <a
-          href={calendarUrl(match, venue ? (venue.address ? `${venue.name}, ${venue.address}` : venue.name) : "")}
-          className="rounded-full border border-line px-4.5 py-3 text-sm font-semibold hover:border-ink"
-        >
-          Añadir al calendario
-        </a>
+        <span className="ml-auto flex gap-2 sm:ml-0 sm:gap-2.5">
+          {venue && (
+            <IconButton href={mapsUrl(venue)} label="Cómo llegar">
+              <PinIcon />
+            </IconButton>
+          )}
+          <IconButton
+            href={calendarUrl(match, venue ? (venue.address ? `${venue.name}, ${venue.address}` : venue.name) : "")}
+            label="Añadir al calendario"
+          >
+            <CalendarIcon />
+          </IconButton>
+        </span>
       </div>
     </>
   );
@@ -334,6 +335,15 @@ function LastMatchLine({ match, teamId }: { match: Match; teamId: number }) {
   );
 }
 
+/** Two columns on a phone, with an odd last tile across both so none is left alone; a single row from `sm`. */
+function Tiles({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(150px,1fr))] [&>:last-child:nth-child(odd)]:col-span-2 sm:[&>:last-child:nth-child(odd)]:col-span-1">
+      {children}
+    </div>
+  );
+}
+
 function Tile({ label, value, detail }: { label: string; value: string; detail: string | null }) {
   return (
     <div className="rounded-[14px] bg-canvas px-3.5 py-3">
@@ -341,6 +351,37 @@ function Tile({ label, value, detail }: { label: string; value: string; detail: 
       <div className="mt-1 truncate text-[15px] font-bold">{value}</div>
       {detail && <div className="text-[13px] text-muted">{detail}</div>}
     </div>
+  );
+}
+
+/** A small round button with only its icon on a phone, its label from `sm`. */
+function IconButton({ href, label, children }: { href: string; label: string; children: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      className="grid size-11 place-items-center rounded-full border border-line hover:border-ink sm:block sm:size-auto sm:px-4.5 sm:py-3 sm:text-sm sm:font-semibold"
+    >
+      <span className="sm:hidden">{children}</span>
+      <span className="max-sm:sr-only">{label}</span>
+    </a>
+  );
+}
+
+function PinIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+      <path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5" />
+    </svg>
   );
 }
 
