@@ -86,6 +86,10 @@ jobs:
     needs: sync
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Shared with notify.yml: two runs at once could send a call-up twice.
+    concurrency:
+      group: notify
+      cancel-in-progress: false
     permissions:
       contents: read
     steps:
