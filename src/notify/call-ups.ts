@@ -46,7 +46,6 @@ export interface CallUpMessage {
   kind: CallUp["kind"];
   title: string;
   matchup: string;
-  round: number | null;
   when: string;
   /** "Jueves, 29 de octubre" and "21:10", for Slack's one line each. */
   date: string;
@@ -74,7 +73,6 @@ export function callUpMessage({ match, kind, fingerprint }: CallUp, teamId: numb
     kind,
     title: match.round ? `${label} · Jornada ${match.round}` : label,
     matchup: `${match.homeName} vs ${match.awayName}`,
-    round: match.round,
     when: `${capitalize(day)} · ${formatTime(match.date)}`,
     date: `${capitalize(weekday)}, ${date.join(" ")}`,
     time: formatTime(match.date),
@@ -103,11 +101,11 @@ export function toTelegramHtml(message: CallUpMessage): string {
 }
 
 /**
- * Slack's Block Kit, worded like the call-ups teams already post by hand. The
- * match's share image goes in as an image block instead of link previews, which
- * can only be turned off for the whole message (the venue's Google Maps link
- * made a useless one). An image block cannot link anywhere, so the link to the
- * site sits right above it. `text` is what notifications show. Slack has no poll
+ * Slack's Block Kit: the title, then the details worded like the call-ups teams
+ * already post by hand. The match's share image goes in as an image block
+ * instead of link previews, which can only be turned off for the whole message
+ * (the venue's Google Maps link made a useless one). An image block cannot link
+ * anywhere, so the link to the site sits right above it. `text` is what notifications show. Slack has no poll
  * without an app of its own, so it asks for reactions.
  */
 export function toSlackMessage(message: CallUpMessage) {
@@ -117,8 +115,9 @@ export function toSlackMessage(message: CallUpMessage) {
   return {
     text: `${message.title}: ${message.matchup}, ${message.when}`,
     blocks: [
+      { type: "header", text: { type: "plain_text", text: `⚽ ${message.title}` } },
       section(
-        "¡Hola equipo! ⚽",
+        "¡Hola equipo!",
         message.kind === "new"
           ? "Os dejo por aquí todos los detalles del próximo partido."
           : "⚠️ *Ha cambiado el horario del partido.* Estos son los nuevos detalles:",
@@ -127,7 +126,7 @@ export function toSlackMessage(message: CallUpMessage) {
         `🗓️ *Fecha:* ${escapeHtml(message.date)}`,
         `⏰ *Hora:* ${message.time} h`,
         message.venue && `📍 *Lugar:* ${link(message.venue.url, message.venue.name)}`,
-        `🆚 *Encuentro:* ${escapeHtml(message.matchup)}${message.round ? ` · Jornada ${message.round}` : ""}`,
+        `🆚 *Encuentro:* ${escapeHtml(message.matchup)}`,
       ),
       section(`👉 *${link(message.url, "Ver el partido en la web")}*`),
       { type: "image", image_url: message.imageUrl, alt_text: `${message.matchup}, ${message.when}` },

@@ -88,9 +88,9 @@ describe("callUpMessage", () => {
     assert.equal(slack.text, "Convocatoria · Jornada 7: Embat vs R&D <Labs>, Miércoles 4 de noviembre · 21:30");
     assert.deepEqual(
       slack.blocks.map((b) => b.type),
-      ["section", "section", "section", "image", "section"],
+      ["header", "section", "section", "section", "image", "section"],
     );
-    assert.match(JSON.stringify(slack.blocks[1]), /🆚 \*Encuentro:\* Embat vs R&amp;D &lt;Labs&gt; · Jornada 7/);
+    assert.equal(slack.blocks[0].text?.text, "⚽ Convocatoria · Jornada 7");
     assert.equal(slack.unfurl_links, false);
     assert.equal(slack.unfurl_media, false);
   });
