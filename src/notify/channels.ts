@@ -1,7 +1,11 @@
-// Where call-ups are sent. A channel is on when its environment variables are
-// set, so locally (and in any run without them) nothing is sent.
+// Where call-ups are sent. The env-configured channels are on when their
+// environment variables are set, so locally (and in any run without them)
+// nothing is sent; Slack subscriptions come from the database (run.ts).
 
-import { toSlackMrkdwn, toTelegramHtml, type CallUpMessage } from "./call-ups";
+import { escapeHtml, toSlackMessage, toTelegramHtml, type CallUpMessage } from "./call-ups";
+import { describeSchedule, type Schedule } from "./schedule";
+import { SLACK_APP_NAME } from "./slack-oauth";
+import { isRevokedWebhook } from "./targets";
 
 export interface Channel {
   /** Stored in `notifications.channel`: each channel keeps its own record of what it sent. */
@@ -9,9 +13,16 @@ export interface Channel {
   send(message: CallUpMessage): Promise<void>;
 }
 
+/** Slack says the webhook is gone for good: the subscription should be deleted, not retried. */
+export class RevokedWebhookError extends Error {}
+
 async function post(url: string, body: unknown, what: string): Promise<Response> {
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error(`${what} failed: ${res.status} ${await res.text()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    const Failure = isRevokedWebhook(res.status, text) ? RevokedWebhookError : Error;
+    throw new Failure(`${what} failed: ${res.status} ${text}`);
+  }
   return res;
 }
 
@@ -36,11 +47,11 @@ function telegram(token: string, chatId: string): Channel {
 }
 
 /** A Slack app's Incoming Webhook, which posts to the channel it was created for. */
-function slack(webhookUrl: string): Channel {
+export function slack(webhookUrl: string, name = "slack", footer: string | null = null): Channel {
   return {
-    name: "slack",
+    name,
     async send(message) {
-      await post(webhookUrl, { text: toSlackMrkdwn(message), unfurl_links: true }, "Slack webhook");
+      await post(webhookUrl, toSlackMessage(message, footer), "Slack webhook");
     },
   };
 }
@@ -50,4 +61,36 @@ export function configuredChannels(env: NodeJS.ProcessEnv = process.env): Channe
   if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) channels.push(telegram(env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_CHAT_ID));
   if (env.SLACK_WEBHOOK_URL) channels.push(slack(env.SLACK_WEBHOOK_URL));
   return channels;
+}
+
+/** The small print under a subscription's call-ups: when they come and where to change it. */
+export function subscriptionFooter(schedule: Schedule, settingsUrl: string): string {
+  return `🔔 *${SLACK_APP_NAME}* avisa ${describeSchedule(schedule)} · <${settingsUrl}|Cambiar avisos o darse de baja>`;
+}
+
+/** The first message of a new subscription, which also proves the webhook works. */
+export async function sendSlackWelcome(webhookUrl: string, team: { name: string; url: string }, schedule: Schedule, settingsUrl: string): Promise<void> {
+  const text = [
+    `✅ Hecho, os avisaré de los partidos de *<${team.url}|${escapeHtml(team.name)}>*.`,
+    `Cada convocatoria llegará ${describeSchedule(schedule)}, y al momento si cambia la hora o el campo. <${settingsUrl}|Cambiar avisos o darse de baja>`,
+  ].join("\n");
+  await post(webhookUrl, { text, unfurl_links: false }, "Slack webhook");
+}
+
+/** A changed schedule, told to the whole channel and not only to whoever changed it. */
+export async function sendScheduleChanged(webhookUrl: string, team: { name: string; url: string }, schedule: Schedule, settingsUrl: string): Promise<void> {
+  const text = [
+    `🔔 Cambio en los avisos: las convocatorias de *<${team.url}|${escapeHtml(team.name)}>* llegarán ${describeSchedule(schedule)}.`,
+    `<${settingsUrl}|Cambiar avisos o darse de baja>`,
+  ].join("\n");
+  await post(webhookUrl, { text, unfurl_links: false }, "Slack webhook");
+}
+
+/** The last message of a subscription, so the channel knows why the call-ups stop. */
+export async function sendUnsubscribed(webhookUrl: string, team: { name: string; url: string }, subscribeUrl: string): Promise<void> {
+  const text = [
+    `🔕 Este canal ya no recibirá las convocatorias de *<${team.url}|${escapeHtml(team.name)}>*.`,
+    `<${subscribeUrl}|Volver a recibirlas>`,
+  ].join("\n");
+  await post(webhookUrl, { text, unfurl_links: false }, "Slack webhook");
 }

@@ -1,0 +1,40 @@
+name: Send call-ups
+
+# Sends the Slack call-ups that are due (`pnpm notify`): each subscribed channel
+# picks a weekday and a whole hour from 07:00 to 22:00 Madrid time, so this runs
+# on the hour. cron-job.org starts it through workflow_dispatch (`pnpm cron-job`),
+# because GitHub starts scheduled runs late or drops them on busy hours; the
+# schedule here is the fallback, in UTC, covering both winter and summer time.
+# The notify job after every sync (sync.yml) also sends whatever is due.
+on:
+  schedule:
+    - cron: "20 5-21 * * *"
+  workflow_dispatch:
+
+jobs:
+  notify:
+    if: vars.SYNC_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Shared with the notify job in sync.yml: two runs at once could send a call-up twice.
+    concurrency:
+      group: notify
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm notify
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_AUTH_TOKEN: ${{ secrets.DATABASE_AUTH_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          NOTIFY_ENCRYPTION_KEY: ${{ secrets.NOTIFY_ENCRYPTION_KEY }}

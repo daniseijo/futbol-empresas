@@ -97,20 +97,22 @@ minutes on its own; once nothing is pending it ends in a few minutes.
   Runs never overlap (`concurrency: sync`); if one is already waiting, GitHub cancels it in favour of the newer
   one, which is harmless.
 
-### The match-night cron (cron-job.org)
+### The cron-job.org jobs
 
-The job is defined in `scripts/cron-job.ts` and managed through cron-job.org's API, with `CRONJOB_API_KEY` in
-`.env.local` (cron-job.org › Settings › API; 100 calls a day on the free plan):
+Two jobs start GitHub workflows: **sync** on match nights (`sync.yml`), and **notify** on the hour from 07:00 to
+22:00, Monday to Friday (`notify.yml`, the Slack call-ups each channel schedules). They are defined in
+`scripts/cron-job.ts` and managed through cron-job.org's API, with `CRONJOB_API_KEY` in `.env.local`
+(cron-job.org › Settings › API; 100 calls a day on the free plan):
 
 ```sh
-pnpm cron-job          # the job, its last runs (with GitHub's error message if any) and the next ones
+pnpm cron-job          # each job, its last runs (with GitHub's error message if any) and the next ones
 pnpm cron-job diff     # what apply would change
-pnpm cron-job apply    # make the job match scripts/cron-job.ts, creating it if missing
+pnpm cron-job apply    # make the jobs match scripts/cron-job.ts, creating the missing ones
 ```
 
-It calls GitHub with a fine-grained token (*GitHub › Settings › Developer settings › Fine-grained tokens*):
-this repository only, **Actions: Read and write** and nothing else. The token lives only in the job: `apply`
-keeps it, and the script never prints it. To set a new one (it expired, or the job is created from scratch):
+They call GitHub with a fine-grained token (*GitHub › Settings › Developer settings › Fine-grained tokens*):
+this repository only, **Actions: Read and write** and nothing else. The token lives only in the jobs: `apply`
+keeps it (a new job takes it from the other one), and the script never prints it. To set a new one (it expired, or the job is created from scratch):
 `GITHUB_DISPATCH_TOKEN=github_pat_… pnpm cron-job apply`. cron-job.org emails the owner when a call fails, for
 example with `401` once the token expires.
 
@@ -139,6 +141,51 @@ TELEGRAM_BOT_TOKEN=… TELEGRAM_CHAT_ID=… pnpm notify -- --match=104101   # se
 ```
 
 `--dry-run` and `--match` work with a read-only database token. Without a channel set, `pnpm notify` only prints.
+`--match` also sends to the Slack subscriptions of either team in that match (it needs `NOTIFY_ENCRYPTION_KEY`).
+
+#### Slack subscriptions to any team
+
+Every team page has a "Recibir convocatorias en Slack" button, so anyone can get any team's call-ups in a Slack
+channel, with no accounts:
+
+1. The button opens `/slack/nuevo?equipo=<slug>`, where the visitor picks **when** the call-ups come: a weekday
+   (Monday to Friday) and a whole hour from 07:00 to 22:00, by default Thursday at 10:00. Each match is announced
+   on the last such weekday **before** it (`src/notify/schedule.ts`): a Tuesday match on the Thursday before, a
+   Friday one the day before. Never on a weekend. A change of time or venue to an announced match goes out at once.
+2. The form goes to `/api/slack/instalar`, which starts Slack's OAuth v2 with only the `incoming-webhook` scope.
+   The team, the schedule and a nonce travel in `state`, signed with the client secret; the nonce is also kept in
+   a cookie, so the callback only accepts the browser that started the flow, within 10 minutes.
+3. Slack's consent screen picks the workspace and the channel and sends the visitor back to
+   `/api/slack/autorizado`, which trades the code for the channel's webhook, stores it in `subscriptions`
+   **encrypted** (AES-256-GCM, `src/notify/secrets.ts`) with the schedule, says hello in the channel and shows
+   `/slack`. The same channel and team again only replaces the webhook and the schedule.
+4. `pnpm notify` loads every subscription, the upcoming matches of all the followed teams in one query, and sends
+   each one its team's call-ups when they are due. Each target keeps its own record in `notifications`: `telegram`
+   and `slack` for the env-configured channels (which keep the 14-day rule), `sub:<id>` for the subscriptions. One
+   target failing never stops the others. It runs after every sync and, so messages arrive on time, every hour
+   through `notify.yml` (see "The cron-job.org jobs"); both share a concurrency group, so nothing goes twice.
+5. Every call-up ends with "🔔 Convocatorias F7 avisa el jueves antes de cada partido, a las 10:00 · Cambiar avisos
+   o darse de baja". The link is `/slack/avisos?s=<id>.<signature>` (HMAC with `NOTIFY_ENCRYPTION_KEY`): a page
+   to change the schedule or unsubscribe, with no accounts, through Server Actions that check the signature.
+   Removing the app from Slack works too: the webhook then answers `no_service`, `channel_not_found`… and
+   `pnpm notify` deletes the subscription.
+
+Those routes and actions are the site's only writes to the database. Vercel's `DATABASE_AUTH_TOKEN` stays
+read-only; they use `DATABASE_WRITE_AUTH_TOKEN` (`turso db tokens create futbolempresas`), which nothing else gets. The table
+itself is created by the migrations that `pnpm sync` and `pnpm notify` apply.
+
+Setup:
+
+1. At [api.slack.com/apps](https://api.slack.com/apps), *Create New App › From scratch*, then *Incoming Webhooks*:
+   on.
+2. *OAuth & Permissions › Redirect URLs*: add `https://<site>/api/slack/autorizado` for each address it runs on
+   (production and, to try it, a preview's branch alias). Slack only accepts HTTPS, so it cannot be tried on
+   `localhost` without a tunnel. Under *Scopes › Bot Token Scopes*, add `incoming-webhook`.
+3. *Manage Distribution*: tick the checklist and *Activate Public Distribution*, so other workspaces can add it.
+4. On Vercel: `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` (*Basic Information › App Credentials*),
+   `NOTIFY_ENCRYPTION_KEY` (`openssl rand -base64 32`) and `DATABASE_WRITE_AUTH_TOKEN`. In GitHub, the same
+   `NOTIFY_ENCRYPTION_KEY`. The button only shows when the Slack app is set.
+5. `pnpm cron-job apply`, which creates the hourly notify job.
 
 ## Pages
 
