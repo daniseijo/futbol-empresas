@@ -76,3 +76,12 @@ export async function sendSlackWelcome(webhookUrl: string, team: { name: string;
   ].join("\n");
   await post(webhookUrl, { text, unfurl_links: false }, "Slack webhook");
 }
+
+/** A changed schedule, told to the whole channel and not only to whoever changed it. */
+export async function sendScheduleChanged(webhookUrl: string, team: { name: string; url: string }, schedule: Schedule, settingsUrl: string): Promise<void> {
+  const text = [
+    `🔔 Cambio en los avisos: las convocatorias de *<${team.url}|${escapeHtml(team.name)}>* llegarán ${describeSchedule(schedule)}.`,
+    `<${settingsUrl}|Cambiar avisos o darse de baja>`,
+  ].join("\n");
+  await post(webhookUrl, { text, unfurl_links: false }, "Slack webhook");
+}
