@@ -152,12 +152,13 @@ function TeamLink({ side, smallCrest }: { side: TeamSide; smallCrest: boolean })
 
 function Scorers({ scorers, className }: { scorers: ReturnType<typeof scorersOf>; className: string }) {
   return (
-    <ul className={`text-center text-[13px] leading-relaxed text-muted sm:row-start-2 ${className}`}>
+    // On a phone the side column is narrow: the minutes go on a line of their own so the name is not split for them.
+    <ul className={`row-start-3 flex flex-col gap-1.5 text-center text-[13px] leading-snug text-muted sm:row-start-2 sm:gap-0 sm:leading-relaxed ${className}`}>
       {scorers.map(({ name, minutes }) => (
-        <li key={name}>
+        <li key={name} className="text-balance">
           {name}
-          {"\u00a0"}
-          <span className="whitespace-nowrap">{minutes.map((m) => `${m}′`).join(", ")}</span>
+          <span className="max-sm:hidden">{"\u00a0"}</span>
+          <span className="whitespace-nowrap max-sm:block">{minutes.map((m) => `${m}′`).join(", ")}</span>
         </li>
       ))}
     </ul>
@@ -245,13 +246,12 @@ function Scoreboard({ data }: { data: MatchPageData }) {
             )}
           </div>
           <TeamLink side={away} smallCrest={twoDigits} />
-          {/* Scorers centred under each name, in the same grid from `sm`. A phone's side columns are too
-              narrow for them, so there the row spans the board in two halves. */}
-          {match.played && (homeScorers.length > 0 || awayScorers.length > 0) && (
-            <div className="col-span-3 row-start-3 grid grid-cols-2 gap-4 sm:contents">
-              <Scorers scorers={homeScorers} className="sm:col-start-1" />
-              <Scorers scorers={awayScorers} className="sm:col-start-3" />
-            </div>
+          {/* A last row of the same grid, so each side's scorers sit centred under its name. */}
+          {match.played && (
+            <>
+              <Scorers scorers={homeScorers} className="col-start-1" />
+              <Scorers scorers={awayScorers} className="col-start-3" />
+            </>
           )}
         </div>
 
