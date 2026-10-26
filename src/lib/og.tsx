@@ -33,10 +33,10 @@ const fonts = Promise.all([
   readFile(join(fontDir, "BarlowCondensed-ExtraBold.ttf")),
 ]);
 
-export async function ogImage(element: React.ReactElement): Promise<ImageResponse> {
+export async function ogImage(element: React.ReactElement, size: { width: number; height: number } = OG_SIZE): Promise<ImageResponse> {
   const [interMedium, interBold, barlow] = await fonts;
   return new ImageResponse(element, {
-    ...OG_SIZE,
+    ...size,
     fonts: [
       { name: "Inter", data: interMedium, weight: 500, style: "normal" },
       { name: "Inter", data: interBold, weight: 700, style: "normal" },
