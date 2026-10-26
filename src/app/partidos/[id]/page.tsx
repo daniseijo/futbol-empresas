@@ -113,11 +113,12 @@ function scorersOf(data: MatchPageData, teamId: number) {
  * One side of the scoreboard. On phones it takes two rows of the scoreboard's
  * grid (subgrid): crests share the first and names the second, so a name on
  * two lines does not push its crest below the other one. From `sm` up it is a
- * column (crest, name, position) and the columns align to the top, which keeps
- * the crests in line too. A two-digit score leaves no room for the full crest
- * on a phone, so it is drawn smaller then.
+ * column (crest, name, position) centred like the home page's scoreboard, and
+ * the columns align to the top, which keeps the crests in line too. A two-digit
+ * score leaves no room for the full crest on a phone, so it is drawn smaller
+ * then.
  */
-function TeamLink({ side, align, smallCrest }: { side: TeamSide; align: "left" | "right"; smallCrest: boolean }) {
+function TeamLink({ side, smallCrest }: { side: TeamSide; smallCrest: boolean }) {
   const content = (
     <>
       <Crest src={side.logoUrl} name={side.name} size={96} className={`max-sm:self-center ${smallCrest ? "max-sm:size-18!" : ""}`} />
@@ -125,7 +126,7 @@ function TeamLink({ side, align, smallCrest }: { side: TeamSide; align: "left" |
       <span className="@container flex w-full min-w-0 flex-col gap-3 sm:contents">
         <span
           // Its usual size, smaller only when the longest word would not fit the column.
-          className="font-display leading-none font-extrabold [overflow-wrap:break-word] uppercase [--base:26px] [--min:15px] sm:[--base:44px] sm:[--min:24px]"
+          className="font-display leading-none font-extrabold text-balance [overflow-wrap:break-word] uppercase [--base:26px] [--min:15px] sm:[--base:44px] sm:[--min:24px]"
           style={{ fontSize: fitFontSize(side.name, 0.46) }}
         >
           {side.name}
@@ -138,9 +139,8 @@ function TeamLink({ side, align, smallCrest }: { side: TeamSide; align: "left" |
       </span>
     </>
   );
-  const className = `row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center sm:@container sm:row-span-1 sm:flex sm:flex-col sm:gap-3 ${
-    align === "left" ? "sm:items-end sm:text-right" : "sm:items-start sm:text-left"
-  }`;
+  const className =
+    "row-span-2 grid min-w-0 grid-rows-subgrid justify-items-center text-center sm:@container sm:row-span-1 sm:flex sm:flex-col sm:items-center sm:gap-3";
   return side.slug ? (
     <Link href={`/equipos/${side.slug}`} className={`${className} hover:opacity-80`}>
       {content}
@@ -196,8 +196,9 @@ function Scoreboard({ data }: { data: MatchPageData }) {
           </span>
         </div>
 
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-4 gap-y-3 sm:items-start sm:gap-8">
-          <TeamLink side={home} align="left" smallCrest={twoDigits} />
+        {/* Narrower than the page so centred sides stay near the score on wide screens. */}
+        <div className="mx-auto grid w-full max-w-230 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-4 gap-y-3 sm:items-start sm:gap-8">
+          <TeamLink side={home} smallCrest={twoDigits} />
           <div className="flex flex-col items-center gap-2 self-center">
             {match.played ? (
               <>
@@ -229,11 +230,11 @@ function Scoreboard({ data }: { data: MatchPageData }) {
               </>
             )}
           </div>
-          <TeamLink side={away} align="right" smallCrest={twoDigits} />
+          <TeamLink side={away} smallCrest={twoDigits} />
         </div>
 
         {match.played && (homeScorers.length > 0 || awayScorers.length > 0) && (
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4 text-[13px] leading-relaxed text-muted sm:gap-8">
+          <div className="mx-auto grid w-full max-w-230 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4 text-[13px] leading-relaxed text-muted sm:gap-8">
             <ul className="text-right">
               {homeScorers.map(({ name, minutes }) => (
                 <li key={name}>
