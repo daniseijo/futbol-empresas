@@ -1,6 +1,6 @@
 import { cacheLife } from "next/cache";
 import { siteConfig } from "@/config/site";
-import { addDays, dayKey, nowInMadrid } from "@/lib/dates";
+import { addDays, dayKey, nowInMadrid, resultOverdue } from "@/lib/dates";
 import { getCurrentSeason, getLeagues, getSeasonMatches, getTeam } from "@/lib/data";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, StandingRow } from "@/lib/sportspress/types";
@@ -95,7 +95,7 @@ export function buildDay(matches: Match[], tree: LeagueTree, date: string, focus
       venue: getVenue(m.venueId)?.name ?? "",
       label: where ? `${where}${round}` : null,
       isFocus: focusTeamId !== null && (m.homeId === focusTeamId || m.awayId === focusTeamId),
-      noResult: !m.played && now !== "" && m.date < now,
+      noResult: !m.played && resultOverdue(m.date, now),
     };
   });
   rows.sort((a, b) => a.time.localeCompare(b.time) || a.venue.localeCompare(b.venue, "es"));

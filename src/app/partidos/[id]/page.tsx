@@ -16,7 +16,7 @@ import { siteConfig } from "@/config/site";
 import { calendarUrl } from "@/lib/calendar";
 import { getSeasonMatches, getCurrentSeason, getTeam } from "@/lib/data";
 import { playerDisplayName } from "@/lib/players";
-import { capitalize, formatLongDate, formatShortDate, relativeDay } from "@/lib/dates";
+import { capitalize, formatLongDate, formatShortDate, relativeDay, resultOverdue } from "@/lib/dates";
 import type { Position } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import { outcomeFor } from "@/lib/standings";
@@ -214,8 +214,8 @@ function Scoreboard({ data }: { data: MatchPageData }) {
                 <span className="rounded-full bg-ink px-2.5 py-1 text-xs font-bold tracking-[0.12em] text-white">FINAL</span>
                 {data.halftime && <span className="text-[13px] text-muted">Descanso {data.halftime}</span>}
               </>
-            ) : match.date < data.now ? (
-              // Its time has passed and the league has not published the score: not an upcoming match.
+            ) : resultOverdue(match.date, data.now) ? (
+              // A day after kickoff and the league has not published the score: not an upcoming match.
               <>
                 <span className="rounded-full bg-line-soft px-3 py-1 text-xs font-bold tracking-[0.1em] text-muted uppercase">Sin resultado</span>
                 <span className="max-w-32 text-center text-[13px] text-muted sm:max-w-none">La liga no lo ha publicado</span>
@@ -382,7 +382,7 @@ function Photos({ data }: { data: MatchPageData }) {
 function Preview({ data }: { data: MatchPageData }) {
   const sides = [data.home, data.away];
   return (
-    <Card title={data.match.date < data.now ? "Los equipos" : "Previa"}>
+    <Card title={!data.match.played && resultOverdue(data.match.date, data.now) ? "Los equipos" : "Previa"}>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
         {sides.map((side) => (
           <div key={side.id} className="flex flex-col gap-3 rounded-2xl bg-canvas p-4">
@@ -567,7 +567,7 @@ function RestOfRound({ data }: { data: MatchPageData }) {
         >
           <span className="truncate text-right">{m.homeName}</span>
           <span className="text-center font-display text-xl font-bold">
-            {m.played ? `${m.homeGoals}–${m.awayGoals}` : m.date < data.now ? <span className="text-xs font-semibold text-muted">S/R</span> : m.date.slice(11, 16)}
+            {m.played ? `${m.homeGoals}–${m.awayGoals}` : resultOverdue(m.date, data.now) ? <span className="text-xs font-semibold text-muted">S/R</span> : m.date.slice(11, 16)}
           </span>
           <span className="truncate">{m.awayName}</span>
         </Link>

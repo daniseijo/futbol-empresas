@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { addDays, daysBetween, formatLongDate, formatShortDate, relativeDay } from "@/lib/dates";
+import { addDays, daysBetween, formatLongDate, formatShortDate, relativeDay, resultOverdue } from "@/lib/dates";
 
 describe("daysBetween", () => {
   it("ignores the time of day", () => {
@@ -51,5 +51,18 @@ describe("addDays", () => {
   it("crosses months", () => {
     assert.equal(addDays("2026-10-30", 3), "2026-11-02");
     assert.equal(addDays("2026-03-01T10:00", -1), "2026-02-28");
+  });
+});
+
+describe("resultOverdue", () => {
+  it("waits a full day after kickoff", () => {
+    assert.equal(resultOverdue("2026-10-22T21:00", "2026-10-22T20:59"), false);
+    assert.equal(resultOverdue("2026-10-22T21:00", "2026-10-22T22:30"), false);
+    assert.equal(resultOverdue("2026-10-22T21:00", "2026-10-23T20:59"), false);
+    assert.equal(resultOverdue("2026-10-22T21:00", "2026-10-23T21:00"), true);
+  });
+
+  it("is never overdue without a current time", () => {
+    assert.equal(resultOverdue("2020-01-01T10:00", ""), false);
   });
 });

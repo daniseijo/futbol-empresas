@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatShortDate, relativeDay } from "@/lib/dates";
+import { formatShortDate, relativeDay, resultOverdue } from "@/lib/dates";
 import type { Match } from "@/lib/sportspress/types";
 import { outcomeFor } from "@/lib/standings";
 import { Crest } from "../crest";
@@ -51,7 +51,7 @@ export function MatchRow({
           match.played ? "bg-canvas" : highlight ? "bg-accent text-on-accent" : "bg-canvas text-muted"
         }`}
       >
-        {match.played ? `${match.homeGoals}–${match.awayGoals}` : match.date < now ? "S/R" : match.date.slice(11, 16)}
+        {match.played ? `${match.homeGoals}–${match.awayGoals}` : resultOverdue(match.date, now) ? "S/R" : match.date.slice(11, 16)}
       </span>
       <span className="flex items-center gap-2.5 max-sm:hidden">
         <Crest src={logos[match.awayId]} name={match.awayName} size={30} />
