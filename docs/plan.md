@@ -89,14 +89,11 @@ See the steps in the README.
   sends per target and drops revoked webhooks. See "Slack subscriptions" in the README. Next: the same for
   Telegram (a `?startgroup=<slug>` deep link to the bot), and maybe Slack's `app_uninstalled` event to drop
   subscriptions straight away instead of on the next call-up.
-- [ ] Slack call-ups at a time each channel picks (next PR after the Slack subscriptions, agreed 26 Oct 2026): one
-  message per match "N days before, at HH:MM" (default 3 days before at 10:00), reschedules still sent right away; a
-  short screen on the site before going to Slack, and a signed "Cambiar avisos o darse de baja" link to it (no
-  accounts) with a button to unsubscribe; a notify-only workflow every 15 minutes from cron-job.org so messages arrive
-  on time. Every message ends with a small footer: divider, then "🔔 *Convocatorias F7* avisa 3 días antes de cada
-  partido, a las 10:00 · Cambiar avisos o darse de baja" (the app name in bold, not a link: mentioning the bot needs
-  its per-workspace user id, not worth it). `/slack` becomes the bot's page (what it sends, a team search to add it,
-  not official). Write the plan in `docs/plans/` first.
+- [x] Slack call-ups at a time each channel picks (26 Oct 2026): each subscription picks a weekday (Monday to
+  Friday) and a whole hour; each match goes out on the last such weekday before it, never on a weekend, and
+  reschedules at once. `/slack/nuevo` before Slack, `/slack/avisos` (signed link in every message's footer) to
+  change it or unsubscribe, and `notify.yml` on the hour from cron-job.org. Next: `/slack` as the bot's own page
+  (what it sends, a team search to add it); a smaller image made for Slack if the share image feels too big.
 - [ ] Let each visitor pick their own company (separate PR, after the Slack subscriptions): today "Mi equipo", the
   home page's "Tu equipo" and the app shortcut all come from the fixed `NEXT_PUBLIC_FOCUS_TEAM_SLUG`. A choice kept
   in a cookie, no accounts, would personalise them and could show the Slack button on the home page too. Watch the
