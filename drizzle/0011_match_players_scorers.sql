@@ -1,0 +1,1 @@
+CREATE INDEX `match_players_scorers` ON `match_players` (`match_id`) WHERE "match_players"."goals" > 0 or "match_players"."assists" > 0 or "match_players"."crack" = 1 or "match_players"."dandy" = 1;

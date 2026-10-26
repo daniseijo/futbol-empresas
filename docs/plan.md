@@ -128,6 +128,18 @@ See the steps in the README.
 - [ ] Revalidate only what a sync changed, not the whole site. First measurement taken on 24 Oct 2026 (Turso
   reads, Vercel ISR writes and Active CPU, in the plan); measure again after a week of normal runs (~1 Nov) and
   build it if ISR writes are still high. Plan: [14 · Targeted revalidation](plans/14-targeted-revalidation.md).
+- [x] Rows read on Turso, measured on 26 Oct 2026 (500M a month on the free plan; 110M used that month, 91M of
+  them by the initial backfill on 22-23 Oct). A sync with nothing new reads ~3,300 rows, one with results
+  5,000-22,000 (~150 per squad refreshed); `pnpm notify` ~400 whatever the number of subscriptions. Most reads
+  come from development: dev sessions and preview builds against production read 1-3M rows an hour. Done: indexes
+  for a player's squads and for the season's scorers, notify reading only upcoming matches, `pnpm db:pull` for a
+  local copy. Still open:
+  - [ ] Views compute "now" inside `"use cache"`, so they keep `revalidate: 300`; an inline `cacheLife` lasting
+    until the next kickoff or midnight would let pages hold for hours outside match nights.
+  - [ ] The sync's 60-minute overlap saves each changed match ~4 times on match nights and refreshes both squads
+    each time (~13 s each against the API; 124 squads took 26 min, past the 15-minute budget, which that loop
+    does not check). Skip squads whose matches' `modified` did not change.
+  - [ ] Preview builds read production. A staging database only saves quota in another Turso organization.
 - [x] Alerts when the sync fails: a `sync-failure` issue that opens on failure and closes on the next success,
   and the footer's last sync date in red after 12 hours. Plan: [03 · Sync monitoring](plans/03-sync-monitoring.md).
 

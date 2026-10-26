@@ -80,6 +80,7 @@ pnpm lint
 pnpm test                                  # unit tests (node:test + tsx), next to the code as *.test.ts
 npx next typegen && npx tsc --noEmit       # tsc needs the generated route types first
 pnpm db:generate                           # after changing src/db/schema.ts
+pnpm db:pull                               # copy the production database into data/futbol.db
 node scripts/screenshot.mjs <url> <out.png> [width] [height]   # e.g. 1280 2000, or 390 1800 for a phone
 pnpm cron-job [diff|apply]                 # the match-night cron on cron-job.org: status, diff, apply
 ```
@@ -89,9 +90,11 @@ pnpm cron-job [diff|apply]                 # the match-night cron on cron-job.or
 - Run lint, types and `pnpm test` (CI runs the same on every push), then look at the pages you touched at
   **1280 px and 390 px** with `scripts/screenshot.mjs`. Headless Chrome's `--window-size` cannot go below
   ~500 px, so use the script for the phone width.
-- **Data:** without `.env.local` the site reads `data/futbol.db`, which can be days old. To see production data,
-  put `DATABASE_URL` and a **read-only** `DATABASE_AUTH_TOKEN` in `.env.local`
-  (`turso db tokens create futbolempresas --read-only`). Never run `pnpm sync` against production from a laptop.
+- **Data:** without `DATABASE_URL` in `.env.local` the site reads `data/futbol.db`. Refresh it from production
+  with `pnpm db:pull` (a few seconds; stop `pnpm dev` first). Prefer that to pointing `.env.local` at Turso: a dev
+  session against production reads 1-3M rows an hour, and rows read are the plan's tightest limit. If you must,
+  use a **read-only** token (`turso db tokens create futbolempresas --read-only`). Never run `pnpm sync` against
+  production from a laptop.
 - **Restart `pnpm dev`** after changing `.env.local` or adding tokens to `globals.css`: it can keep serving stale CSS.
 - To try another focus team: `NEXT_PUBLIC_FOCUS_TEAM_SLUG=telefonica-femenino pnpm dev`.
 

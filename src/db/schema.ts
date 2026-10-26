@@ -104,7 +104,16 @@ export const matchPlayers = sqliteTable(
   },
   // Includes the team: sometimes the same player is in both lineups
   // (e.g. a goalkeeper who plays for both teams in the women's league).
-  (t) => [primaryKey({ columns: [t.matchId, t.teamId, t.playerId] }), index("match_players_player").on(t.playerId)],
+  (t) => [
+    primaryKey({ columns: [t.matchId, t.teamId, t.playerId] }),
+    index("match_players_player").on(t.playerId),
+    // The players with something to show (goals, assists, awards), about a third
+    // of each lineup: the pages read only these (`scorersFor` in data.ts), and
+    // through the primary key they read every lineup row of the season instead.
+    index("match_players_scorers")
+      .on(t.matchId)
+      .where(sql`${t.goals} > 0 or ${t.assists} > 0 or ${t.crack} = 1 or ${t.dandy} = 1`),
+  ],
 );
 
 export const players = sqliteTable("players", {
@@ -137,7 +146,8 @@ export const squadPlayers = sqliteTable(
     crack: integer("crack").notNull(),
     dandy: integer("dandy").notNull(),
   },
-  (t) => [primaryKey({ columns: [t.teamId, t.playerId] })],
+  // By player: a player's page reads their squads (the whole table without it).
+  (t) => [primaryKey({ columns: [t.teamId, t.playerId] }), index("squad_players_player").on(t.playerId)],
 );
 
 export const tournaments = sqliteTable("tournaments", {

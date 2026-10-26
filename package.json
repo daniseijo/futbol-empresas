@@ -9,6 +9,7 @@
     "lint": "eslint",
     "sync": "tsx scripts/sync.ts",
     "db:generate": "drizzle-kit generate",
+    "db:pull": "tsx scripts/db-pull.ts",
     "sync:reset": "tsx scripts/sync.ts --reset",
     "notify": "tsx scripts/notify.ts",
     "cron-job": "tsx scripts/cron-job.ts",
