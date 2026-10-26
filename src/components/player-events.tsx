@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { cardsFor, sendingOff, type CardKind } from "@/lib/cards";
 
 const CARD_LABEL: Record<CardKind, string> = {
@@ -47,8 +48,20 @@ export function PlayerEvents({
   const off = sendingOff(yellowCards, redCards);
   if (goals === 0 && assists === 0 && cards.length === 0) return null;
   return (
-    <span className="inline-flex items-center gap-2 text-xs font-semibold whitespace-nowrap">
-      {goals > 0 && <span>{minutes.length ? minutes.map((m) => `● ${m}′`).join(" ") : "●".repeat(goals)}</span>}
+    // Many goals wrap onto more lines, between goals, instead of squeezing what sits beside them.
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-semibold">
+      {goals > 0 && (
+        <span>
+          {minutes.length
+            ? minutes.map((m, index) => (
+                <Fragment key={index}>
+                  {index > 0 && " "}
+                  <span className="whitespace-nowrap">● {m}′</span>
+                </Fragment>
+              ))
+            : "●".repeat(goals)}
+        </span>
+      )}
       {assists > 0 && <span className="text-muted">{"◆".repeat(assists)}</span>}
       {cards.length > 0 && (
         <span className="inline-flex items-center gap-1">

@@ -16,7 +16,15 @@ export function DayMatchCard({ match, logos, className = "" }: { match: DayMatch
       } ${className}`}
     >
       <span className="flex justify-between gap-2 text-xs">
-        <b className="text-accent-text">{match.time}</b>
+        <span className="shrink-0 whitespace-nowrap">
+          <b className="text-accent-text">{match.time}</b>
+          {match.noResult && (
+            <span className="text-muted" title="Jugado sin resultado publicado">
+              {" "}
+              · S/R
+            </span>
+          )}
+        </span>
         {match.venueId ? (
           <Link href={`/campos/${match.venueId}`} className="relative z-10 truncate text-muted hover:text-ink hover:underline">
             {match.venue}
@@ -26,8 +34,9 @@ export function DayMatchCard({ match, logos, className = "" }: { match: DayMatch
         )}
       </span>
       <Link href={`/partidos/${match.id}`} className="flex flex-col gap-2 after:absolute after:inset-0 after:rounded-2xl">
-        <DayTeam id={match.homeId} name={match.home} position={match.homePosition} goals={match.homeGoals} logos={logos} />
-        <DayTeam id={match.awayId} name={match.away} position={match.awayPosition} goals={match.awayGoals} logos={logos} />
+        {/* A past match without a score shows no positions, which would read as an upcoming one. */}
+        <DayTeam id={match.homeId} name={match.home} position={match.noResult ? null : match.homePosition} goals={match.homeGoals} logos={logos} />
+        <DayTeam id={match.awayId} name={match.away} position={match.noResult ? null : match.awayPosition} goals={match.awayGoals} logos={logos} />
       </Link>
       {match.label && <span className="border-t border-line-soft pt-2 text-xs text-muted">{match.label}</span>}
     </div>

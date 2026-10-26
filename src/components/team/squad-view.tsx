@@ -16,10 +16,11 @@ function PlayerRow({ player, rank }: { player: SquadPlayer; rank?: number }) {
   return (
     <Link href={`/jugadores/${player.id}`} className={`grid ${COLUMNS} items-center gap-2 border-t border-line-soft py-2 text-sm hover:bg-canvas`}>
       <PlayerAvatar name={player.name} photoUrl={player.photoUrl} number={player.number} position={player.position} size={36} />
-      <span className="min-w-0 truncate font-semibold">
+      {/* A name that does not fit wraps instead of being cut, so the surname shows. */}
+      <span className="min-w-0 font-semibold [overflow-wrap:break-word]">
         {rank !== undefined && <span className="mr-2 font-normal text-muted">{rank}.</span>}
         {playerDisplayName(player.name, player.number)}
-        {player.photoUrl && player.number ? <span className="ml-1.5 font-normal text-muted">#{player.number}</span> : null}
+        {player.name && player.photoUrl && player.number ? <span className="ml-1.5 font-normal whitespace-nowrap text-muted">#{player.number}</span> : null}
       </span>
       <span className="text-right">{player.appearances}</span>
       <span className="text-right">{player.goals}</span>

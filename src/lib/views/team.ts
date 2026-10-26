@@ -1,5 +1,5 @@
 import { cacheLife } from "next/cache";
-import { nowInMadrid } from "@/lib/dates";
+import { dayKey, nowInMadrid } from "@/lib/dates";
 import { getCurrentSeason, getGroupMatches, getLeagues, getSeasonMatches, getSeasons, getSquad, getTeam, getTeams } from "@/lib/data";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, SquadPlayer, Team } from "@/lib/sportspress/types";
@@ -78,15 +78,17 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
     : null;
   const videoIds = new Set(groupMatches.filter((m) => m.video).map((m) => m.id));
 
-  // Bye weeks: group rounds in which the team does not play.
+  // Bye weeks: group rounds in which the team does not play. A match of its own on that day counts as
+  // playing even when the API left its round empty, or the list would show a bye next to the match.
   const entries: SeasonEntry[] = context.matches.map((match) => ({ kind: "match", match, hasVideo: videoIds.has(match.id) }));
   const ownRounds = new Set(context.matches.map((m) => m.round));
+  const ownDays = new Set(context.matches.map((m) => dayKey(m.date)));
   const roundDates = new Map<number, string>();
   for (const m of groupMatches) {
     if (m.round && !roundDates.has(m.round)) roundDates.set(m.round, m.date);
   }
   for (const [round, date] of roundDates) {
-    if (!ownRounds.has(round)) entries.push({ kind: "rest", round, date });
+    if (!ownRounds.has(round) && !ownDays.has(dayKey(date))) entries.push({ kind: "rest", round, date });
   }
   entries.sort((a, b) => {
     const dateA = a.kind === "match" ? a.match.date : a.date;

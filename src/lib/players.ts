@@ -4,5 +4,5 @@
  */
 export function playerDisplayName(name: string | null | undefined, number?: string | null): string {
   if (name) return name;
-  return number ? `Dorsal ${number}` : "Jugador";
+  return number ? `Dorsal\u00a0${number}` : "Jugador";
 }

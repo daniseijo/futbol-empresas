@@ -118,7 +118,7 @@ export async function getHomeData(): Promise<HomeData> {
   // Matches of the day (today or the next date with matches).
   const picked = pickDay(matches, today);
   const day: HomeData["day"] = {
-    ...buildDay(matches, tree, picked?.date ?? today, focusTeam?.id ?? null, mainId),
+    ...buildDay(matches, tree, picked?.date ?? today, focusTeam?.id ?? null, mainId, now),
     when: picked?.when ?? "upcoming",
   };
 

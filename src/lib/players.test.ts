@@ -8,7 +8,7 @@ describe("playerDisplayName", () => {
   });
 
   it("shows a private player by shirt number", () => {
-    assert.equal(playerDisplayName("", "7"), "Dorsal 7");
+    assert.equal(playerDisplayName("", "7"), "Dorsal\u00a07");
   });
 
   it("falls back to a generic label without a number", () => {

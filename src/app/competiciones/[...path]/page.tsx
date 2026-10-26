@@ -6,7 +6,7 @@ import { Crest } from "@/components/crest";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { SectionCard } from "@/components/team/section-card";
 import { StandingsTable } from "@/components/team/standings-table";
-import { dayKey, formatShortDate } from "@/lib/dates";
+import { dayKey, formatShortDate, resultOverdue } from "@/lib/dates";
 import type { Match } from "@/lib/sportspress/types";
 import {
   getCompetitionPageData,
@@ -238,7 +238,7 @@ function Rounds({
 
 function RoundMatch({ match, roundDay, data }: { match: Match; roundDay: string; data: CompetitionPageData }) {
   const focus = match.homeId === data.focusTeamId || match.awayId === data.focusTeamId;
-  const pending = !match.played && match.date < data.now;
+  const pending = !match.played && resultOverdue(match.date, data.now);
   // A match postponed to another day shows the date instead of the time.
   const when = dayKey(match.date) === roundDay ? match.date.slice(11, 16) : formatShortDate(match.date, data.now);
   return (

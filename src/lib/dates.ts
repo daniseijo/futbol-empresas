@@ -100,6 +100,17 @@ export function weekdayName(weekday: number): string {
   return WEEKDAYS[weekday];
 }
 
+/** Hours after kickoff before a match still without a score counts as one the league has not published. */
+export const RESULT_GRACE_HOURS = 24;
+
+/**
+ * Whether a match that kicked off at `kickoff` should have a score by `now`. Until then it may still be on, or the
+ * sync may not have brought its result yet.
+ */
+export function resultOverdue(kickoff: string, now: string): boolean {
+  return now !== "" && minutesBetween(kickoff, now) >= RESULT_GRACE_HOURS * 60;
+}
+
 export function addDays(stamp: string, days: number): string {
   const date = new Date(`${dayKey(stamp)}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);

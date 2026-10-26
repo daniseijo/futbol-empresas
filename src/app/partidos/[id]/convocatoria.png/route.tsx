@@ -1,5 +1,6 @@
 import { capitalize, formatLongDate } from "@/lib/dates";
 import { crestDataUrl, OG, OgCrest, ogImage } from "@/lib/og";
+import { fitPixelSize } from "@/lib/text";
 import { getMatchPageData, type TeamSide } from "@/lib/views/match";
 
 /**
@@ -57,7 +58,7 @@ function Side({ side, crest }: { side: TeamSide; crest: string | null }) {
       <div
         style={{
           fontFamily: "Barlow",
-          fontSize: side.name.length > 18 ? 38 : 46,
+          fontSize: fitPixelSize(side.name, { width: 350, base: 46, min: 28, maxLines: 3, emPerChar: 0.46 }),
           lineHeight: 1,
           textAlign: "center",
           textTransform: "uppercase",

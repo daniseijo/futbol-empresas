@@ -1,5 +1,6 @@
 import { capitalize, formatLongDate } from "@/lib/dates";
 import { crestDataUrl, OG, OG_SIZE, OgCrest, OgFrame, ogImage } from "@/lib/og";
+import { fitPixelSize } from "@/lib/text";
 import { getMatchPageData, matchSummary, type TeamSide } from "@/lib/views/match";
 import DefaultImage from "../../opengraph-image";
 
@@ -60,7 +61,7 @@ function Side({ side, crest, faded }: { side: TeamSide; crest: string | null; fa
       <div
         style={{
           fontFamily: "Barlow",
-          fontSize: side.name.length > 18 ? 44 : 54,
+          fontSize: fitPixelSize(side.name, { width: 330, base: 54, min: 32, maxLines: 3, emPerChar: 0.46 }),
           lineHeight: 1,
           textAlign: "center",
           textTransform: "uppercase",

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { SquadPlayer } from "@/lib/sportspress/types";
+import { playerDisplayName } from "@/lib/players";
 import { PlayerAvatar } from "../player-avatar";
 
 const money = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -17,11 +18,11 @@ function topBy(squad: SquadPlayer[], key: "goals" | "assists" | "mvpPoints") {
 /** The team's leaders in goals, assists and MVP points. */
 export function Leaders({ squad, columns = 3 }: { squad: SquadPlayer[]; columns?: 1 | 3 }) {
   return (
-    <div className={`grid gap-3.5 ${columns === 3 ? "grid-cols-[repeat(auto-fit,minmax(220px,1fr))]" : ""}`}>
+    <div className={`grid gap-3.5 ${columns === 3 ? "grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))]" : ""}`}>
       {GROUPS.map((group) => {
         const [first, ...rest] = topBy(squad, group.key);
         return (
-          <div key={group.key} className="flex flex-col gap-2.5 rounded-[18px] bg-canvas p-4.5">
+          <div key={group.key} className="flex min-w-0 flex-col gap-2.5 rounded-[18px] bg-canvas p-4.5">
             <div className="text-xs font-bold tracking-[0.1em] text-muted uppercase">{group.title}</div>
             {first ? (
               <>
@@ -29,7 +30,7 @@ export function Leaders({ squad, columns = 3 }: { squad: SquadPlayer[]; columns?
                   <span className="flex min-w-0 items-center gap-2.5">
                     <PlayerAvatar name={first.name} photoUrl={first.photoUrl} number={first.number} position={first.position} />
                     <Link href={`/jugadores/${first.id}`} className="truncate font-bold hover:underline">
-                      {first.name}
+                      {playerDisplayName(first.name, first.number)}
                     </Link>
                   </span>
                   <span className="font-display text-[42px] leading-none font-extrabold text-accent-text">{group.format(first[group.key])}</span>
@@ -37,7 +38,7 @@ export function Leaders({ squad, columns = 3 }: { squad: SquadPlayer[]; columns?
                 {rest.map((player) => (
                   <div key={player.id} className="flex justify-between gap-2 border-t border-line pt-2 text-sm">
                     <Link href={`/jugadores/${player.id}`} className="truncate text-[#3a4350] hover:underline">
-                      {player.name}
+                      {playerDisplayName(player.name, player.number)}
                     </Link>
                     <b>{group.format(player[group.key])}</b>
                   </div>
@@ -64,7 +65,7 @@ export function MarketValue({ squad }: { squad: SquadPlayer[] }) {
       {top.map((player) => (
         <div key={player.id} className="flex flex-col gap-1.5">
           <div className="flex justify-between gap-2 text-sm">
-            <span className="truncate">{player.name}</span>
+            <span className="truncate">{playerDisplayName(player.name, player.number)}</span>
             <b className="whitespace-nowrap">{money.format(player.marketValue)} M€</b>
           </div>
           <div className="h-1.5 rounded-full bg-line-soft">
