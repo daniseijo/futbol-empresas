@@ -18,8 +18,27 @@ export interface CallUp {
   match: Match;
   /** "new": first announcement; "rescheduled": its date or venue changed since. */
   kind: "new" | "rescheduled";
+  /** What changed, for a rescheduled one. */
+  change?: Change;
   fingerprint: string;
 }
+
+export type Change = "date" | "venue" | "both";
+
+/** What differs between two fingerprints. */
+function changeBetween(previous: string, current: string): Change {
+  const [oldDate, oldVenue] = previous.split("|");
+  const [newDate, newVenue] = current.split("|");
+  if (oldDate !== newDate && oldVenue !== newVenue) return "both";
+  return oldDate !== newDate ? "date" : "venue";
+}
+
+const CHANGE_LABELS: Record<Change, string> = { date: "Cambio de horario", venue: "Cambio de campo", both: "Cambio de horario y campo" };
+const CHANGE_NOTICES: Record<Change, string> = {
+  date: "Ha cambiado el horario del partido.",
+  venue: "Ha cambiado el campo del partido.",
+  both: "Han cambiado el horario y el campo del partido.",
+};
 
 /** What an announcement says about a match: when it changes, it is announced again. */
 export function fingerprint(match: Pick<Match, "date" | "venueId">): string {
@@ -42,7 +61,8 @@ export function pendingCallUps(matches: Match[], sent: Map<number, string>, now:
       if (previous === current) return [];
       const due = schedule ? previous !== undefined || now >= sendAt(match.date, schedule) : daysBetween(now, match.date) <= NOTIFY_DAYS;
       if (!due) return [];
-      return [{ match, kind: previous === undefined ? "new" : "rescheduled", fingerprint: current }];
+      if (previous === undefined) return [{ match, kind: "new", fingerprint: current }];
+      return [{ match, kind: "rescheduled", change: changeBetween(previous, current), fingerprint: current }];
     })
     .sort((a, b) => a.match.date.localeCompare(b.match.date));
 }
@@ -50,6 +70,7 @@ export function pendingCallUps(matches: Match[], sent: Map<number, string>, now:
 /** A channel-neutral announcement; each channel lays it out its own way. */
 export interface CallUpMessage {
   kind: CallUp["kind"];
+  change: Change | null;
   title: string;
   matchup: string;
   when: string;
@@ -67,9 +88,9 @@ export interface CallUpMessage {
   question: string;
 }
 
-export function callUpMessage({ match, kind, fingerprint }: CallUp, teamId: number, today: string): CallUpMessage {
+export function callUpMessage({ match, kind, change, fingerprint }: CallUp, teamId: number, today: string): CallUpMessage {
   const venue = getVenue(match.venueId);
-  const label = kind === "new" ? "Convocatoria" : "Cambio de horario";
+  const label = kind === "new" ? "Convocatoria" : CHANGE_LABELS[change ?? "date"];
   const day = formatLongDate(match.date, today);
   const rival = match.homeId === teamId ? match.awayName : match.homeName;
   // "miércoles 4", without the month.
@@ -77,6 +98,7 @@ export function callUpMessage({ match, kind, fingerprint }: CallUp, teamId: numb
   const [weekday, ...date] = day.split(" ");
   return {
     kind,
+    change: kind === "new" ? null : (change ?? "date"),
     title: match.round ? `${label} · Jornada ${match.round}` : label,
     matchup: `${match.homeName} vs ${match.awayName}`,
     when: `${capitalize(day)} · ${formatTime(match.date)}`,
@@ -124,9 +146,9 @@ export function toSlackMessage(message: CallUpMessage, footer: string | null = n
       { type: "header", text: { type: "plain_text", text: `⚽ ${message.title}` } },
       section(
         "¡Hola equipo!",
-        message.kind === "new"
+        message.change === null
           ? "Os dejo por aquí todos los detalles del próximo partido."
-          : "⚠️ *Ha cambiado el horario del partido.* Estos son los nuevos detalles:",
+          : `⚠️ *${CHANGE_NOTICES[message.change]}* Estos son los nuevos detalles:`,
       ),
       section(
         `🗓️ *Fecha:* ${escapeHtml(message.date)}`,

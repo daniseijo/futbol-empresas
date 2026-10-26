@@ -21,7 +21,9 @@ describe("pendingCallUps", () => {
     const moved = { ...soon, date: "2026-10-29T20:00" };
     const otherVenue = { ...soon, venueId: 109 };
     assert.equal(pendingCallUps([moved], sent, now)[0].kind, "rescheduled");
-    assert.equal(pendingCallUps([otherVenue], sent, now)[0].kind, "rescheduled");
+    assert.equal(pendingCallUps([moved], sent, now)[0].change, "date");
+    assert.equal(pendingCallUps([otherVenue], sent, now)[0].change, "venue");
+    assert.equal(pendingCallUps([{ ...moved, venueId: 109 }], sent, now)[0].change, "both");
   });
 
   it(`waits until the match is ${NOTIFY_DAYS} days away`, () => {
@@ -71,8 +73,11 @@ describe("callUpMessage", () => {
 
   it("flags a rescheduled match and works without a round or a known venue", () => {
     const bare = { ...game, round: null, venueId: 99999 };
-    const message = callUpMessage({ match: bare, kind: "rescheduled", fingerprint: "" }, 1, now);
+    const message = callUpMessage({ match: bare, kind: "rescheduled", change: "date", fingerprint: "" }, 1, now);
     assert.equal(message.title, "Cambio de horario");
+    const venue = callUpMessage({ match: game, kind: "rescheduled", change: "venue", fingerprint: "" }, 1, now);
+    assert.equal(venue.title, "Cambio de campo · Jornada 7");
+    assert.match(JSON.stringify(toSlackMessage(venue).blocks), /Ha cambiado el campo del partido/);
     assert.equal(message.venue, null);
   });
 
