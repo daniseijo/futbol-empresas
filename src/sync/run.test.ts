@@ -198,7 +198,7 @@ describe("runSync", () => {
     assert.equal(event.status, "future");
     // With a scorer never seen before, whose profile is private.
     const performance = { [EMBAT]: { [NEW_PLAYER]: { number: "9", goals: "1" } } };
-    modifiedAfter([{ ...event, main_results: ["1", "0"], performance }]);
+    modifiedAfter([{ ...event, main_results: ["1", "0"], performance, modified: "2026-10-26T16:30:00" }]);
     fake.override((url) => url.pathname.endsWith("/players") && url.searchParams.get("include") === String(NEW_PLAYER), { body: [] });
     // Now played, its web page is checked for a video: none yet.
     fake.override((url) => url.searchParams.get("p") === String(NEXT_MATCH), { body: "", headers: { "content-type": "text/html" } });
@@ -211,6 +211,44 @@ describe("runSync", () => {
     const [scorer] = await m.db.select().from(m.schema.players).where(m.eq(m.schema.players.id, NEW_PLAYER));
     assert.equal(scorer?.name, "", "the new player was looked up and saved without a name");
     assert.equal(scorer.lastTeamId, EMBAT);
+  });
+
+  it("skips a match the overlap brings back unchanged, and its squads", async () => {
+    mock.timers.tick(HOUR);
+    fake.requests.length = 0;
+    const before = await match(CHANGED_MATCH);
+    // The second run saved it with this score and `modified`: the API sends it again as is.
+    const event = recordedEvents().find((e) => e.id === CHANGED_MATCH)!;
+    modifiedAfter([{ ...event, main_results: ["4", "3"], modified: "2026-10-26T15:30:00", content: recordedContent(CHANGED_MATCH) }]);
+
+    const result = await run();
+    assert.ok(result.lines.some((line) => line.includes("0 matches updated (1 already up to date) (0 squads to refresh)")));
+    assert.equal(result.writes, 0, "nothing to revalidate");
+    assert.ok(!fake.requests.some((url) => url.includes("/lists?")), "no squad downloaded");
+    assert.deepEqual(await match(CHANGED_MATCH), before);
+  });
+
+  it("leaves the squads it has no time for to a later run", async () => {
+    mock.timers.tick(HOUR);
+    const event = recordedEvents().find((e) => e.id === CHANGED_MATCH)!;
+    modifiedAfter([{ ...event, main_results: ["5", "3"], modified: "2026-10-26T18:45:00", content: recordedContent(CHANGED_MATCH) }]);
+    // Each squad takes 10 s: the first one uses up the budget.
+    fake.onRequest = (url) => {
+      if (url.pathname.endsWith("/lists")) mock.timers.tick(10_000);
+    };
+    try {
+      const paused = await run({ budgetSeconds: 5 });
+      assert.ok(paused.lines.some((line) => /^Squads refreshed: 1 in \d+ s, 1 left for the next run$/.test(line)));
+      const pending = (await teamRows()).filter((t) => [EY, EMBAT].includes(t.id) && t.squadSyncedAt === null);
+      assert.equal(pending.length, 1);
+    } finally {
+      fake.onRequest = undefined;
+    }
+
+    modifiedAfter([]);
+    const resumed = await run();
+    assert.deepEqual(resumed.pending, []);
+    for (const team of await teamRows()) assert.notEqual(team.squadSyncedAt, null, `${team.name} has its squad`);
   });
 
   it("stops between tasks when the budget runs out, and the next run resumes", async () => {
