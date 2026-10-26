@@ -13,7 +13,8 @@
     "sync:reset": "tsx scripts/sync.ts --reset",
     "notify": "tsx scripts/notify.ts",
     "cron-job": "tsx scripts/cron-job.ts",
-    "test": "node --import tsx --test \"src/**/*.test.ts\""
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "test:record-sync": "tsx scripts/record-sync.ts"
   },
   "dependencies": {
     "@libsql/client": "0.18.0",

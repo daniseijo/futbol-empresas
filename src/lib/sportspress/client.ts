@@ -55,8 +55,8 @@ export const PAGE_CONCURRENCY = 6;
 const apiSlot = slots(API_CONCURRENCY);
 const pageSlot = slots(PAGE_CONCURRENCY);
 
-/** Waits before retrying: the server returns 502/503/504 under load. */
-const RETRY_DELAYS_MS = [3_000, 10_000, 30_000];
+/** Waits before retrying: the server returns 502/503/504 under load. Tests set them to zero. */
+export const RETRY_DELAYS_MS = [3_000, 10_000, 30_000];
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
