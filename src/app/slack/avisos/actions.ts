@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { siteConfig } from "@/config/site";
 import { schema } from "@/db/client";
 import { writableDb } from "@/db/writer";
-import { sendScheduleChanged } from "@/notify/channels";
+import { sendScheduleChanged, sendUnsubscribed } from "@/notify/channels";
 import { parseSchedule } from "@/notify/schedule";
 import { decrypt, encryptionKey, verifySubscription } from "@/notify/secrets";
 import { settingsUrl } from "@/notify/slack-oauth";
@@ -54,12 +54,18 @@ export async function unsubscribe(formData: FormData) {
   const db = writableDb();
   const { subscriptions, notifications, teams } = schema;
   const [row] = await db
-    .select({ channel: subscriptions.channelName, slug: teams.slug })
+    .select({ channel: subscriptions.channelName, webhookUrl: subscriptions.webhookUrl, teamName: teams.name, slug: teams.slug })
     .from(subscriptions)
     .leftJoin(teams, eq(teams.id, subscriptions.teamId))
     .where(eq(subscriptions.id, id));
   if (!row) redirect("/slack?error=enlace");
   await db.delete(subscriptions).where(eq(subscriptions.id, id));
   await db.delete(notifications).where(eq(notifications.channel, subscriptionKey(id)));
+  const origin = (await headers()).get("origin") ?? siteConfig.url;
+  const team = { name: row.teamName ?? "vuestro equipo", url: `${siteConfig.url}/equipos/${row.slug ?? ""}` };
+  await sendUnsubscribed(decrypt(row.webhookUrl, encryptionKey()), team, `${origin}/slack/nuevo?equipo=${row.slug ?? ""}`).catch((error) => {
+    // Unsubscribed all the same.
+    console.error("Slack goodbye message failed", error);
+  });
   redirect(`/slack?${new URLSearchParams({ baja: "1", equipo: row.slug ?? "", canal: row.channel })}`);
 }

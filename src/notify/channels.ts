@@ -85,3 +85,12 @@ export async function sendScheduleChanged(webhookUrl: string, team: { name: stri
   ].join("\n");
   await post(webhookUrl, { text, unfurl_links: false }, "Slack webhook");
 }
+
+/** The last message of a subscription, so the channel knows why the call-ups stop. */
+export async function sendUnsubscribed(webhookUrl: string, team: { name: string; url: string }, subscribeUrl: string): Promise<void> {
+  const text = [
+    `🔕 Este canal ya no recibirá las convocatorias de *<${team.url}|${escapeHtml(team.name)}>*.`,
+    `<${subscribeUrl}|Volver a recibirlas>`,
+  ].join("\n");
+  await post(webhookUrl, { text, unfurl_links: false }, "Slack webhook");
+}
