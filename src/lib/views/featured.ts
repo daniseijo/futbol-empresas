@@ -6,7 +6,7 @@ import type { TeamContext } from "./team-context";
 
 /** The match a team's summary puts first (on the home page and the team page). */
 export interface Featured {
-  /** "result" right after a match; "preview" once the next one is PREVIEW_DAYS away or less. */
+  /** "result" right after a match; "preview" from the Monday of the week the next one is played. */
   mode: "result" | "preview";
   /** The last match (result) or the next one (preview), with its match sheet. */
   featured: MatchPageData | null;

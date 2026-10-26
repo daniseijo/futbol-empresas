@@ -1,25 +1,28 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { featuredMode, gap, positionBefore, PREVIEW_DAYS, trend } from "@/lib/views/featured-rules";
+import { featuredMode, gap, positionBefore, trend } from "@/lib/views/featured-rules";
 import { match, result, standingRow } from "@/test/fixtures";
 
 describe("featuredMode", () => {
+  // Friday 23 October 2026; the next week starts on Monday 26.
   const now = "2026-10-23T10:00";
   const yesterday = result(1, 2, 1, 2, { date: "2026-10-22T21:00" });
   const inDays = (days: number) => match({ homeId: 1, awayId: 3, date: `2026-10-${23 + days}T21:00` });
 
-  it(`is the result while the next match is more than ${PREVIEW_DAYS} days away`, () => {
+  it("is the result while the next match is in a later week", () => {
     const next = inDays(6);
     assert.deepEqual(featuredMode({ lastResults: [yesterday], nextMatch: next }, now), { mode: "result", matchId: yesterday.id, daysToNext: 6 });
-    assert.equal(featuredMode({ lastResults: [yesterday], nextMatch: inDays(PREVIEW_DAYS + 1) }, now).mode, "result");
+    // Monday 26 is only 3 days away, but in the next week.
+    assert.equal(featuredMode({ lastResults: [yesterday], nextMatch: inDays(3) }, now).mode, "result");
   });
 
-  it(`is the preview from ${PREVIEW_DAYS} days before`, () => {
-    const next = inDays(PREVIEW_DAYS);
-    assert.deepEqual(featuredMode({ lastResults: [yesterday], nextMatch: next }, now), {
+  it("is the preview from the Monday of the match's week", () => {
+    const thursday = match({ homeId: 1, awayId: 3, date: "2026-10-29T21:00" });
+    assert.equal(featuredMode({ lastResults: [yesterday], nextMatch: thursday }, "2026-10-25T23:59").mode, "result");
+    assert.deepEqual(featuredMode({ lastResults: [yesterday], nextMatch: thursday }, "2026-10-26T00:00"), {
       mode: "preview",
-      matchId: next.id,
-      daysToNext: PREVIEW_DAYS,
+      matchId: thursday.id,
+      daysToNext: 3,
     });
   });
 

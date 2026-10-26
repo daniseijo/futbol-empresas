@@ -95,6 +95,11 @@ export function weekdayOf(stamp: string): number {
   return parts(stamp).weekday;
 }
 
+/** The Monday of the stamp's week, as a day key ("YYYY-MM-DD"). */
+export function weekStart(stamp: string): string {
+  return addDays(stamp, -((weekdayOf(stamp) + 6) % 7));
+}
+
 /** "jueves" for 4. */
 export function weekdayName(weekday: number): string {
   return WEEKDAYS[weekday];

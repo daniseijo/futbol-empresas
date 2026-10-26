@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { addDays, daysBetween, formatLongDate, formatShortDate, relativeDay, resultOverdue } from "@/lib/dates";
+import { addDays, daysBetween, formatLongDate, formatShortDate, relativeDay, resultOverdue, weekStart } from "@/lib/dates";
 
 describe("daysBetween", () => {
   it("ignores the time of day", () => {
@@ -51,6 +51,15 @@ describe("addDays", () => {
   it("crosses months", () => {
     assert.equal(addDays("2026-10-30", 3), "2026-11-02");
     assert.equal(addDays("2026-03-01T10:00", -1), "2026-02-28");
+  });
+});
+
+describe("weekStart", () => {
+  it("is the Monday of the week, Sunday included", () => {
+    assert.equal(weekStart("2026-10-26T00:00"), "2026-10-26");
+    assert.equal(weekStart("2026-10-29T21:00"), "2026-10-26");
+    assert.equal(weekStart("2026-11-01T23:59"), "2026-10-26");
+    assert.equal(weekStart("2026-10-25T12:00"), "2026-10-19");
   });
 });
 

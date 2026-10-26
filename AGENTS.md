@@ -33,8 +33,8 @@ futbolempresas.es (WordPress + SportsPress API)
 - `src/lib/sportspress/`: the domain types (`types.ts`), parsing of the API's quirks (`parse.ts`), the league tree
   (`leagues.ts`) and the venues, a static list (`venues.ts`).
 - `src/lib/views/featured.ts`: a team's featured match, shared by the home page and the team page. The rules
-  behind it (`PREVIEW_DAYS`, `featuredMode`, the "Sube a 7º" and "A 1 punto de…" texts) are pure, in
-  `featured-rules.ts`.
+  behind it (`featuredMode`, with the preview from the Monday of the match's week, and the "Sube a 7º" and
+  "A 1 punto de…" texts) are pure, in `featured-rules.ts`.
 - `src/components/`: shared UI (`Crest`, `FormBadges`, `PlayerAvatar`, `PlayerEvents`/`CardIcon`,
   `FeaturedHero`/`FeaturedFooter`, `team/SectionCard`, `team/StandingsZone`, `team/MatchRow`…). Reuse before writing
   new ones.

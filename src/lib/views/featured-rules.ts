@@ -1,13 +1,10 @@
 // The pure rules behind a team's featured match, kept apart from featured.ts
 // (which reads the database) so they can be tested on their own.
 
-import { daysBetween } from "@/lib/dates";
+import { daysBetween, weekStart } from "@/lib/dates";
 import type { Match, StandingRow } from "@/lib/sportspress/types";
 import { computeStandings } from "@/lib/standings";
 import type { TeamContext } from "./team-context";
-
-/** Days before the next match from which its preview replaces the last result. */
-export const PREVIEW_DAYS = 2;
 
 /** Whether the summary leads with the last result or the next match's preview, and which match. */
 export function featuredMode(
@@ -16,7 +13,9 @@ export function featuredMode(
 ): { mode: "result" | "preview"; matchId: number | null; daysToNext: number | null } {
   const last = context.lastResults[0] ?? null;
   const daysToNext = context.nextMatch ? daysBetween(now, context.nextMatch.date) : null;
-  const mode = context.nextMatch && (!last || daysToNext! <= PREVIEW_DAYS) ? "preview" : "result";
+  // The preview replaces the last result from the Monday of the week the next match is played.
+  const previewDue = context.nextMatch && (daysToNext! <= 0 || weekStart(now) === weekStart(context.nextMatch.date));
+  const mode = context.nextMatch && (!last || previewDue) ? "preview" : "result";
   const match = mode === "preview" ? context.nextMatch : last;
   return { mode, matchId: match?.id ?? null, daysToNext };
 }
