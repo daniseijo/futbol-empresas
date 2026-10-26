@@ -9,6 +9,7 @@ import {
   getPlayers,
   getSeasonMatches,
   getSeasonTournaments,
+  getSheetTotals,
   getSquad,
   getTeam,
   getTeams,
@@ -19,6 +20,7 @@ import type { Match, Season } from "@/lib/sportspress/types";
 import { expectedTotal } from "@/lib/expected-matches";
 import { computeStandings } from "@/lib/standings";
 import { getFeatured, type FeaturedTeam } from "./featured";
+import { buildIdealSeven, type IdealSevenData } from "./ideal";
 import { buildDay, mainCompetitionId, pickDay, type Day } from "./day";
 import { expectedRulesFor } from "./expected-rules";
 import { buildTeamContext } from "./team-context";
@@ -71,6 +73,8 @@ export interface HomeData {
   groupsPhase: string;
   groupLeaders: GroupLeader[];
   scorers: ScorerRow[];
+  /** The main competition's ideal 7. */
+  ideal: IdealSevenData;
   week: { matches: number; goals: number; from: string; to: string; bigWins: BigWin[] };
   news: NewsItem | null;
 }
@@ -201,6 +205,10 @@ export async function getHomeData(): Promise<HomeData> {
     photoUrl: players[playerId]?.photoUrl ?? null,
   }));
 
+  // Sorted, so the home page and the competition page share one cache entry.
+  const mainGroups = [...new Set(mainMatches.map((m) => m.groupId).filter((id) => id !== null))].sort((a, b) => a - b);
+  const ideal = await buildIdealSeven(await getSheetTotals(season.id, { groupIds: mainGroups }), teams);
+
   // Summary of the last 7 days.
   const from = addDays(today, -7);
   const weekMatches = matches.filter((m) => m.played && dayKey(m.date) >= from && dayKey(m.date) <= today);
@@ -225,6 +233,7 @@ export async function getHomeData(): Promise<HomeData> {
     groupsPhase: phase?.name ?? "",
     groupLeaders,
     scorers,
+    ideal,
     week: {
       matches: weekMatches.length,
       goals: weekMatches.reduce((sum, m) => sum + m.homeGoals! + m.awayGoals!, 0),

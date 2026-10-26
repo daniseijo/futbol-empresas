@@ -4,6 +4,7 @@ import { Crest } from "@/components/crest";
 import { DayMatchCard } from "@/components/day-match-card";
 import { Eyebrow, FeaturedFooter, FeaturedHero } from "@/components/featured-match";
 import { FormBadges } from "@/components/form-badges";
+import { IdealSeven } from "@/components/ideal-seven";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { StandingsZone } from "@/components/team/standings-table";
 import { SectionCard } from "@/components/team/section-card";
@@ -142,6 +143,7 @@ async function HomeContent() {
         )}
 
         <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-3">
+          {data.ideal && <IdealSeven lines={data.ideal} aside={<span className="text-sm text-muted">{data.mainCompetition.name}</span>} />}
           {data.news && (
             <a href={data.news.url} className="flex flex-col gap-2.5 rounded-[20px] bg-ink p-5 text-white">
               <span className="text-xs font-bold tracking-[0.1em] text-[#c7cdd6]">NOTICIA · {formatNewsDate(data.news.date).toUpperCase()}</span>

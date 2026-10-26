@@ -8,6 +8,7 @@ import {
   getSeasonMatches,
   getSeasons,
   getSeasonTournaments,
+  getSheetTotals,
   getSquad,
   getTeam,
   getTeams,
@@ -16,6 +17,7 @@ import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, SquadPlayer, Team } from "@/lib/sportspress/types";
 import { outcomeFor } from "@/lib/standings";
 import { getFeatured, type Featured } from "./featured";
+import { buildIdealSeven, type IdealSevenData } from "./ideal";
 import { expectedBracketSize } from "./knockout";
 import { buildTeamContext, involves, type TeamContext } from "./team-context";
 
@@ -40,6 +42,8 @@ export interface TeamPageData extends TeamContext, Featured {
   /** Cup knockout matches by id, with their round ("1/4", "F"), for lists that show "J5" for league rounds. */
   roundLabels: Record<number, string>;
   squad: SquadPlayer[];
+  /** The team's best goalkeeper, two defenders, two midfielders and two forwards this season. */
+  ideal: IdealSevenData;
   photos: Photo[];
   heroPhoto: Photo | null;
   /** The most recent played match with video highlights. */
@@ -126,6 +130,8 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
     }
   }
 
+  const ideal = await buildIdealSeven(await getSheetTotals(season.id, { teamId: team.id }), teams);
+
   const balance = { played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0 };
   for (const match of context.matches) {
     const outcome = outcomeFor(match, team.id);
@@ -170,6 +176,7 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
     entries,
     roundLabels,
     squad,
+    ideal,
     photos,
     heroPhoto,
     latestVideo,

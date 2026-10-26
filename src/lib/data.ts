@@ -6,6 +6,7 @@ import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { cacheLife, cacheTag } from "next/cache";
 import { db, schema } from "@/db/client";
+import type { SheetTotals } from "./ideal-seven";
 import type { Pairing } from "./expected-matches";
 import { shortenUrl, type SearchIndexPayload } from "./search";
 import type {
@@ -344,6 +345,48 @@ export async function getPlayers(ids: number[]): Promise<Record<number, PlayerIn
   if (ids.length === 0) return {};
   const rows = await db.select(playerColumns).from(schema.players).where(inArray(schema.players.id, ids));
   return Object.fromEntries(rows.map((p) => [p.id, p]));
+}
+
+/**
+ * Every player's match sheets in a season's played matches, added up by team
+ * and line: those of some groups (a competition page) or of one team. What
+ * the ideal 7 is scored from (see `ideal-seven.ts`).
+ */
+export async function getSheetTotals(seasonId: number, scope: { groupIds: number[] } | { teamId: number }): Promise<SheetTotals[]> {
+  "use cache";
+  cacheLife("results");
+  cacheTag(DATA_TAG);
+  const mp = schema.matchPlayers;
+  const m = schema.matches;
+  if ("groupIds" in scope && scope.groupIds.length === 0) return [];
+  const conceded = sql`case when ${mp.teamId} = ${m.homeId} then ${m.awayGoals} else ${m.homeGoals} end`;
+  const rows = await db
+    .select({
+      playerId: mp.playerId,
+      teamId: mp.teamId,
+      position: mp.position,
+      matches: sql<number>`count(*)`,
+      points: sql<number>`sum(${mp.points})`,
+      goals: sql<number>`sum(${mp.goals})`,
+      assists: sql<number>`sum(${mp.assists})`,
+      cracks: sql<number>`sum(${mp.crack})`,
+      dandies: sql<number>`sum(${mp.dandy})`,
+      cleanSheets: sql<number>`sum(case when ${conceded} = 0 then 1 else 0 end)`,
+    })
+    .from(m)
+    .innerJoin(mp, eq(mp.matchId, m.id))
+    .where(
+      and(
+        eq(m.seasonId, seasonId),
+        eq(m.played, true),
+        "groupIds" in scope
+          ? inArray(m.groupId, scope.groupIds)
+          : // Through the matches' team indexes: lineups have none by team.
+            and(or(eq(m.homeId, scope.teamId), eq(m.awayId, scope.teamId)), eq(mp.teamId, scope.teamId)),
+      ),
+    )
+    .groupBy(mp.playerId, mp.teamId, mp.position);
+  return rows.map((row) => ({ ...row, position: row.position as Position | null }));
 }
 
 export interface PlayerSquadEntry {
