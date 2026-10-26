@@ -46,8 +46,12 @@ type JobSpec = ReturnType<typeof dispatchJob>;
 
 /** The fields of the jobs this script owns. Anything else is left as it is. */
 const JOBS: JobSpec[] = [
-  // Matches are Monday to Friday, 19:00 to 23:30 Madrid time.
-  dispatchJob("futbol-empresas sync", "sync.yml", { hours: [19, 20, 21, 22, 23], minutes: [0, 20, 40], wdays: [1, 2, 3, 4, 5] }),
+  // Matches are Monday to Friday nights, kicking off from 20:00 to 22:05 Madrid time, and the league uploads
+  // the results until about 01:00. Every 20 minutes from 20:30, when the first ones end, to 01:50. A job
+  // runs every hour × minute it lists, and its weekdays are those of the run, so it takes three jobs.
+  dispatchJob("futbol-empresas sync", "sync.yml", { hours: [21, 22, 23], minutes: [10, 30, 50], wdays: [1, 2, 3, 4, 5] }),
+  dispatchJob("futbol-empresas sync (first matches)", "sync.yml", { hours: [20], minutes: [30, 50], wdays: [1, 2, 3, 4, 5] }),
+  dispatchJob("futbol-empresas sync (after midnight)", "sync.yml", { hours: [0, 1], minutes: [10, 30, 50], wdays: [2, 3, 4, 5, 6] }),
   // Slack channels pick a weekday and a whole hour from 07:00 to 22:00 (src/notify/schedule.ts).
   dispatchJob("futbol-empresas notify", "notify.yml", {
     hours: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],

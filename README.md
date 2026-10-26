@@ -114,14 +114,17 @@ minutes on its own; once nothing is pending it ends in a few minutes.
 - **Late or missing scheduled runs:** GitHub's `schedule` is best effort. On busy hours it starts runs hours
   late or drops them (on 22–23 Oct 2026 the 09:07 UTC run started at 11:27, and a match night got 5 of its
   ~21 runs). So match nights are not on GitHub's schedule: a [cron-job.org](https://cron-job.org) job calls the
-  `workflow_dispatch` API every 20 minutes, 19:00–23:40 Madrid time, Monday to Friday. GitHub answers `204`.
+  `workflow_dispatch` API every 20 minutes on match nights, from 20:30 (when the first matches end) to 01:50
+  (the league uploads results until about 01:00), Monday to Friday nights. GitHub answers `204`.
   Runs never overlap (`concurrency: sync`); if one is already waiting, GitHub cancels it in favour of the newer
   one, which is harmless.
 
 ### The cron-job.org jobs
 
-Two jobs start GitHub workflows: **sync** on match nights (`sync.yml`), and **notify** on the hour from 07:00 to
-22:00, Monday to Friday (`notify.yml`, the Slack call-ups each channel schedules). They are defined in
+The jobs start GitHub workflows: **sync** on match nights (`sync.yml`, three jobs: a job runs every hour × minute
+it lists, on the weekdays of the run, so 20:30–20:50, 21:10–23:50 and 00:10–01:50 the night after are separate),
+and **notify** on the hour from 07:00 to 22:00, Monday to Friday (`notify.yml`, the Slack call-ups each channel
+schedules). They are defined in
 `scripts/cron-job.ts` and managed through cron-job.org's API, with `CRONJOB_API_KEY` in `.env.local`
 (cron-job.org › Settings › API; 100 calls a day on the free plan):
 
@@ -133,7 +136,7 @@ pnpm cron-job apply    # make the jobs match scripts/cron-job.ts, creating the m
 
 They call GitHub with a fine-grained token (*GitHub › Settings › Developer settings › Fine-grained tokens*):
 this repository only, **Actions: Read and write** and nothing else. The token lives only in the jobs: `apply`
-keeps it (a new job takes it from the other one), and the script never prints it. To set a new one (it expired, or the job is created from scratch):
+keeps it (a new job takes it from the others), and the script never prints it. To set a new one (it expired, or the job is created from scratch):
 `GITHUB_DISPATCH_TOKEN=github_pat_… pnpm cron-job apply`. cron-job.org emails the owner when a call fails, for
 example with `401` once the token expires.
 

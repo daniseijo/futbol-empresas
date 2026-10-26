@@ -31,7 +31,8 @@ See the steps in the README.
 - [x] Trigger the sync from an external cron on match nights so it does not depend on GitHub's schedule.
   Since 23 Oct 2026 cron-job.org calls `workflow_dispatch` every 20 minutes, 19:00–23:59 Madrid time, Monday to
   Friday, with a fine-grained token limited to Actions on this repository. Steps in the README ("Keeping an eye
-  on the sync").
+  on the sync"). Since 26 Oct 2026 from 20:30, when the first matches end, to 01:50, as the league uploads results
+  until about 01:00.
 
 ## 3. New pages
 
