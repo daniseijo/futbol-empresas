@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Bracket } from "@/components/bracket";
 import { Crest } from "@/components/crest";
+import { IdealSeven } from "@/components/ideal-seven";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { SectionCard } from "@/components/team/section-card";
 import { StandingsTable } from "@/components/team/standings-table";
@@ -95,8 +96,9 @@ async function CompetitionContent({ params, searchParams }: Props) {
           <Rounds group={data.group} selected={single(query.jornada)} roundHref={roundHref} data={data} />
         </div>
       )}
-      {(data.scorers.length > 0 || data.cracks.length > 0) && (
-        <div className="grid gap-5 md:grid-cols-2">
+      {(data.scorers.length > 0 || data.cracks.length > 0 || data.ideal) && (
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {data.ideal && <IdealSeven lines={data.ideal} />}
           <TallyCard title="Pichichi" unit="goles" items={data.scorers} />
           <TallyCard title="MVP" unit="veces" items={data.cracks} note="Veces elegido mejor jugador del partido." />
         </div>

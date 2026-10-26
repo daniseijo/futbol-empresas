@@ -10,6 +10,7 @@ import {
   getSeasonMatches,
   getSeasons,
   getSeasonTournaments,
+  getSheetTotals,
   getTeams,
 } from "@/lib/data";
 import { playerDisplayName } from "@/lib/players";
@@ -18,6 +19,7 @@ import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, StandingRow } from "@/lib/sportspress/types";
 import { computeStandings } from "@/lib/standings";
 import { expectedRulesFor } from "./expected-rules";
+import { buildIdealSeven, type IdealSevenData } from "./ideal";
 import { expectedBracketSize } from "./knockout";
 
 export interface Crumb {
@@ -113,6 +115,8 @@ export interface CompetitionPageData {
   totals: { teams: number; played: number; total: number; goals: number };
   scorers: PlayerTally[];
   cracks: PlayerTally[];
+  /** The best goalkeeper, two defenders, two midfielders and two forwards of the node's matches. */
+  ideal: IdealSevenData;
   focusTeamId: number | null;
   logos: Record<number, string | null>;
   slugs: Record<number, string>;
@@ -292,6 +296,9 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
     value: entry.value,
   });
 
+  const groupIds = [...new Set(matches.map((m) => m.groupId!))];
+  const ideal = await buildIdealSeven(await getSheetTotals(season.id, { groupIds }), teams);
+
   const played = matches.filter((m) => m.played);
   return {
     id: node.id,
@@ -311,6 +318,7 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
     },
     scorers: scorerTotals.map(toTally),
     cracks: crackTotals.map(toTally),
+    ideal,
     focusTeamId,
     logos: Object.fromEntries(teams.map((t) => [t.id, t.logoUrl])),
     slugs: Object.fromEntries(teams.map((t) => [t.id, t.slug])),
