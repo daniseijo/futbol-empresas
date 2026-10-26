@@ -150,6 +150,20 @@ function TeamLink({ side, smallCrest }: { side: TeamSide; smallCrest: boolean })
   );
 }
 
+function Scorers({ scorers, className }: { scorers: ReturnType<typeof scorersOf>; className: string }) {
+  return (
+    <ul className={`text-center text-[13px] leading-relaxed text-muted sm:row-start-2 ${className}`}>
+      {scorers.map(({ name, minutes }) => (
+        <li key={name}>
+          {name}
+          {"\u00a0"}
+          <span className="whitespace-nowrap">{minutes.map((m) => `${m}′`).join(", ")}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Scoreboard({ data }: { data: MatchPageData }) {
   const { match, home, away } = data;
   const venue = getVenue(match.venueId);
@@ -231,27 +245,15 @@ function Scoreboard({ data }: { data: MatchPageData }) {
             )}
           </div>
           <TeamLink side={away} smallCrest={twoDigits} />
+          {/* Scorers centred under each name, in the same grid from `sm`. A phone's side columns are too
+              narrow for them, so there the row spans the board in two halves. */}
+          {match.played && (homeScorers.length > 0 || awayScorers.length > 0) && (
+            <div className="col-span-3 row-start-3 grid grid-cols-2 gap-4 sm:contents">
+              <Scorers scorers={homeScorers} className="sm:col-start-1" />
+              <Scorers scorers={awayScorers} className="sm:col-start-3" />
+            </div>
+          )}
         </div>
-
-        {match.played && (homeScorers.length > 0 || awayScorers.length > 0) && (
-          <div className="mx-auto grid w-full max-w-230 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4 text-[13px] leading-relaxed text-muted sm:gap-8">
-            <ul className="text-right">
-              {homeScorers.map(({ name, minutes }) => (
-                <li key={name}>
-                  {name}{"\u00a0"}<span className="whitespace-nowrap">{minutes.map((m) => `${m}′`).join(", ")}</span>
-                </li>
-              ))}
-            </ul>
-            <span className="w-[72px] sm:w-[160px]" />
-            <ul>
-              {awayScorers.map(({ name, minutes }) => (
-                <li key={name}>
-                  {name}{"\u00a0"}<span className="whitespace-nowrap">{minutes.map((m) => `${m}′`).join(", ")}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
 
         {match.played && data.goals.length > 0 && (
           <MatchTimeline
