@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { siteConfig } from "@/config/site";
 import { getLastSync } from "@/lib/data";
 import { LastSync } from "./last-sync";
@@ -14,9 +15,14 @@ export async function SiteFooter() {
           </a>
           . Web no oficial.{lastSync && <> <LastSync stamp={lastSync} /></>}
         </span>
-        <a href={siteConfig.youtubeChannel} className="font-semibold text-ink underline-offset-2 hover:underline">
-          Canal de YouTube
-        </a>
+        <span className="flex gap-4">
+          <Link href="/slack" className="font-semibold text-ink underline-offset-2 hover:underline">
+            Convocatorias en Slack
+          </Link>
+          <a href={siteConfig.youtubeChannel} className="font-semibold text-ink underline-offset-2 hover:underline">
+            Canal de YouTube
+          </a>
+        </span>
       </div>
     </footer>
   );
