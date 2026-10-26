@@ -17,7 +17,7 @@ import { COOKIE_PATH, exchangeCode, NONCE_COOKIE, settingsUrl, slackApp } from "
  */
 export async function GET(request: NextRequest) {
   const done = (params: Record<string, string>) => {
-    const response = NextResponse.redirect(new URL(`/slack?${new URLSearchParams(params)}`, request.url));
+    const response = NextResponse.redirect(new URL(`/slack/resultado?${new URLSearchParams(params)}`, request.url));
     response.cookies.delete({ name: NONCE_COOKIE, path: COOKIE_PATH });
     return response;
   };

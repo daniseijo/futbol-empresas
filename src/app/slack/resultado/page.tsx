@@ -19,7 +19,7 @@ const ERRORS: Record<string, { title: string; text: string }> = {
   enlace: { title: "Enlace no válido", text: "Ese enlace de avisos no es válido o la suscripción ya no existe." },
 };
 
-export default function SlackPage({ searchParams }: PageProps<"/slack">) {
+export default function SlackPage({ searchParams }: PageProps<"/slack/resultado">) {
   return (
     <main className="mx-auto flex max-w-xl flex-col items-start gap-4 px-4 py-20 sm:px-6">
       <Suspense fallback={<div className="h-48 w-full animate-pulse rounded-[22px] bg-line-soft" aria-busy="true" />}>
@@ -29,7 +29,7 @@ export default function SlackPage({ searchParams }: PageProps<"/slack">) {
   );
 }
 
-async function Result({ searchParams }: Pick<PageProps<"/slack">, "searchParams">) {
+async function Result({ searchParams }: Pick<PageProps<"/slack/resultado">, "searchParams">) {
   const query = await searchParams;
   const param = (name: string) => (typeof query[name] === "string" ? query[name] : undefined);
   const slug = param("equipo");
