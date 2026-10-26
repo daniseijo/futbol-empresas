@@ -185,6 +185,21 @@ async function fillMissingTeams(playerIds: number[]): Promise<number> {
   return changed;
 }
 
+/**
+ * The rows that are new or whose `modified` differs from the stored one. The
+ * changes are asked for with an overlap, so on match nights each run brings
+ * back matches the previous one already saved: skipping them saves their
+ * writes and, above all, refreshing both squads again (~13 s each).
+ */
+async function changedOnly<T extends { match: MatchRow }>(rows: T[]): Promise<T[]> {
+  if (rows.length === 0) return rows;
+  const m = schema.matches;
+  const stored = new Map(
+    (await db.select({ id: m.id, modified: m.modified }).from(m).where(inArray(m.id, rows.map((r) => r.match.id)))).map((row) => [row.id, row.modified]),
+  );
+  return rows.filter(({ match }) => !match.modified || stored.get(match.id) !== match.modified);
+}
+
 async function saveMatches(ctx: Context, rows: { match: MatchRow; lineups: MatchPlayerRow[] }[]): Promise<Set<number>> {
   const touched = new Set<number>();
   if (rows.length === 0) return touched;
@@ -534,17 +549,26 @@ export async function runSync({
     if (teams.length > 0) ctx.searchChanged = true; // name, crest or seasons may have changed
     const touched = new Set(teams.map((t) => t.id));
     let matches = 0;
+    let unchanged = 0;
     for (let page = 1, total = 1; page <= total; page += 1) {
       const result = await fetchMatchesPage({ modifiedAfter: after }, page, ctx.lookup);
       total = result.totalPages;
-      matches += result.rows.length;
-      for (const id of await saveMatches(ctx, result.rows)) touched.add(id);
+      const changed = await changedOnly(result.rows);
+      matches += changed.length;
+      unchanged += result.rows.length - changed.length;
+      for (const id of await saveMatches(ctx, changed)) touched.add(id);
     }
-    log(`Changes since ${since}: ${teams.length} teams updated, ${matches} matches updated (${touched.size} squads to refresh)`);
+    log(
+      `Changes since ${since}: ${teams.length} teams updated, ${matches} matches updated` +
+        `${unchanged ? ` (${unchanged} already saved)` : ""} (${touched.size} squads to refresh)`,
+    );
     for (const teamId of teams.map((t) => t.id)) await syncTeamDetail(ctx, teamId);
+    // Marked as pending first, so the "Squads" task picks up those the budget leaves out.
+    if (touched.size > 0) await db.update(schema.teams).set({ squadSyncedAt: null }).where(inArray(schema.teams.id, [...touched]));
+    const squads = touched.size > 0 ? await pendingTeams(ctx, schema.teams.squadSyncedAt, [...touched]) : [];
     const squadsStarted = Date.now();
-    for (const teamId of touched) await syncSquad(ctx, teamId);
-    if (touched.size > 0) log(`Squads refreshed: ${touched.size} in ${Math.round((Date.now() - squadsStarted) / 1000)} s`);
+    await forEachTeam(ctx, "Squads (changes)", squads, (id) => syncSquad(ctx, id));
+    if (squads.length > 0) log(`Squads refreshed in ${Math.round((Date.now() - squadsStarted) / 1000)} s`);
   } else if (!(await getState("backfill:teams"))) {
     const teams = await fetchTeams();
     await upsert(schema.teams, teams, [schema.teams.id]);
