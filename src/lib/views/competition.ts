@@ -18,6 +18,7 @@ import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, StandingRow } from "@/lib/sportspress/types";
 import { computeStandings } from "@/lib/standings";
 import { expectedRulesFor } from "./expected-rules";
+import { expectedBracketSize } from "./knockout";
 
 export interface Crumb {
   name: string;
@@ -84,6 +85,8 @@ export interface PlayerTally {
 export interface GroupData {
   standings: StandingRow[];
   rounds: RoundEntry[];
+  /** The matches are a cup's knockout (a cup in progress, or those outside its brackets): no standings. */
+  knockout: boolean;
   /**
    * The round shown by default: the first one starting today or later or, if
    * none is left, the last one. It goes by the day of its first match, so a
@@ -231,7 +234,9 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
   const recorded = tournaments.filter(
     (t) => t.winnerId !== null && t.winnerId > 0 && (t.competitionId === competitionId || t.competitionId === node.id),
   );
-  const knockout = buildKnockout(direct, { champions: recorded.map((t) => t.winnerId!), now });
+  // A cup in progress is read with the size of last season's brackets.
+  const expectedSize = direct.length > 0 && season.id === current.id ? await expectedBracketSize(node.id, season, tree) : undefined;
+  const knockout = buildKnockout(direct, { champions: recorded.map((t) => t.winnerId!), now, expectedSize });
   const brackets = knockout.brackets.map((bracket, index): BracketData => {
     const title = recorded.find((t) => t.winnerId === bracket.championId)?.title;
     const firstToPlay = bracket.rounds.findIndex((round) => round.ties.some((tie) => !tie.match.played));
@@ -256,13 +261,23 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
       currentRound: firstToPlay === -1 ? bracket.rounds.length - 1 : firstToPlay,
     };
   });
+  const isKnockout = brackets.length > 0 || knockout.rounds !== null;
   const listed = brackets.length > 0 ? knockout.others : direct;
   let group: GroupData | null = null;
   if (listed.length > 0) {
-    const standings = brackets.length > 0 ? [] : computeStandings(listed);
-    const rounds = buildRounds(listed, standings, now);
-    const next = rounds.find((r) => dayKey(r.date) >= today);
-    group = { standings, rounds, currentRound: (next ?? rounds[rounds.length - 1])?.key ?? null };
+    const standings = isKnockout ? [] : computeStandings(listed);
+    const rounds: RoundEntry[] = knockout.rounds
+      ? knockout.rounds.map((round, index) => ({
+          key: `ronda-${index + 1}`,
+          label: round.name,
+          date: round.matches[0].date,
+          matches: round.matches,
+          resting: [],
+        }))
+      : buildRounds(listed, standings, now);
+    // The first round with a match left to play or, if none is left, the last one.
+    const next = knockout.rounds ? rounds.find((r) => r.matches.some((m) => !m.played)) : rounds.find((r) => dayKey(r.date) >= today);
+    group = { standings, rounds, knockout: isKnockout, currentRound: (next ?? rounds[rounds.length - 1])?.key ?? null };
   }
 
   const scorerTotals = top(tally(matches, (s) => s.goals));

@@ -73,12 +73,18 @@ async function CompetitionContent({ params, searchParams }: Props) {
       {data.brackets.map((bracket, index) => (
         <BracketCard key={index} bracket={bracket} data={data} />
       ))}
-      {data.group && data.brackets.length > 0 && (
+      {data.group?.knockout && (
         <div className="lg:max-w-[560px]">
-          <Rounds group={data.group} selected={single(query.jornada)} roundHref={roundHref} data={data} title="Otros partidos" />
+          <Rounds
+            group={data.group}
+            selected={single(query.jornada)}
+            roundHref={roundHref}
+            data={data}
+            title={data.brackets.length > 0 ? "Otros partidos" : undefined}
+          />
         </div>
       )}
-      {data.group && data.brackets.length === 0 && (
+      {data.group && !data.group.knockout && (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
           <SectionCard title="Clasificación" aside={<span className="text-sm text-muted">Temporada {data.season.name}</span>}>
             <StandingsTable rows={data.group.standings} teamId={data.focusTeamId ?? -1} logos={data.logos} slugs={data.slugs} />

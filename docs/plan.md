@@ -41,9 +41,10 @@ See the steps in the README.
     one per connected group of teams (the Corporate Cup's three or four divisions, the Copa's six), with columns
     and connecting lines on large screens and one round per tab on phones. Team pages label those matches "1/8",
     "1/4", "1/2", "F". Anything that is not a clean bracket stays a list: the Liga Clausura's root matches, the
-    women's placement finals, the 22/23 divisions with a missing or undecided tie, and a cup still in progress
-    (a "final" played in the last 14 days without a recorded champion may only be a semifinal). Plan:
-    [09 · Cup brackets](plans/09-cup-brackets.md).
+    women's placement finals and the 22/23 divisions with a missing or undecided tie. A cup in progress is
+    read with the size of its brackets the season before (16 teams): its matches are listed by round
+    ("Octavos", "Cuartos"…), and each bracket shows as soon as its final is published. Replaying the past cups
+    day by day showed no wrong bracket or round. Plan: [09 · Cup brackets](plans/09-cup-brackets.md).
 - [x] **Player** (`/jugadores/[id]`): matches, goals with minute, MVP, teams per season and photo, linked from
   lineups, top scorers, MVP, squad and team leaders.
 - [x] **Venue** (`/campos/[id]`, index at `/campos`): a map in the site's colours (MapLibre + OpenFreeMap), address, the next date with matches

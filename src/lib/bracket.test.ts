@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildKnockout, knockoutLabels, type Bracket } from "@/lib/bracket";
+import { addDays } from "@/lib/dates";
 import type { Match } from "@/lib/sportspress/types";
 import { match } from "@/test/fixtures";
 
@@ -174,7 +175,7 @@ describe("buildKnockout", () => {
       champions: [GRUPO_COBRA],
     }).brackets;
     assert.equal(settled.championId, GRUPO_COBRA);
-    assert.equal(knockoutLabels({ brackets: [settled], others: [] }).get(84978), "F");
+    assert.equal(knockoutLabels({ brackets: [settled], others: [], rounds: null }).get(84978), "F");
   });
 
   it("falls back when the matches do not form a clean bracket", () => {
@@ -209,5 +210,42 @@ describe("buildKnockout", () => {
     const { brackets, others } = buildKnockout(finals, { now: NOW });
     assert.deepEqual(brackets, []);
     assert.equal(others.length, 2);
+  });
+
+  describe("a cup in progress", () => {
+    /** The Corporate Cup 26/27 as it stood at `now`: published a week ahead, without scores after `now`. */
+    const asOf = (now: string) =>
+      toMatches(
+        corporateCup2026
+          .filter(([, date]) => date.slice(0, 10) <= addDays(now, 7).slice(0, 10))
+          .map(([id, date, home, away, hg, ag]): Row => (date > now ? [id, date, home, away, null, null] : [id, date, home, away, hg, ag])),
+      );
+
+    it("names the rounds played so far with the size of last season's brackets", () => {
+      const now = "2026-09-14T23:59"; // round of 16 played, quarterfinals under way
+      const { brackets, rounds } = buildKnockout(asOf(now), { now, expectedSize: 16 });
+      assert.deepEqual(brackets, []);
+      assert.deepEqual(
+        rounds?.map((r) => r.name),
+        ["Octavos", "Cuartos", "Semifinales"],
+      );
+      assert.equal(rounds?.[0].matches.length, 24);
+      assert.equal(buildKnockout(asOf(now), { now }).rounds, null, "without an expected size, it does not guess");
+    });
+
+    it("shows each bracket as soon as its final is out", () => {
+      const now = "2026-09-21T23:59"; // semifinals played, finals on the 23rd
+      const { brackets, rounds } = buildKnockout(asOf(now), { now, expectedSize: 16 });
+      assert.equal(brackets.length, 3);
+      assert.equal(rounds, null);
+      for (const bracket of brackets) assert.equal(bracket.championId, null);
+      assert.deepEqual(buildKnockout(asOf(now), { now }).brackets, [], "a recent final without the expected size waits");
+    });
+
+    it("never takes half a bracket for a whole one", () => {
+      const now = "2026-09-15T23:59";
+      const { brackets } = buildKnockout(asOf(now), { now, expectedSize: 16 });
+      assert.deepEqual(brackets, []);
+    });
   });
 });

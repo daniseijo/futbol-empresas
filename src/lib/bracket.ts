@@ -25,10 +25,30 @@ export interface Bracket {
   teamIds: number[];
 }
 
+export interface KnockoutRound {
+  name: string;
+  /** "1/8", "1/4", "1/2", "F". */
+  short: string;
+  matches: Match[];
+}
+
 export interface Knockout {
   brackets: Bracket[];
-  /** Matches that are not part of any clean bracket (placement matches, missing ties...). */
+  /** Matches that are not part of any clean bracket (placement matches, missing ties, a cup in progress...). */
   others: Match[];
+  /**
+   * `others` by round, when they are the early rounds of brackets of the expected size (a cup in progress,
+   * before its finals are out); null if they do not fit.
+   */
+  rounds: KnockoutRound[] | null;
+}
+
+export interface KnockoutOptions {
+  /** Winners the league recorded for this competition and season: they settle a drawn final. */
+  champions?: number[];
+  now: string;
+  /** Teams per bracket the cup is expected to have (from its previous season), to read a cup in progress. */
+  expectedSize?: number;
 }
 
 /** A just-finished final may only be a semifinal whose final is not published yet. */
@@ -93,7 +113,13 @@ function scoreWinner(m: Match): number | null {
 const hasTeam = (m: Match, team: number) => m.homeId === team || m.awayId === team;
 
 /** One bracket from a connected group of matches, or null if they are not a clean single-elimination bracket. */
-function toBracket(matches: Match[], champions: Set<number>, now: string, undecided: Match[]): Bracket | null {
+function toBracket(
+  matches: Match[],
+  champions: Set<number>,
+  now: string,
+  undecided: Match[],
+  expectedSize: number | undefined,
+): Bracket | null {
   const teams = new Set(matches.flatMap((m) => [m.homeId, m.awayId]));
   const size = teams.size;
   // At least semifinals, a power of two, and one match fewer than teams (no byes, replays or third place).
@@ -127,8 +153,9 @@ function toBracket(matches: Match[], champions: Set<number>, now: string, undeci
   const finalists = [final.homeId, final.awayId].filter((team) => champions.has(team));
   const champion = scoreWinner(final) ?? (final.played && finalists.length === 1 ? finalists[0] : null);
   winners.set(final.id, champion);
-  // Without a recorded champion, a recent "final" could be a semifinal whose final is not out yet.
-  const settled = (champion !== null && champions.has(champion)) || daysBetween(final.date, now) > SETTLED_DAYS;
+  // Without a recorded champion, a recent "final" could be a semifinal whose final is not out yet, unless
+  // the bracket already has the size the cup's brackets have.
+  const settled = (champion !== null && champions.has(champion)) || size === expectedSize || daysBetween(final.date, now) > SETTLED_DAYS;
   if (!settled) return null;
 
   // From the final back: each tie is followed by the ties that fed it, home side first.
@@ -154,25 +181,64 @@ function toBracket(matches: Match[], champions: Set<number>, now: string, undeci
 }
 
 /**
- * The brackets in a node's matches. `champions` are the winners the league
- * recorded for this competition and season (they settle a drawn final);
- * `now` keeps a cup in progress out until its final is settled.
+ * Matches of a cup in progress by round, with brackets of `size` teams: a team's n-th match is in round n,
+ * and whoever plays a round won (or drew) their tie of the one before. Null if they do not fit, so the page
+ * lists them by date instead of naming a round wrongly.
  */
-export function buildKnockout(matches: Match[], { champions = [], now }: { champions?: number[]; now: string }): Knockout {
+function inProgressRounds(matches: Match[], size: number): KnockoutRound[] | null {
+  if (matches.length === 0 || size < 4 || (size & (size - 1)) !== 0) return null;
+  const roundCount = Math.log2(size);
+  const played = new Map<number, Match[]>();
+  const rounds: Match[][] = Array.from({ length: roundCount }, () => []);
+  for (const m of [...matches].sort(byDate)) {
+    const known = [m.homeId, m.awayId].filter((team) => team > 0);
+    const counts = known.map((team) => played.get(team) ?? []);
+    const round = counts[0]?.length ?? -1;
+    if (known.length === 0 || counts.some((list) => list.length !== round) || round >= roundCount) return null;
+    for (const [i, team] of known.entries()) {
+      const previous = counts[i].at(-1);
+      // Whoever plays on lost nothing before: a decisive score against them means this is not a knockout.
+      if (previous && scoreWinner(previous) !== null && scoreWinner(previous) !== team) return null;
+      played.set(team, [...counts[i], m]);
+    }
+    rounds[round].push(m);
+  }
+  // Every bracket starts with size / 2 ties.
+  if (rounds[0].length === 0 || rounds[0].length % (size / 2) !== 0) return null;
+  return rounds
+    .map((list, r) => ({ name: roundName(roundCount - 1 - r, roundCount), short: shortRoundName(roundCount - 1 - r), matches: list }))
+    .filter((round) => round.matches.length > 0);
+}
+
+/**
+ * The brackets in a node's matches. `now` keeps a cup in progress out until its final is settled: played
+ * more than two weeks ago, its champion recorded, or the bracket already as big as `expectedSize`.
+ */
+export function buildKnockout(matches: Match[], { champions = [], now, expectedSize }: KnockoutOptions): Knockout {
   const winners = new Set(champions);
   const undecided = matches.filter((m) => m.homeId <= 0 || m.awayId <= 0);
   const brackets: Bracket[] = [];
   // Matches with a team still to be decided (id -1) would join unrelated brackets.
   const others: Match[] = [...undecided];
-  for (const group of components(withoutDuplicates(matches.filter((m) => !undecided.includes(m))))) {
-    const bracket = toBracket(group, winners, now, undecided);
+  const decided = withoutDuplicates(matches.filter((m) => !undecided.includes(m)));
+  for (const group of components(decided)) {
+    const bracket = toBracket(group, winners, now, undecided, expectedSize);
     if (bracket) brackets.push(bracket);
     else others.push(...group);
   }
-  return { brackets, others: others.sort(byDate) };
+  others.sort(byDate);
+  const rounds = expectedSize ? inProgressRounds(others, expectedSize) : null;
+  return { brackets, others, rounds };
 }
 
-/** Each match of the brackets with its round's short name ("1/4"), for lists of matches. */
+/** The most common number of teams per bracket, if there are brackets. */
+export function bracketSize(brackets: Bracket[]): number | undefined {
+  const counts = new Map<number, number>();
+  for (const bracket of brackets) counts.set(bracket.teamIds.length, (counts.get(bracket.teamIds.length) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+}
+
+/** Each knockout match with its round's short name ("1/4"), for lists of matches. */
 export function knockoutLabels(knockout: Knockout): Map<number, string> {
   const labels = new Map<number, string>();
   for (const bracket of knockout.brackets) {
@@ -180,5 +246,6 @@ export function knockoutLabels(knockout: Knockout): Map<number, string> {
       for (const tie of round.ties) labels.set(tie.match.id, shortRoundName(bracket.rounds.length - 1 - r));
     });
   }
+  for (const round of knockout.rounds ?? []) for (const m of round.matches) labels.set(m.id, round.short);
   return labels;
 }

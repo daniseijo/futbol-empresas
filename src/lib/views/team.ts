@@ -16,6 +16,7 @@ import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, SquadPlayer, Team } from "@/lib/sportspress/types";
 import { outcomeFor } from "@/lib/standings";
 import { getFeatured, type Featured } from "./featured";
+import { expectedBracketSize } from "./knockout";
 import { buildTeamContext, involves, type TeamContext } from "./team-context";
 
 export type SeasonEntry =
@@ -116,9 +117,10 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
     const tournaments = await getSeasonTournaments(season.id);
     const champions = tournaments.map((t) => t.winnerId).filter((id): id is number => id !== null && id > 0);
     for (const groupId of knockoutGroups) {
+      const expectedSize = await expectedBracketSize(groupId, season, tree);
       const knockout = buildKnockout(
         seasonMatches.filter((m) => m.groupId === groupId),
-        { champions, now },
+        { champions, now, expectedSize },
       );
       for (const [id, label] of knockoutLabels(knockout)) roundLabels[id] = label;
     }
