@@ -8,6 +8,9 @@
 # branch's first deployment, or older than Vercel's shallow clone).
 base=${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}
 git cat-file -e "$base^{commit}" 2>/dev/null || exit 1
+# The same commit as the last deployment: a redeploy someone asked for (after
+# changing environment variables, say), which must build.
+[ "$(git rev-parse "$base")" = "$(git rev-parse HEAD)" ] && exit 1
 
 git diff --quiet "$base" HEAD -- . \
   ':(exclude)docs' \
