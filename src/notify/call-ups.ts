@@ -43,9 +43,14 @@ export function pendingCallUps(matches: Match[], sent: Map<number, string>, now:
 
 /** A channel-neutral announcement; each channel lays it out its own way. */
 export interface CallUpMessage {
+  kind: CallUp["kind"];
   title: string;
   matchup: string;
+  round: number | null;
   when: string;
+  /** "Jueves, 29 de octubre" and "21:10", for Slack's one line each. */
+  date: string;
+  time: string;
   venue: { name: string; url: string } | null;
   url: string;
   /**
@@ -64,10 +69,15 @@ export function callUpMessage({ match, kind, fingerprint }: CallUp, teamId: numb
   const rival = match.homeId === teamId ? match.awayName : match.homeName;
   // "miércoles 4", without the month.
   const shortDay = day.split(" ").slice(0, 2).join(" ");
+  const [weekday, ...date] = day.split(" ");
   return {
+    kind,
     title: match.round ? `${label} · Jornada ${match.round}` : label,
     matchup: `${match.homeName} vs ${match.awayName}`,
+    round: match.round,
     when: `${capitalize(day)} · ${formatTime(match.date)}`,
+    date: `${capitalize(weekday)}, ${date.join(" ")}`,
+    time: formatTime(match.date),
     venue: venue ? { name: venue.name, url: mapsUrl(venue) } : null,
     url: `${siteConfig.url}/partidos/${match.id}`,
     imageUrl: `${siteConfig.url}/partidos/${match.id}/opengraph-image?v=${encodeURIComponent(fingerprint)}`,
@@ -93,31 +103,35 @@ export function toTelegramHtml(message: CallUpMessage): string {
 }
 
 /**
- * Slack's Block Kit, as Slack recommends for laid-out messages: the match's
- * share image as an image block instead of link previews, which can only be
- * turned off for the whole message (the venue's Google Maps link made a useless
- * one). `text` is what notifications show. Slack has no poll without an app of
- * its own, so it asks for reactions.
+ * Slack's Block Kit, worded like the call-ups teams already post by hand. The
+ * match's share image goes in as an image block instead of link previews, which
+ * can only be turned off for the whole message (the venue's Google Maps link
+ * made a useless one). An image block cannot link anywhere, so the link to the
+ * site sits right above it. `text` is what notifications show. Slack has no poll
+ * without an app of its own, so it asks for reactions.
  */
 export function toSlackMessage(message: CallUpMessage) {
   // Slack only needs &, < and > escaped, the same as HTML.
   const link = (url: string, text: string) => `<${url}|${escapeHtml(text)}>`;
-  const mrkdwn = (text: string) => ({ type: "mrkdwn", text });
+  const section = (...lines: (string | null | false)[]) => ({ type: "section", text: { type: "mrkdwn", text: lines.filter(Boolean).join("\n") } });
   return {
     text: `${message.title}: ${message.matchup}, ${message.when}`,
     blocks: [
-      { type: "header", text: { type: "plain_text", text: `⚽ ${message.title}` } },
-      {
-        type: "section",
-        text: mrkdwn(
-          [`*${escapeHtml(message.matchup)}*`, `📅 ${escapeHtml(message.when)}`, message.venue && `📍 ${link(message.venue.url, message.venue.name)}`]
-            .filter(Boolean)
-            .join("\n"),
-        ),
-      },
+      section(
+        "¡Hola equipo! ⚽",
+        message.kind === "new"
+          ? "Os dejo por aquí todos los detalles del próximo partido."
+          : "⚠️ *Ha cambiado el horario del partido.* Estos son los nuevos detalles:",
+      ),
+      section(
+        `🗓️ *Fecha:* ${escapeHtml(message.date)}`,
+        `⏰ *Hora:* ${message.time} h`,
+        message.venue && `📍 *Lugar:* ${link(message.venue.url, message.venue.name)}`,
+        `🆚 *Encuentro:* ${escapeHtml(message.matchup)}${message.round ? ` · Jornada ${message.round}` : ""}`,
+      ),
+      section(`👉 *${link(message.url, "Ver el partido en la web")}*`),
       { type: "image", image_url: message.imageUrl, alt_text: `${message.matchup}, ${message.when}` },
-      { type: "section", text: mrkdwn(`${escapeHtml(message.question)} Reacciona con ✅ o ❌`) },
-      { type: "context", elements: [mrkdwn(link(message.url, "Ver el partido en la web"))] },
+      section("Por favor, confirmad vuestra asistencia lo antes posible reaccionando a este mensaje (✅ voy / ❌ no voy)"),
     ],
     unfurl_links: false,
     unfurl_media: false,

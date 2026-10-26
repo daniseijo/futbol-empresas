@@ -56,6 +56,8 @@ describe("callUpMessage", () => {
     assert.equal(message.title, "Convocatoria · Jornada 7");
     assert.equal(message.matchup, "Embat vs R&D <Labs>");
     assert.equal(message.when, "Miércoles 4 de noviembre · 21:30");
+    assert.equal(message.date, "Miércoles, 4 de noviembre");
+    assert.equal(message.time, "21:30");
     assert.equal(message.venue?.name, "La Elipa");
     assert.match(message.url, new RegExp(`/partidos/${game.id}$`));
     assert.match(message.imageUrl, new RegExp(`/partidos/${game.id}/opengraph-image\\?v=2026-11-04T21%3A30%7C110$`));
@@ -77,7 +79,7 @@ describe("callUpMessage", () => {
   it("escapes team names for Telegram and Slack", () => {
     const message = callUpMessage({ match: game, kind: "new", fingerprint: "" }, 1, now);
     assert.match(toTelegramHtml(message), /<b>Embat vs R&amp;D &lt;Labs&gt;<\/b>/);
-    assert.match(JSON.stringify(toSlackMessage(message).blocks), /\*Embat vs R&amp;D &lt;Labs&gt;\*/);
+    assert.match(JSON.stringify(toSlackMessage(message).blocks), /\*Encuentro:\* Embat vs R&amp;D &lt;Labs&gt;/);
     assert.doesNotMatch(toTelegramHtml({ ...message, venue: null }), /📍/);
   });
 
@@ -86,8 +88,9 @@ describe("callUpMessage", () => {
     assert.equal(slack.text, "Convocatoria · Jornada 7: Embat vs R&D <Labs>, Miércoles 4 de noviembre · 21:30");
     assert.deepEqual(
       slack.blocks.map((b) => b.type),
-      ["header", "section", "image", "section", "context"],
+      ["section", "section", "section", "image", "section"],
     );
+    assert.match(JSON.stringify(slack.blocks[1]), /🆚 \*Encuentro:\* Embat vs R&amp;D &lt;Labs&gt; · Jornada 7/);
     assert.equal(slack.unfurl_links, false);
     assert.equal(slack.unfurl_media, false);
   });
