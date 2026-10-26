@@ -205,7 +205,8 @@ export async function getHomeData(): Promise<HomeData> {
     photoUrl: players[playerId]?.photoUrl ?? null,
   }));
 
-  const mainGroups = [...new Set(mainMatches.map((m) => m.groupId).filter((id) => id !== null))];
+  // Sorted, so the home page and the competition page share one cache entry.
+  const mainGroups = [...new Set(mainMatches.map((m) => m.groupId).filter((id) => id !== null))].sort((a, b) => a - b);
   const ideal = await buildIdealSeven(await getSheetTotals(season.id, { groupIds: mainGroups }), teams);
 
   // Summary of the last 7 days.

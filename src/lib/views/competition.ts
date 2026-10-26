@@ -296,7 +296,8 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
     value: entry.value,
   });
 
-  const groupIds = [...new Set(matches.map((m) => m.groupId!))];
+  // Sorted, so the home page and the main competition's page share one cache entry.
+  const groupIds = [...new Set(matches.map((m) => m.groupId!))].sort((a, b) => a - b);
   const ideal = await buildIdealSeven(await getSheetTotals(season.id, { groupIds }), teams);
 
   const played = matches.filter((m) => m.played);
