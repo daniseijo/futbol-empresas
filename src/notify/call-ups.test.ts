@@ -62,7 +62,7 @@ describe("callUpMessage", () => {
     assert.equal(message.time, "21:30");
     assert.equal(message.venue?.name, "La Elipa");
     assert.match(message.url, new RegExp(`/partidos/${game.id}$`));
-    assert.match(message.imageUrl, new RegExp(`/partidos/${game.id}/opengraph-image\\?v=2026-11-04T21%3A30%7C110$`));
+    assert.match(message.imageUrl, new RegExp(`/partidos/${game.id}/convocatoria\\.png\\?v=2026-11-04T21%3A30%7C110$`));
     assert.equal(message.question, "¿Vas el miércoles 4 contra R&D <Labs>?");
   });
 

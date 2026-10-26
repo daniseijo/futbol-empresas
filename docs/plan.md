@@ -93,7 +93,8 @@ See the steps in the README.
   Friday) and a whole hour; each match goes out on the last such weekday before it, never on a weekend, and
   reschedules at once. `/slack/nuevo` before Slack, `/slack/avisos` (signed link in every message's footer) to
   change it or unsubscribe, and `notify.yml` on the hour from cron-job.org. Next: `/slack` as the bot's own page
-  (what it sends, a team search to add it); a smaller image made for Slack if the share image feels too big.
+  (what it sends, a team search to add it). Since 26 Oct the messages use their own image,
+  `/partidos/<id>/convocatoria.png` (1200×400, crests, day and time), a third shorter than the share image.
 - [ ] Let each visitor pick their own company (separate PR, after the Slack subscriptions): today "Mi equipo", the
   home page's "Tu equipo" and the app shortcut all come from the fixed `NEXT_PUBLIC_FOCUS_TEAM_SLUG`. A choice kept
   in a cookie, no accounts, would personalise them and could show the Slack button on the home page too. Watch the

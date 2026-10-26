@@ -80,7 +80,7 @@ export interface CallUpMessage {
   venue: { name: string; url: string } | null;
   url: string;
   /**
-   * The match's share image (its opengraph-image), versioned by the fingerprint:
+   * The match's call-up image (/partidos/<id>/convocatoria.png), versioned by the fingerprint:
    * Slack caches images by URL, and a rescheduled match must show its new time.
    */
   imageUrl: string;
@@ -106,7 +106,7 @@ export function callUpMessage({ match, kind, change, fingerprint }: CallUp, team
     time: formatTime(match.date),
     venue: venue ? { name: venue.name, url: mapsUrl(venue) } : null,
     url: `${siteConfig.url}/partidos/${match.id}`,
-    imageUrl: `${siteConfig.url}/partidos/${match.id}/opengraph-image?v=${encodeURIComponent(fingerprint)}`,
+    imageUrl: `${siteConfig.url}/partidos/${match.id}/convocatoria.png?v=${encodeURIComponent(fingerprint)}`,
     question: `¿Vas el ${shortDay} contra ${rival}?`,
   };
 }
