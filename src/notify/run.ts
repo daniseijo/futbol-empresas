@@ -1,5 +1,6 @@
 // Announces upcoming matches: the focus team's on the configured channels, and
-// each subscribed team's on the Slack channels that subscribed from its page.
+// each subscribed team's on the Slack channels that subscribed from its page,
+// when each of them asked (src/notify/schedule.ts).
 // It only reads the database the sync fills (never the league API) and keeps
 // what it sent in `notifications`, so it can run after any sync, as often as
 // wanted: a match is announced once per target, and again if its date or venue
@@ -13,8 +14,10 @@ import { db, schema } from "@/db/client";
 import { nowInMadrid } from "@/lib/dates";
 import type { Match } from "@/lib/sportspress/types";
 import { callUpMessage, fingerprint, pendingCallUps, type CallUp, type CallUpMessage } from "./call-ups";
-import { configuredChannels, RevokedWebhookError, slack, type Channel } from "./channels";
+import { configuredChannels, RevokedWebhookError, slack, subscriptionFooter, type Channel } from "./channels";
+import type { Schedule } from "./schedule";
 import { decrypt, encryptionKey } from "./secrets";
+import { settingsUrl } from "./slack-oauth";
 import { pendingByTarget, subscriptionKey, type Target } from "./targets";
 
 type Log = (message: string) => void;
@@ -66,13 +69,20 @@ async function loadRecipients(focusTeamId: number): Promise<Recipient[]> {
   const subscriptions = (await tableExists("subscriptions")) ? await db.select().from(schema.subscriptions) : [];
   return [
     ...channels,
-    ...subscriptions.map((sub) => ({
-      key: subscriptionKey(sub.id),
-      teamId: sub.teamId,
-      label: `${subscriptionKey(sub.id)} (${sub.channelName}, ${sub.workspaceName})`,
-      subscriptionId: sub.id,
-      open: () => slack(decrypt(sub.webhookUrl, encryptionKey()), subscriptionKey(sub.id)),
-    })),
+    ...subscriptions.map((sub) => {
+      const schedule: Schedule = { weekday: sub.notifyWeekday, time: sub.notifyTime };
+      return {
+        key: subscriptionKey(sub.id),
+        teamId: sub.teamId,
+        schedule,
+        label: `${subscriptionKey(sub.id)} (${sub.channelName}, ${sub.workspaceName})`,
+        subscriptionId: sub.id,
+        open: () => {
+          const key = encryptionKey();
+          return slack(decrypt(sub.webhookUrl, key), subscriptionKey(sub.id), subscriptionFooter(schedule, settingsUrl(sub.id, key)));
+        },
+      };
+    }),
   ];
 }
 

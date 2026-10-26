@@ -6,8 +6,9 @@ import { schema } from "@/db/client";
 import { getTeam } from "@/lib/data";
 import { nowInMadrid } from "@/lib/dates";
 import { sendSlackWelcome } from "@/notify/channels";
+import { DEFAULT_SCHEDULE, parseSchedule } from "@/notify/schedule";
 import { encrypt, encryptionKey, verifyState } from "@/notify/secrets";
-import { COOKIE_PATH, exchangeCode, NONCE_COOKIE, slackApp } from "@/notify/slack-oauth";
+import { COOKIE_PATH, exchangeCode, NONCE_COOKIE, settingsUrl, slackApp } from "@/notify/slack-oauth";
 
 /**
  * Slack's redirect after the consent screen: stores the channel's webhook
@@ -32,6 +33,7 @@ export async function GET(request: NextRequest) {
   const code = query.get("code");
   if (query.get("error") || !code) return done({ error: "cancelado", equipo: team.slug });
 
+  const schedule = parseSchedule(state.weekday, state.time) ?? DEFAULT_SCHEDULE;
   let channelName: string;
   let again = false;
   try {
@@ -43,6 +45,8 @@ export async function GET(request: NextRequest) {
       workspaceName: installation.workspaceName,
       channelId: installation.channelId,
       channelName: installation.channelName,
+      notifyWeekday: schedule.weekday,
+      notifyTime: schedule.time,
       webhookUrl: encrypt(installation.webhookUrl, encryptionKey()),
       createdAt: nowInMadrid(),
     };
@@ -53,17 +57,28 @@ export async function GET(request: NextRequest) {
       .from(subscriptions)
       .where(and(eq(subscriptions.teamId, team.id), eq(subscriptions.workspaceId, row.workspaceId), eq(subscriptions.channelId, row.channelId)));
     again = Boolean(existing);
-    // Subscribing the same channel again keeps its id, and so what it was already sent.
-    await db
+    // Subscribing the same channel again keeps its id, and so what it was already
+    // sent; it takes the webhook and the schedule just picked.
+    const [{ id }] = await db
       .insert(subscriptions)
       .values(row)
       .onConflictDoUpdate({
         target: [subscriptions.teamId, subscriptions.workspaceId, subscriptions.channelId],
-        set: { webhookUrl: row.webhookUrl, workspaceName: row.workspaceName, channelName: row.channelName },
-      });
-    // Only the first time: subscribing again just replaces the webhook.
+        set: {
+          webhookUrl: row.webhookUrl,
+          workspaceName: row.workspaceName,
+          channelName: row.channelName,
+          notifyWeekday: row.notifyWeekday,
+          notifyTime: row.notifyTime,
+        },
+      })
+      .returning({ id: subscriptions.id });
+    // Only the first time: subscribing again just replaces the webhook and the schedule.
     if (!again) {
-      await sendSlackWelcome(installation.webhookUrl, { name: team.name, url: `${siteConfig.url}/equipos/${team.slug}` }).catch((error) => {
+      const teamLink = { name: team.name, url: `${siteConfig.url}/equipos/${team.slug}` };
+      // The settings link points to this deployment, so it also works on a preview.
+      const settings = settingsUrl(id, encryptionKey(), request.nextUrl.origin);
+      await sendSlackWelcome(installation.webhookUrl, teamLink, schedule, settings).catch((error) => {
         // Subscribed all the same: the next call-up will tell.
         console.error("Slack welcome message failed", error);
       });
@@ -72,5 +87,5 @@ export async function GET(request: NextRequest) {
     console.error("Slack subscription failed", error);
     return done({ error: "fallo", equipo: team.slug });
   }
-  return done({ equipo: team.slug, canal: channelName, ...(again && { ya: "1" }) });
+  return done({ equipo: team.slug, canal: channelName, dia: String(schedule.weekday), hora: schedule.time, ...(again && { ya: "1" }) });
 }

@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getTeam } from "@/lib/data";
-import { NOTIFY_DAYS } from "@/notify/call-ups";
+import { describeSchedule, parseSchedule } from "@/notify/schedule";
 
-// Where the Slack subscription flow ends (src/app/api/slack): ?equipo=<slug>&canal=#x
-// when it worked (&ya=1 if the channel was already subscribed), ?error=<reason>
-// when not. Not worth indexing.
+// Where the Slack subscription flow ends (src/app/api/slack):
+// ?equipo=<slug>&canal=#x&dia=4&hora=10:00 when it worked (&ya=1 if the channel
+// was already subscribed), ?baja=1 after unsubscribing (src/app/slack/avisos),
+// ?error=<reason> when not. Not worth indexing.
 export const metadata: Metadata = { title: "Convocatorias en Slack", robots: { index: false } };
 
 const ERRORS: Record<string, { title: string; text: string }> = {
@@ -15,6 +16,7 @@ const ERRORS: Record<string, { title: string; text: string }> = {
   fallo: { title: "Algo ha fallado", text: "Slack no ha respondido como esperábamos. Inténtalo otra vez en un rato." },
   equipo: { title: "Equipo no encontrado", text: "No encontramos ese equipo. Puede que haya cambiado de nombre." },
   "no-disponible": { title: "No disponible", text: "Los avisos en Slack todavía no están activados en esta web." },
+  enlace: { title: "Enlace no válido", text: "Ese enlace de avisos no es válido o la suscripción ya no existe." },
 };
 
 export default function SlackPage({ searchParams }: PageProps<"/slack">) {
@@ -55,14 +57,34 @@ async function Result({ searchParams }: Pick<PageProps<"/slack">, "searchParams"
   }
 
   const channel = param("canal");
+  const where = channel ? <strong>{channel}</strong> : "Ese canal";
+  if (param("baja")) {
+    return (
+      <>
+        <h1 className="font-display text-6xl font-extrabold uppercase">Sin avisos</h1>
+        <p className="text-lg">
+          {where} ya no recibirá las convocatorias de <strong>{team.name}</strong>.
+        </p>
+        <p className="text-muted">Si no usáis la app para otro equipo, también podéis quitarla de Slack.</p>
+        {back}
+      </>
+    );
+  }
+  const schedule = parseSchedule(param("dia"), param("hora"));
+  const when = schedule && (
+    <p className="text-muted">
+      Cada convocatoria llegará {describeSchedule(schedule)}, y al momento si cambia la hora o el campo. En cada mensaje tenéis un enlace para
+      cambiar los avisos o daros de baja.
+    </p>
+  );
   if (param("ya")) {
     return (
       <>
-        <h1 className="font-display text-6xl font-extrabold uppercase">Ya estaba</h1>
+        <h1 className="font-display text-6xl font-extrabold uppercase">Actualizado</h1>
         <p className="text-lg">
-          {channel ? <strong>{channel}</strong> : "Ese canal"} ya recibía las convocatorias de <strong>{team.name}</strong>. No hace falta hacer
-          nada más: seguirán llegando una sola vez.
+          {where} ya recibía las convocatorias de <strong>{team.name}</strong>: seguirán llegando una sola vez, con el horario que acabas de elegir.
         </p>
+        {when}
         {back}
       </>
     );
@@ -73,10 +95,7 @@ async function Result({ searchParams }: Pick<PageProps<"/slack">, "searchParams"
       <p className="text-lg">
         Avisaremos {channel ? <>en <strong>{channel}</strong> </> : ""}de los partidos de <strong>{team.name}</strong>.
       </p>
-      <p className="text-muted">
-        Cada convocatoria llega {NOTIFY_DAYS} días antes del partido, y otra vez si cambia la hora o el campo. Para dejar de recibirlas, quitad la
-        app de Slack del canal o del espacio de trabajo.
-      </p>
+      {when}
       {back}
     </>
   );

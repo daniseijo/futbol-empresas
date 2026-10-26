@@ -3,6 +3,12 @@
 // back a webhook for that channel. No user accounts and no bot token.
 // https://docs.slack.dev/authentication/installing-with-oauth
 
+import { siteConfig } from "@/config/site";
+import { signSubscription } from "./secrets";
+
+/** The Slack app's name, as its messages say it. */
+export const SLACK_APP_NAME = "Convocatorias F7";
+
 export const NONCE_COOKIE = "slack_oauth_nonce";
 /** The cookie only travels to these routes. */
 export const COOKIE_PATH = "/api/slack";
@@ -55,4 +61,9 @@ export async function exchangeCode(app: SlackApp, origin: string, code: string):
     channelName: body.incoming_webhook.channel,
     webhookUrl: body.incoming_webhook.url,
   };
+}
+
+/** The page where a channel changes its schedule or unsubscribes (src/app/slack/avisos). */
+export function settingsUrl(subscriptionId: number, key: Buffer, base: string = siteConfig.url): string {
+  return `${base}/slack/avisos?s=${signSubscription(subscriptionId, key)}`;
 }

@@ -37,6 +37,9 @@ export const STATE_TTL_SECONDS = 10 * 60;
 export interface OAuthState {
   /** The team to subscribe to. */
   slug: string;
+  /** When to send its call-ups (src/notify/schedule.ts), picked before going to Slack. */
+  weekday: number;
+  time: string;
   /** Also kept in a cookie: the callback must come from the browser that started the flow. */
   nonce: string;
   /** Milliseconds since the epoch. */
@@ -69,6 +72,26 @@ export function verifyState(value: string, key: string, nonce: string | undefine
     return null;
   }
   if (typeof state.slug !== "string" || typeof state.nonce !== "string" || typeof state.expiresAt !== "number") return null;
+  if (typeof state.weekday !== "number" || typeof state.time !== "string") return null;
   if (state.expiresAt < now || !nonce || state.nonce !== nonce) return null;
   return state;
+}
+
+/**
+ * The token in a subscription's "Cambiar avisos o darse de baja" link: its id
+ * and a signature, so the link works for that channel only, with no accounts.
+ * Signed with NOTIFY_ENCRYPTION_KEY, which both the job (that writes the link)
+ * and the site (that checks it) have.
+ */
+export function signSubscription(id: number, key: Buffer): string {
+  return `${id}.${createHmac("sha256", key).update(`subscription:${id}`).digest("base64url").slice(0, 22)}`;
+}
+
+/** The subscription id if the token is genuine, null otherwise. */
+export function verifySubscription(token: string, key: Buffer): number | null {
+  const id = Number(token.split(".")[0]);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const expected = Buffer.from(signSubscription(id, key));
+  const given = Buffer.from(token);
+  return expected.length === given.length && timingSafeEqual(expected, given) ? id : null;
 }

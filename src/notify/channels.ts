@@ -2,7 +2,9 @@
 // environment variables are set, so locally (and in any run without them)
 // nothing is sent; Slack subscriptions come from the database (run.ts).
 
-import { escapeHtml, NOTIFY_DAYS, toSlackMessage, toTelegramHtml, type CallUpMessage } from "./call-ups";
+import { escapeHtml, toSlackMessage, toTelegramHtml, type CallUpMessage } from "./call-ups";
+import { describeSchedule, type Schedule } from "./schedule";
+import { SLACK_APP_NAME } from "./slack-oauth";
 import { isRevokedWebhook } from "./targets";
 
 export interface Channel {
@@ -45,11 +47,11 @@ function telegram(token: string, chatId: string): Channel {
 }
 
 /** A Slack app's Incoming Webhook, which posts to the channel it was created for. */
-export function slack(webhookUrl: string, name = "slack"): Channel {
+export function slack(webhookUrl: string, name = "slack", footer: string | null = null): Channel {
   return {
     name,
     async send(message) {
-      await post(webhookUrl, toSlackMessage(message), "Slack webhook");
+      await post(webhookUrl, toSlackMessage(message, footer), "Slack webhook");
     },
   };
 }
@@ -61,11 +63,16 @@ export function configuredChannels(env: NodeJS.ProcessEnv = process.env): Channe
   return channels;
 }
 
+/** The small print under a subscription's call-ups: when they come and where to change it. */
+export function subscriptionFooter(schedule: Schedule, settingsUrl: string): string {
+  return `🔔 *${SLACK_APP_NAME}* avisa ${describeSchedule(schedule)} · <${settingsUrl}|Cambiar avisos o darse de baja>`;
+}
+
 /** The first message of a new subscription, which also proves the webhook works. */
-export async function sendSlackWelcome(webhookUrl: string, team: { name: string; url: string }): Promise<void> {
+export async function sendSlackWelcome(webhookUrl: string, team: { name: string; url: string }, schedule: Schedule, settingsUrl: string): Promise<void> {
   const text = [
     `✅ Hecho, os avisaré de los partidos de *<${team.url}|${escapeHtml(team.name)}>*.`,
-    `Cada convocatoria llega aquí ${NOTIFY_DAYS} días antes del partido, y otra vez si cambia la hora o el campo.`,
+    `Cada convocatoria llegará ${describeSchedule(schedule)}, y al momento si cambia la hora o el campo. <${settingsUrl}|Cambiar avisos o darse de baja>`,
   ].join("\n");
   await post(webhookUrl, { text, unfurl_links: false }, "Slack webhook");
 }

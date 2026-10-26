@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { describe, it } from "node:test";
-import { decrypt, encrypt, encryptionKey, signState, verifyState } from "@/notify/secrets";
+import { decrypt, encrypt, encryptionKey, signState, signSubscription, verifyState, verifySubscription } from "@/notify/secrets";
 
 describe("encrypt / decrypt", () => {
   const key = randomBytes(32);
@@ -33,7 +33,7 @@ describe("encrypt / decrypt", () => {
 describe("signState / verifyState", () => {
   const key = "client-secret";
   const now = 1_800_000_000_000;
-  const state = { slug: "embat", nonce: "abc", expiresAt: now + 60_000 };
+  const state = { slug: "embat", weekday: 4, time: "10:00", nonce: "abc", expiresAt: now + 60_000 };
 
   it("accepts its own state from the same browser", () => {
     assert.deepEqual(verifyState(signState(state, key), key, "abc", now), state);
@@ -48,5 +48,17 @@ describe("signState / verifyState", () => {
     const forged = Buffer.from(JSON.stringify({ ...state, slug: "otro" })).toString("base64url");
     assert.equal(verifyState(`${forged}.${signed.split(".")[1]}`, key, "abc", now), null);
     assert.equal(verifyState("garbage", key, "abc", now), null);
+  });
+});
+
+describe("signSubscription / verifySubscription", () => {
+  const key = randomBytes(32);
+
+  it("gives back the id of a genuine token only", () => {
+    assert.equal(verifySubscription(signSubscription(7, key), key), 7);
+    assert.equal(verifySubscription(signSubscription(7, key), randomBytes(32)), null);
+    assert.equal(verifySubscription(signSubscription(7, key).replace(/^7/, "8"), key), null);
+    assert.equal(verifySubscription("7", key), null);
+    assert.equal(verifySubscription("", key), null);
   });
 });
