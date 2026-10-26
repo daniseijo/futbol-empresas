@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { FeaturedFooter, FeaturedHero } from "@/components/featured-match";
+import { IdealSeven } from "@/components/ideal-seven";
 import { Leaders } from "@/components/team/leaders";
 import { MatchRow } from "@/components/team/match-row";
 import { SectionCard } from "@/components/team/section-card";
@@ -75,6 +76,7 @@ function Summary({ data }: { data: TeamPageData }) {
             <StandingsZone rows={data.standings} teamId={data.team.id} logos={data.logos} slugs={data.slugs} />
           </SectionCard>
         )}
+        {data.ideal && <IdealSeven lines={data.ideal} crests={false} link={{ href: `${base}/plantilla`, label: "Ver la plantilla" }} />}
         <SeasonNumbers data={data} />
       </aside>
     </div>

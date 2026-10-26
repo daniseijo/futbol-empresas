@@ -12,16 +12,18 @@ export function IdealSeven({
   lines,
   title = "7 ideal",
   aside,
+  link,
   crests = true,
 }: {
   lines: NonNullable<IdealSevenData>;
   title?: string;
   aside?: React.ReactNode;
+  link?: { href: string; label: string };
   /** Each player's team crest: not needed when they all play for the same team. */
   crests?: boolean;
 }) {
   return (
-    <SectionCard title={title} aside={aside}>
+    <SectionCard title={title} aside={aside} link={link}>
       <div className="relative flex flex-col justify-around gap-2 overflow-hidden rounded-2xl border border-line bg-canvas px-2 py-4">
         <span aria-hidden="true">
           <span className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-line" />
