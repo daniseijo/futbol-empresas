@@ -41,6 +41,22 @@ pnpm sync:reset                   # downloads everything again from scratch
 
 Environment variables: see `.env.example`. Without `DATABASE_URL` the local file `data/futbol.db` is used.
 
+### Testing the sync
+
+`pnpm test` also runs the whole sync end to end, offline (`src/sync/run.test.ts`, under a second): `runSync`
+against a throwaway database, with `fetch` answering from API responses recorded in `src/test/fixtures/sync/`
+(one season, three teams, a dozen matches; see `SLICE` in `src/test/sync-fixtures.ts`). A request without a
+recording fails the test, so a new call in the sync shows up in CI. When the API or the sync's requests change,
+re-record them by hand and commit the result:
+
+```bash
+pnpm test:record-sync    # ~2 minutes against the league API; never touches DATABASE_URL
+```
+
+The recorder narrows requests that would download the whole league to the slice, trims each response to what
+the sync reads (~0.5 MB in total) and answers 500 to the `content` of one match, as WordPress does with some.
+When a new season starts, pick new ids for `SLICE` and update the ids at the top of the test.
+
 ## Copying the database to another machine
 
 `data/futbol.db` **is not committed**: it is a copy of third-party data (with player names and photos), it can
@@ -220,7 +236,9 @@ src/
   lib/standings.ts       standings computed from the matches
   app/api/revalidate     endpoint the sync calls when it finishes
   test/fixtures.ts       builders for test data (tests live next to the code as *.test.ts)
+  test/fixtures/sync/    recorded API responses for the sync test (`pnpm test:record-sync`)
 scripts/sync.ts          `pnpm sync` (see the options above)
+scripts/record-sync.ts   `pnpm test:record-sync` (see "Testing the sync")
 scripts/notify.ts        `pnpm notify` (see "Match call-ups")
 drizzle/                 migrations (generated with `pnpm db:generate`)
 ```
