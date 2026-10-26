@@ -35,7 +35,9 @@ function Summary({ data }: { data: TeamPageData }) {
           {recent.length === 0 ? (
             <p className="text-sm text-muted">Todavía no ha jugado esta temporada.</p>
           ) : (
-            recent.map((match) => <MatchRow key={match.id} match={match} teamId={data.team.id} now={data.now} logos={data.logos} />)
+            recent.map((match) => (
+              <MatchRow key={match.id} match={match} teamId={data.team.id} now={data.now} logos={data.logos} roundLabel={data.roundLabels[match.id]} />
+            ))
           )}
         </SectionCard>
 

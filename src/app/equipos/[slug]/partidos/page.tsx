@@ -34,6 +34,7 @@ function Matches({ data }: { data: TeamPageData }) {
         logos={data.logos}
         hasVideo={entry.hasVideo}
         highlight={entry.match.id === nextId}
+        roundLabel={data.roundLabels[entry.match.id]}
       />
     );
 
