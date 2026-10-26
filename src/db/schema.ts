@@ -195,6 +195,10 @@ export const subscriptions = sqliteTable(
     channelId: text("channel_id").notNull(),
     /** "#futbol", as Slack gives it. */
     channelName: text("channel_name").notNull(),
+    /** When it wants each call-up (src/notify/schedule.ts): the last such weekday (1 Monday … 5 Friday) before the match. */
+    notifyWeekday: integer("notify_weekday").notNull().default(4),
+    /** At this Madrid time, "HH:00". */
+    notifyTime: text("notify_time").notNull().default("10:00"),
     /** The Incoming Webhook URL, encrypted (src/notify/secrets.ts): whoever has it can post to the channel. */
     webhookUrl: text("webhook_url").notNull(),
     /** Madrid local time. */

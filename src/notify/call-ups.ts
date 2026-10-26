@@ -5,6 +5,7 @@ import { siteConfig } from "@/config/site";
 import { capitalize, daysBetween, formatLongDate, formatTime } from "@/lib/dates";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import type { Match } from "@/lib/sportspress/types";
+import { sendAt, type Schedule } from "./schedule";
 
 /**
  * How far ahead a match is announced. The league can publish weeks of fixtures
@@ -27,15 +28,20 @@ export function fingerprint(match: Pick<Match, "date" | "venueId">): string {
 
 /**
  * Upcoming matches to announce on a channel, soonest first. `sent` maps a match
- * to the fingerprint the channel announced.
+ * to the fingerprint the channel announced. Without a schedule (the
+ * env-configured channels) a match is announced once it is `NOTIFY_DAYS` away;
+ * with one, when its time comes (`sendAt`). A change to an announced match goes
+ * out straight away.
  */
-export function pendingCallUps(matches: Match[], sent: Map<number, string>, now: string): CallUp[] {
+export function pendingCallUps(matches: Match[], sent: Map<number, string>, now: string, schedule: Schedule | null = null): CallUp[] {
   return matches
-    .filter((m) => !m.played && m.date > now && daysBetween(now, m.date) <= NOTIFY_DAYS)
+    .filter((m) => !m.played && m.date > now)
     .flatMap((match): CallUp[] => {
       const current = fingerprint(match);
       const previous = sent.get(match.id);
       if (previous === current) return [];
+      const due = schedule ? previous !== undefined || now >= sendAt(match.date, schedule) : daysBetween(now, match.date) <= NOTIFY_DAYS;
+      if (!due) return [];
       return [{ match, kind: previous === undefined ? "new" : "rescheduled", fingerprint: current }];
     })
     .sort((a, b) => a.match.date.localeCompare(b.match.date));
@@ -108,7 +114,7 @@ export function toTelegramHtml(message: CallUpMessage): string {
  * anywhere, so the link to the site sits right above it. `text` is what notifications show. Slack has no poll
  * without an app of its own, so it asks for reactions.
  */
-export function toSlackMessage(message: CallUpMessage) {
+export function toSlackMessage(message: CallUpMessage, footer: string | null = null) {
   // Slack only needs &, < and > escaped, the same as HTML.
   const link = (url: string, text: string) => `<${url}|${escapeHtml(text)}>`;
   const section = (...lines: (string | null | false)[]) => ({ type: "section", text: { type: "mrkdwn", text: lines.filter(Boolean).join("\n") } });
@@ -131,6 +137,7 @@ export function toSlackMessage(message: CallUpMessage) {
       section(`👉 *${link(message.url, "Ver el partido en la web")}*`),
       { type: "image", image_url: message.imageUrl, alt_text: `${message.matchup}, ${message.when}` },
       section("Por favor, confirmad vuestra asistencia lo antes posible reaccionando a este mensaje (✅ voy / ❌ no voy)"),
+      ...(footer ? [{ type: "divider" }, { type: "context", elements: [{ type: "mrkdwn", text: footer }] }] : []),
     ],
     unfurl_links: false,
     unfurl_media: false,

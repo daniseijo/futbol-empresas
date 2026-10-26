@@ -4,11 +4,14 @@
 
 import type { Match } from "@/lib/sportspress/types";
 import { pendingCallUps, type CallUp } from "./call-ups";
+import type { Schedule } from "./schedule";
 
 export interface Target {
   /** Its key in `notifications.channel`: "telegram", "slack" or "sub:<id>". */
   key: string;
   teamId: number;
+  /** When a subscription wants its call-ups; none for the env-configured channels. */
+  schedule?: Schedule | null;
 }
 
 export const subscriptionKey = (id: number) => `sub:${id}`;
@@ -32,7 +35,7 @@ export function pendingByTarget<T extends Target>(targets: T[], matches: Match[]
   }
   return targets.map((target) => {
     const own = matches.filter((m) => m.homeId === target.teamId || m.awayId === target.teamId);
-    return { target, callUps: pendingCallUps(own, sentBy.get(target.key) ?? new Map(), now) };
+    return { target, callUps: pendingCallUps(own, sentBy.get(target.key) ?? new Map(), now, target.schedule ?? null) };
   });
 }
 

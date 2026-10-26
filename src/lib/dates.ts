@@ -90,6 +90,16 @@ export function minutesBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to.slice(0, 16)}:00Z`) - Date.parse(`${from.slice(0, 16)}:00Z`)) / 60_000);
 }
 
+/** Day of the week, 0 (Sunday) to 6 (Saturday), as `Date.getDay`. */
+export function weekdayOf(stamp: string): number {
+  return parts(stamp).weekday;
+}
+
+/** "jueves" for 4. */
+export function weekdayName(weekday: number): string {
+  return WEEKDAYS[weekday];
+}
+
 export function addDays(stamp: string, days: number): string {
   const date = new Date(`${dayKey(stamp)}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
