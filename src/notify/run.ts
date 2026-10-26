@@ -6,7 +6,7 @@
 // wanted: a match is announced once per target, and again if its date or venue
 // changes.
 
-import { and, eq, gt, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, eq, gt, inArray, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { siteConfig } from "@/config/site";
@@ -161,14 +161,19 @@ export async function runNotify({
     return finish();
   }
 
-  const teamIds = [...new Set([focus.id, ...recipients.map((r) => r.teamId)])];
-  const upcoming = await loadMatches(
-    and(
-      or(inArray(schema.matches.homeId, teamIds), inArray(schema.matches.awayId, teamIds)),
-      eq(schema.matches.played, false),
-      gt(schema.matches.date, now),
-    ),
-  );
+  // The current season's upcoming matches, through the (season, date) index:
+  // ~100 rows whatever the number of subscriptions. Filtering by team in SQL
+  // made SQLite read every match each team ever played (~15,000 rows for 200 teams).
+  const teamIds = new Set([focus.id, ...recipients.map((r) => r.teamId)]);
+  const seasons = await db.select().from(schema.seasons);
+  const season = seasons.sort((a, b) => a.name.localeCompare(b.name)).at(-1);
+  const upcoming = season
+    ? (
+        await loadMatches(
+          and(eq(schema.matches.seasonId, season.id), gt(schema.matches.date, now), eq(schema.matches.played, false)),
+        )
+      ).filter((m) => teamIds.has(m.homeId) || teamIds.has(m.awayId))
+    : [];
   if (recipients.length === 0) {
     log("No channel configured (TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID, or SLACK_WEBHOOK_URL) and no subscription");
     const own = upcoming.filter((m) => m.homeId === focus.id || m.awayId === focus.id);
@@ -176,9 +181,22 @@ export async function runNotify({
     return;
   }
 
-  const sent = (await tableExists("notifications"))
-    ? await db.select().from(schema.notifications).where(inArray(schema.notifications.channel, recipients.map((r) => r.key)))
-    : [];
+  // What was sent about those matches, by the primary key's first column. By
+  // channel it read the whole table, which is never pruned; adding the channels
+  // too makes SQLite probe every match × channel pair. Rows of other channels
+  // are harmless: each target only looks up its own.
+  const sent =
+    upcoming.length > 0 && (await tableExists("notifications"))
+      ? await db
+          .select()
+          .from(schema.notifications)
+          .where(
+            inArray(
+              schema.notifications.matchId,
+              upcoming.map((m) => m.id),
+            ),
+          )
+      : [];
   for (const { target, callUps } of pendingByTarget(recipients, upcoming, sent, now)) {
     if (callUps.length === 0) log(`${target.label}: nothing new`);
     await deliver(target, callUps, !dryRun);
