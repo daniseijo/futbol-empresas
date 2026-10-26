@@ -1,13 +1,24 @@
 import { cacheLife } from "next/cache";
 import { siteConfig } from "@/config/site";
+import { buildKnockout } from "@/lib/bracket";
 import { dayKey, formatLongDate, nowInMadrid } from "@/lib/dates";
-import { getCurrentSeason, getGroupSeasons, getLeagues, getPlayers, getSeasonMatches, getSeasons, getTeams } from "@/lib/data";
+import {
+  getCurrentSeason,
+  getGroupSeasons,
+  getLeagues,
+  getPlayers,
+  getSeasonMatches,
+  getSeasons,
+  getSeasonTournaments,
+  getTeams,
+} from "@/lib/data";
 import { playerDisplayName } from "@/lib/players";
 import { expectedTotal } from "@/lib/expected-matches";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, StandingRow } from "@/lib/sportspress/types";
 import { computeStandings } from "@/lib/standings";
 import { expectedRulesFor } from "./expected-rules";
+import { expectedBracketSize } from "./knockout";
 
 export interface Crumb {
   name: string;
@@ -40,6 +51,29 @@ export interface RoundEntry {
   resting: string[];
 }
 
+/** A knockout tie as the bracket draws it. */
+export interface BracketTie {
+  id: number;
+  date: string;
+  homeId: number;
+  awayId: number;
+  homeName: string;
+  awayName: string;
+  homeGoals: number | null;
+  awayGoals: number | null;
+  played: boolean;
+  winnerId: number | null;
+}
+
+export interface BracketData {
+  /** The division, from the league's record of its champion ("Primera División"), or "Cuadro 2". */
+  name: string | null;
+  championId: number | null;
+  rounds: { name: string; ties: BracketTie[] }[];
+  /** The round shown first on phones: the first with a tie to play or, if none, the final. */
+  currentRound: number;
+}
+
 export interface PlayerTally {
   playerId: number;
   name: string;
@@ -51,6 +85,8 @@ export interface PlayerTally {
 export interface GroupData {
   standings: StandingRow[];
   rounds: RoundEntry[];
+  /** The matches are a cup's knockout (a cup in progress, or those outside its brackets): no standings. */
+  knockout: boolean;
   /**
    * The round shown by default: the first one starting today or later or, if
    * none is left, the last one. It goes by the day of its first match, so a
@@ -67,7 +103,12 @@ export interface CompetitionPageData {
   isCurrentSeason: boolean;
   seasons: SeasonLink[];
   children: ChildCard[];
-  /** Standings and rounds: only if the node has its own matches (a group, a cup). */
+  /** Knockout brackets inferred from the node's own matches (cups). */
+  brackets: BracketData[];
+  /**
+   * Standings and rounds: only if the node has its own matches (a group, a cup).
+   * With brackets, only the matches outside them, and no standings.
+   */
   group: GroupData | null;
   totals: { teams: number; played: number; total: number; goals: number };
   scorers: PlayerTally[];
@@ -187,12 +228,56 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
     .sort((a, b) => naturalCompare(a.name, b.name));
 
   const direct = matches.filter((m) => m.groupId === node.id);
+  // Only cups have their own matches in a knockout's shape; groups and leagues fall through to the standings.
+  const tournaments = direct.length > 0 ? await getSeasonTournaments(season.id) : [];
+  const competitionId = tree.competitionOf(node.id)?.id ?? node.id;
+  const recorded = tournaments.filter(
+    (t) => t.winnerId !== null && t.winnerId > 0 && (t.competitionId === competitionId || t.competitionId === node.id),
+  );
+  // A cup in progress is read with the size of last season's brackets.
+  const expectedSize = direct.length > 0 && season.id === current.id ? await expectedBracketSize(node.id, season, tree) : undefined;
+  const knockout = buildKnockout(direct, { champions: recorded.map((t) => t.winnerId!), now, expectedSize });
+  const brackets = knockout.brackets.map((bracket, index): BracketData => {
+    const title = recorded.find((t) => t.winnerId === bracket.championId)?.title;
+    const firstToPlay = bracket.rounds.findIndex((round) => round.ties.some((tie) => !tie.match.played));
+    return {
+      name: title?.split(/\s[–-]\s/).pop() ?? (knockout.brackets.length > 1 ? `Cuadro ${index + 1}` : null),
+      championId: bracket.championId,
+      rounds: bracket.rounds.map((round) => ({
+        name: round.name,
+        ties: round.ties.map(({ match: m, winnerId }) => ({
+          id: m.id,
+          date: m.date,
+          homeId: m.homeId,
+          awayId: m.awayId,
+          homeName: m.homeName,
+          awayName: m.awayName,
+          homeGoals: m.homeGoals,
+          awayGoals: m.awayGoals,
+          played: m.played,
+          winnerId,
+        })),
+      })),
+      currentRound: firstToPlay === -1 ? bracket.rounds.length - 1 : firstToPlay,
+    };
+  });
+  const isKnockout = brackets.length > 0 || knockout.rounds !== null;
+  const listed = brackets.length > 0 ? knockout.others : direct;
   let group: GroupData | null = null;
-  if (direct.length > 0) {
-    const standings = computeStandings(direct);
-    const rounds = buildRounds(direct, standings, now);
-    const next = rounds.find((r) => dayKey(r.date) >= today);
-    group = { standings, rounds, currentRound: (next ?? rounds[rounds.length - 1])?.key ?? null };
+  if (listed.length > 0) {
+    const standings = isKnockout ? [] : computeStandings(listed);
+    const rounds: RoundEntry[] = knockout.rounds
+      ? knockout.rounds.map((round, index) => ({
+          key: `ronda-${index + 1}`,
+          label: round.name,
+          date: round.matches[0].date,
+          matches: round.matches,
+          resting: [],
+        }))
+      : buildRounds(listed, standings, now);
+    // The first round with a match left to play or, if none is left, the last one.
+    const next = knockout.rounds ? rounds.find((r) => r.matches.some((m) => !m.played)) : rounds.find((r) => dayKey(r.date) >= today);
+    group = { standings, rounds, knockout: isKnockout, currentRound: (next ?? rounds[rounds.length - 1])?.key ?? null };
   }
 
   const scorerTotals = top(tally(matches, (s) => s.goals));
@@ -216,6 +301,7 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
     isCurrentSeason: season.id === current.id,
     seasons: available.map((s) => ({ name: s.name, href: seasonHref(node.id, s) })),
     children,
+    brackets,
     group,
     totals: {
       teams: new Set(matches.flatMap((m) => [m.homeId, m.awayId])).size,

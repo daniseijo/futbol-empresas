@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { Bracket } from "@/components/bracket";
 import { Crest } from "@/components/crest";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { SectionCard } from "@/components/team/section-card";
@@ -10,6 +11,7 @@ import { dayKey, formatShortDate, resultOverdue } from "@/lib/dates";
 import type { Match } from "@/lib/sportspress/types";
 import {
   getCompetitionPageData,
+  type BracketData,
   type ChildCard,
   type CompetitionPageData,
   type GroupData,
@@ -68,7 +70,21 @@ async function CompetitionContent({ params, searchParams }: Props) {
     <main className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-7 sm:px-6">
       <Header data={data} />
       {data.children.length > 0 && <Children items={data.children} />}
-      {data.group && (
+      {data.brackets.map((bracket, index) => (
+        <BracketCard key={index} bracket={bracket} data={data} />
+      ))}
+      {data.group?.knockout && (
+        <div className="lg:max-w-[560px]">
+          <Rounds
+            group={data.group}
+            selected={single(query.jornada)}
+            roundHref={roundHref}
+            data={data}
+            title={data.brackets.length > 0 ? "Otros partidos" : undefined}
+          />
+        </div>
+      )}
+      {data.group && !data.group.knockout && (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
           <SectionCard title="Clasificación" aside={<span className="text-sm text-muted">Temporada {data.season.name}</span>}>
             <StandingsTable rows={data.group.standings} teamId={data.focusTeamId ?? -1} logos={data.logos} slugs={data.slugs} />
@@ -151,6 +167,27 @@ function Header({ data }: { data: CompetitionPageData }) {
   );
 }
 
+function BracketCard({ bracket, data }: { bracket: BracketData; data: CompetitionPageData }) {
+  const final = bracket.rounds[bracket.rounds.length - 1].ties[0];
+  const champion = bracket.championId === final.homeId ? final.homeName : bracket.championId === final.awayId ? final.awayName : null;
+  return (
+    <SectionCard
+      title={bracket.name ?? "Cuadro"}
+      aside={
+        champion && (
+          <span className="flex items-center gap-2 text-sm">
+            <span className="text-muted">Campeón</span>
+            <Crest src={data.logos[bracket.championId!]} name={champion} size={22} />
+            <span className="font-semibold">{champion}</span>
+          </span>
+        )
+      }
+    >
+      <Bracket bracket={bracket} logos={data.logos} focusTeamId={data.focusTeamId} now={data.now} />
+    </SectionCard>
+  );
+}
+
 function Children({ items }: { items: ChildCard[] }) {
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2.5">
@@ -182,11 +219,14 @@ function Rounds({
   selected,
   roundHref,
   data,
+  title,
 }: {
   group: GroupData;
   selected: string | null;
   roundHref: (key: string) => string;
   data: CompetitionPageData;
+  /** Replaces the round's name as the card title, for matches listed apart from the brackets. */
+  title?: string;
 }) {
   const index = Math.max(
     0,
@@ -199,7 +239,7 @@ function Rounds({
   const arrow = "flex size-9 items-center justify-center rounded-full border border-line text-lg";
   return (
     <SectionCard
-      title={round.label}
+      title={title ?? round.label}
       aside={
         <span className="flex items-center gap-1.5">
           {previous ? (
@@ -224,7 +264,7 @@ function Rounds({
       }
     >
       <p className="text-sm text-muted">
-        {formatShortDate(round.date, data.now)} · {index + 1} de {group.rounds.length}
+        {title ? round.label : formatShortDate(round.date, data.now)} · {index + 1} de {group.rounds.length}
       </p>
       <div className="flex flex-col">
         {round.matches.map((match) => (

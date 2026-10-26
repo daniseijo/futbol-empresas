@@ -37,9 +37,14 @@ See the steps in the README.
 
 - [x] **Group / competition** (`/competiciones/...`): standings, browsable rounds, top scorers and the group's
   MVP, linked from the home page, the match page and the team standings.
-  - [ ] Cups without groups (Corporate Cup), and knockout or final matches tagged only with the competition
-    (Copa de las Empresas, Liga Clausura, the women's leagues): they now show a standings table; a bracket or a
-    list of knockout rounds would be better. Plan: [09 · Cup brackets](plans/09-cup-brackets.md).
+  - [x] Cup brackets (26 Oct 2026): the knockout matches of a node are turned into brackets (`src/lib/bracket.ts`),
+    one per connected group of teams (the Corporate Cup's three or four divisions, the Copa's six), with columns
+    and connecting lines on large screens and one round per tab on phones. Team pages label those matches "1/8",
+    "1/4", "1/2", "F". Anything that is not a clean bracket stays a list: the Liga Clausura's root matches, the
+    women's placement finals and the 22/23 divisions with a missing or undecided tie. A cup in progress is
+    read with the size of its brackets the season before (16 teams): its matches are listed by round
+    ("Octavos", "Cuartos"…), and each bracket shows as soon as its final is published. Replaying the past cups
+    day by day showed no wrong bracket or round. Plan: [09 · Cup brackets](plans/09-cup-brackets.md).
 - [x] **Player** (`/jugadores/[id]`): matches, goals with minute, MVP, teams per season and photo, linked from
   lineups, top scorers, MVP, squad and team leaders.
 - [x] **Venue** (`/campos/[id]`, index at `/campos`): a map in the site's colours (MapLibre + OpenFreeMap), address, the next date with matches
@@ -158,6 +163,8 @@ See the steps in the README.
   have none.
 - A match can be tagged with the wrong group (IBO – PWC S.A.D Curve, two Grupo 4 teams, in Grupo 3). The teams'
   `leagues` say where they really play, but only for the current season: they do not keep past groups.
+- The same knockout tie entered twice, once as a test ("MANU PRUEBA Redpiso", 131645 next to 131330), and finals
+  whose team is still -1 (Copa 22/23, Primera Plata). `bracket.ts` drops the copy and treats -1 as undecided.
 - League tables (`/tables`) are no longer kept per group and season, so they cannot list a group's teams.
 - Match videos are not in the API: SportsPress keeps them in the `sp_video` meta, which the REST API only shows in
   `context=edit` (401). The custom `futbolempresas/v1/match-video/{id}` endpoint exists but returned an empty

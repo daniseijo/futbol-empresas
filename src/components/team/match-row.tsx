@@ -13,6 +13,7 @@ export function MatchRow({
   logos,
   hasVideo = false,
   highlight = false,
+  roundLabel,
 }: {
   match: Match;
   teamId: number;
@@ -20,6 +21,8 @@ export function MatchRow({
   logos: Record<number, string | null>;
   hasVideo?: boolean;
   highlight?: boolean;
+  /** A cup knockout round ("1/4", "F"), for matches without a league round. */
+  roundLabel?: string;
 }) {
   const outcome = outcomeFor(match, teamId);
   const upcoming = !match.played && match.date >= now;
@@ -30,7 +33,7 @@ export function MatchRow({
         highlight ? "border-accent bg-accent-soft" : "border-line-soft hover:border-line hover:bg-canvas"
       }`}
     >
-      <span className="font-display text-[22px] font-bold text-muted">{match.round ? `J${match.round}` : "–"}</span>
+      <span className="font-display text-[22px] font-bold text-muted">{match.round ? `J${match.round}` : (roundLabel ?? "–")}</span>
       <span className="flex items-center gap-1.5 text-[13px] text-muted max-sm:hidden">
         {upcoming ? relativeDay(match.date, now) : formatShortDate(match.date)} · {match.date.slice(11, 16)}
         {hasVideo && (

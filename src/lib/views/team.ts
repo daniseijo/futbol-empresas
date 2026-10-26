@@ -1,10 +1,22 @@
 import { cacheLife } from "next/cache";
+import { buildKnockout, knockoutLabels } from "@/lib/bracket";
 import { dayKey, nowInMadrid } from "@/lib/dates";
-import { getCurrentSeason, getGroupMatches, getLeagues, getSeasonMatches, getSeasons, getSquad, getTeam, getTeams } from "@/lib/data";
+import {
+  getCurrentSeason,
+  getGroupMatches,
+  getLeagues,
+  getSeasonMatches,
+  getSeasons,
+  getSeasonTournaments,
+  getSquad,
+  getTeam,
+  getTeams,
+} from "@/lib/data";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, SquadPlayer, Team } from "@/lib/sportspress/types";
 import { outcomeFor } from "@/lib/standings";
 import { getFeatured, type Featured } from "./featured";
+import { expectedBracketSize } from "./knockout";
 import { buildTeamContext, involves, type TeamContext } from "./team-context";
 
 export type SeasonEntry =
@@ -25,6 +37,8 @@ export interface TeamPageData extends TeamContext, Featured {
   logos: Record<number, string | null>;
   slugs: Record<number, string>;
   entries: SeasonEntry[];
+  /** Cup knockout matches by id, with their round ("1/4", "F"), for lists that show "J5" for league rounds. */
+  roundLabels: Record<number, string>;
   squad: SquadPlayer[];
   photos: Photo[];
   heroPhoto: Photo | null;
@@ -96,6 +110,22 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
     return dateA.localeCompare(dateB);
   });
 
+  // Cup knockout matches have no round: their bracket gives it.
+  const knockoutGroups = new Set(context.matches.filter((m) => m.round === null && m.groupId !== null).map((m) => m.groupId!));
+  const roundLabels: Record<number, string> = {};
+  if (knockoutGroups.size > 0) {
+    const tournaments = await getSeasonTournaments(season.id);
+    const champions = tournaments.map((t) => t.winnerId).filter((id): id is number => id !== null && id > 0);
+    for (const groupId of knockoutGroups) {
+      const expectedSize = await expectedBracketSize(groupId, season, tree);
+      const knockout = buildKnockout(
+        seasonMatches.filter((m) => m.groupId === groupId),
+        { champions, now, expectedSize },
+      );
+      for (const [id, label] of knockoutLabels(knockout)) roundLabels[id] = label;
+    }
+  }
+
   const balance = { played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0 };
   for (const match of context.matches) {
     const outcome = outcomeFor(match, team.id);
@@ -138,6 +168,7 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
     logos,
     slugs,
     entries,
+    roundLabels,
     squad,
     photos,
     heroPhoto,
