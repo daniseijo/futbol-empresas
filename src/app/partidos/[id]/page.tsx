@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Crest } from "@/components/crest";
+import { LineupPitch, type PitchSide } from "@/components/lineup-pitch";
+import { LineupsPane, LineupsToggle } from "@/components/lineups-view";
 import { FormBadges, OutcomeBadge } from "@/components/form-badges";
 import { MatchTimeline } from "@/components/match-timeline";
 import { PlayerAvatar } from "@/components/player-avatar";
@@ -314,8 +316,32 @@ function Mvp({ data }: { data: MatchPageData }) {
 const POSITION_ORDER: (Position | null)[] = ["POR", "DEF", "MED", "DEL", null];
 
 function Lineups({ data }: { data: MatchPageData }) {
+  // The pitch only makes sense with both lineups published, with positions.
+  const withPitch = [data.home, data.away].every((side) => side.lineup.some((p) => p.position !== null));
+  const list = <LineupList data={data} />;
   return (
-    <Card title="Alineaciones">
+    <Card title="Alineaciones" action={withPitch && <LineupsToggle />}>
+      {withPitch ? (
+        <>
+          <LineupsPane view="lista">{list}</LineupsPane>
+          <LineupsPane view="campo">
+            <LineupPitch home={pitchSide(data.home)} away={pitchSide(data.away)} />
+          </LineupsPane>
+        </>
+      ) : (
+        list
+      )}
+    </Card>
+  );
+}
+
+function pitchSide(side: TeamSide): PitchSide {
+  return { id: side.id, name: side.name, logoUrl: side.logoUrl, lineup: side.lineup };
+}
+
+function LineupList({ data }: { data: MatchPageData }) {
+  return (
+    <div className="flex flex-col gap-3">
       <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-6">
         {[data.home, data.away].map((side) => {
           const sorted = POSITION_ORDER.flatMap((position) => side.lineup.filter((p) => p.position === position));
@@ -365,7 +391,7 @@ function Lineups({ data }: { data: MatchPageData }) {
         })}
       </div>
       <PlayerEventsLegend extra="Puntos: la puntuación que da la liga a cada jugador en el partido" />
-    </Card>
+    </div>
   );
 }
 
