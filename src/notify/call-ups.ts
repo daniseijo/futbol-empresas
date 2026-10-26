@@ -48,11 +48,16 @@ export interface CallUpMessage {
   when: string;
   venue: { name: string; url: string } | null;
   url: string;
+  /**
+   * The match's share image (its opengraph-image), versioned by the fingerprint:
+   * Slack caches images by URL, and a rescheduled match must show its new time.
+   */
+  imageUrl: string;
   /** For the attendance poll. */
   question: string;
 }
 
-export function callUpMessage({ match, kind }: CallUp, teamId: number, today: string): CallUpMessage {
+export function callUpMessage({ match, kind, fingerprint }: CallUp, teamId: number, today: string): CallUpMessage {
   const venue = getVenue(match.venueId);
   const label = kind === "new" ? "Convocatoria" : "Cambio de horario";
   const day = formatLongDate(match.date, today);
@@ -65,6 +70,7 @@ export function callUpMessage({ match, kind }: CallUp, teamId: number, today: st
     when: `${capitalize(day)} · ${formatTime(match.date)}`,
     venue: venue ? { name: venue.name, url: mapsUrl(venue) } : null,
     url: `${siteConfig.url}/partidos/${match.id}`,
+    imageUrl: `${siteConfig.url}/partidos/${match.id}/opengraph-image?v=${encodeURIComponent(fingerprint)}`,
     question: `¿Vas el ${shortDay} contra ${rival}?`,
   };
 }
@@ -86,19 +92,34 @@ export function toTelegramHtml(message: CallUpMessage): string {
     .join("\n");
 }
 
-/** Slack's mrkdwn. Slack has no poll without an app of its own, so it asks for reactions. */
-export function toSlackMrkdwn(message: CallUpMessage): string {
+/**
+ * Slack's Block Kit, as Slack recommends for laid-out messages: the match's
+ * share image as an image block instead of link previews, which can only be
+ * turned off for the whole message (the venue's Google Maps link made a useless
+ * one). `text` is what notifications show. Slack has no poll without an app of
+ * its own, so it asks for reactions.
+ */
+export function toSlackMessage(message: CallUpMessage) {
   // Slack only needs &, < and > escaped, the same as HTML.
   const link = (url: string, text: string) => `<${url}|${escapeHtml(text)}>`;
-  return [
-    `*⚽ ${escapeHtml(message.title)}*`,
-    `*${escapeHtml(message.matchup)}*`,
-    `📅 ${escapeHtml(message.when)}`,
-    message.venue && `📍 ${link(message.venue.url, message.venue.name)}`,
-    "",
-    `${escapeHtml(message.question)} Reacciona con ✅ o ❌`,
-    link(message.url, "Ver el partido"),
-  ]
-    .filter((line) => line !== null)
-    .join("\n");
+  const mrkdwn = (text: string) => ({ type: "mrkdwn", text });
+  return {
+    text: `${message.title}: ${message.matchup}, ${message.when}`,
+    blocks: [
+      { type: "header", text: { type: "plain_text", text: `⚽ ${message.title}` } },
+      {
+        type: "section",
+        text: mrkdwn(
+          [`*${escapeHtml(message.matchup)}*`, `📅 ${escapeHtml(message.when)}`, message.venue && `📍 ${link(message.venue.url, message.venue.name)}`]
+            .filter(Boolean)
+            .join("\n"),
+        ),
+      },
+      { type: "image", image_url: message.imageUrl, alt_text: `${message.matchup}, ${message.when}` },
+      { type: "section", text: mrkdwn(`${escapeHtml(message.question)} Reacciona con ✅ o ❌`) },
+      { type: "context", elements: [mrkdwn(link(message.url, "Ver el partido en la web"))] },
+    ],
+    unfurl_links: false,
+    unfurl_media: false,
+  };
 }

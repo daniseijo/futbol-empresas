@@ -2,7 +2,7 @@
 // environment variables are set, so locally (and in any run without them)
 // nothing is sent; Slack subscriptions come from the database (run.ts).
 
-import { escapeHtml, NOTIFY_DAYS, toSlackMrkdwn, toTelegramHtml, type CallUpMessage } from "./call-ups";
+import { escapeHtml, NOTIFY_DAYS, toSlackMessage, toTelegramHtml, type CallUpMessage } from "./call-ups";
 import { isRevokedWebhook } from "./targets";
 
 export interface Channel {
@@ -49,7 +49,7 @@ export function slack(webhookUrl: string, name = "slack"): Channel {
   return {
     name,
     async send(message) {
-      await post(webhookUrl, { text: toSlackMrkdwn(message), unfurl_links: true }, "Slack webhook");
+      await post(webhookUrl, toSlackMessage(message), "Slack webhook");
     },
   };
 }
