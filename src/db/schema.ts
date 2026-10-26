@@ -137,7 +137,8 @@ export const squadPlayers = sqliteTable(
     crack: integer("crack").notNull(),
     dandy: integer("dandy").notNull(),
   },
-  (t) => [primaryKey({ columns: [t.teamId, t.playerId] })],
+  // By player: a player's page reads their squads (the whole table without it).
+  (t) => [primaryKey({ columns: [t.teamId, t.playerId] }), index("squad_players_player").on(t.playerId)],
 );
 
 export const tournaments = sqliteTable("tournaments", {
