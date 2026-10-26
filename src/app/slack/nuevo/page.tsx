@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { SlackScheduleFields } from "@/components/slack-schedule-fields";
 import { getTeam } from "@/lib/data";
@@ -45,7 +46,12 @@ async function Form({ searchParams }: Pick<PageProps<"/slack/nuevo">, "searchPar
           Continuar en Slack
         </button>
       </form>
-      <p className="text-sm text-muted">En Slack eliges el espacio de trabajo y el canal. Sin cuentas: el canal es el que se apunta.</p>
+      <p className="text-sm text-muted">
+        En Slack eliges el espacio de trabajo y el canal. Sin cuentas: el canal es el que se apunta.{" "}
+        <Link href="/slack" className="font-semibold text-ink underline-offset-2 hover:underline">
+          Cómo funciona
+        </Link>
+      </p>
     </>
   );
 }

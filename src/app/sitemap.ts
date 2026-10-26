@@ -28,6 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const paths = [
     "/",
     "/campos",
+    "/slack",
     ...competitions,
     ...teams.map((team) => `/equipos/${team.slug}`),
     ...getVenues().map((venue) => `/campos/${venue.id}`),

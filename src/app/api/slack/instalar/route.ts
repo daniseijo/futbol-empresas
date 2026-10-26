@@ -11,10 +11,10 @@ import { authorizeUrl, COOKIE_PATH, NONCE_COOKIE, slackApp } from "@/notify/slac
  */
 export async function GET(request: NextRequest) {
   const app = slackApp();
-  if (!app) return NextResponse.redirect(new URL("/slack?error=no-disponible", request.url));
+  if (!app) return NextResponse.redirect(new URL("/slack/resultado?error=no-disponible", request.url));
   const slug = request.nextUrl.searchParams.get("equipo") ?? "";
   const team = slug ? await getTeam(slug) : null;
-  if (!team) return NextResponse.redirect(new URL("/slack?error=equipo", request.url));
+  if (!team) return NextResponse.redirect(new URL("/slack/resultado?error=equipo", request.url));
 
   const query = request.nextUrl.searchParams;
   const schedule = parseSchedule(query.get("dia"), query.get("hora")) ?? DEFAULT_SCHEDULE;

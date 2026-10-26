@@ -17,7 +17,7 @@ import { subscriptionKey } from "@/notify/targets";
 
 function subscriptionId(formData: FormData): number {
   const id = verifySubscription(String(formData.get("s") ?? ""), encryptionKey());
-  if (id === null) redirect("/slack?error=enlace");
+  if (id === null) redirect("/slack/resultado?error=enlace");
   return id;
 }
 
@@ -32,7 +32,7 @@ export async function saveSchedule(formData: FormData) {
     .from(subscriptions)
     .leftJoin(teams, eq(teams.id, subscriptions.teamId))
     .where(eq(subscriptions.id, id));
-  if (!row) redirect("/slack?error=enlace");
+  if (!row) redirect("/slack/resultado?error=enlace");
   const { subscription } = row;
   if (schedule && (schedule.weekday !== subscription.notifyWeekday || schedule.time !== subscription.notifyTime)) {
     await db.update(subscriptions).set({ notifyWeekday: schedule.weekday, notifyTime: schedule.time }).where(eq(subscriptions.id, id));
@@ -58,7 +58,7 @@ export async function unsubscribe(formData: FormData) {
     .from(subscriptions)
     .leftJoin(teams, eq(teams.id, subscriptions.teamId))
     .where(eq(subscriptions.id, id));
-  if (!row) redirect("/slack?error=enlace");
+  if (!row) redirect("/slack/resultado?error=enlace");
   await db.delete(subscriptions).where(eq(subscriptions.id, id));
   await db.delete(notifications).where(eq(notifications.channel, subscriptionKey(id)));
   const origin = (await headers()).get("origin") ?? siteConfig.url;
@@ -67,5 +67,5 @@ export async function unsubscribe(formData: FormData) {
     // Unsubscribed all the same.
     console.error("Slack goodbye message failed", error);
   });
-  redirect(`/slack?${new URLSearchParams({ baja: "1", equipo: row.slug ?? "", canal: row.channel })}`);
+  redirect(`/slack/resultado?${new URLSearchParams({ baja: "1", equipo: row.slug ?? "", canal: row.channel })}`);
 }
