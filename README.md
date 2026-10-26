@@ -19,9 +19,14 @@ in milliseconds.
 
 ```bash
 pnpm install
-pnpm sync    # downloads the data into data/futbol.db (takes hours the first time; resumable)
+pnpm db:pull # copies the production database into data/futbol.db (needs the Turso CLI, logged in, and sqlite3)
 pnpm dev     # http://localhost:3000
 ```
+
+`pnpm db:pull` takes a few seconds and reads every row of the Turso database once (~200,000 rows read). Run it
+again whenever you want fresh data, with `pnpm dev` stopped. Develop against this copy rather than Turso: a dev
+session against production reads 1-3M rows an hour, and rows read are the limit of the free plan. Without the
+Turso CLI, `pnpm sync` builds the database from the API instead (hours the first time; resumable).
 
 The sync is **progressive and resumable**: it works by priority (current season, focus team and its group,
 squads, videos, past seasons) and saves its progress after every page or team. It can be stopped with Ctrl+C
