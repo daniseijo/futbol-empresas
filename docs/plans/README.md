@@ -21,8 +21,8 @@ Every plan assumes the project guide in [`AGENTS.md`](../../AGENTS.md). The over
 | [13 · Accessibility review](13-accessibility.md) | Contrast, keyboard and screen reader review and fixes | M |
 | [14 · Targeted revalidation](14-targeted-revalidation.md) | After a sync, rebuild only the pages whose data changed; measure first whether it is still worth it | M |
 
-Done (25 Oct 2026): 01, 02, 03, 04, 05, 06, 07, 08 and 11 (partly: see `docs/plan.md`). Next, in order of value:
-12 and 13. 14 waits for its second measurement (~1 Nov 2026). 09 can wait until the
+Done (25 Oct 2026): 01, 02, 03, 04, 05, 06, 07, 08 and 11 (partly: see `docs/plan.md`); 12 on 26 Oct. Next, in
+order of value: 13. 14 waits for its second measurement (~1 Nov 2026). 09 can wait until the
 Copa de las Empresas (June); the Corporate Cup is already over this season. 10 is optional. The open plans are
 independent of each other and can run in parallel.
 

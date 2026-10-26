@@ -120,7 +120,9 @@ See the steps in the README.
 - [x] Unit tests for `parse.ts` (titles, goals with minute, shortcodes), `standings.ts` and video matching, plus
   cards, the featured match rules, dates and the sync's match mapping. `pnpm test`; CI runs lint, types and tests
   on every push (`.github/workflows/ci.yml`).
-- [ ] End-to-end test of the sync against recorded API responses. Plan: [12 · End-to-end sync test](plans/12-sync-e2e-test.md).
+- [x] End-to-end test of the sync against recorded API responses (26 Oct 2026): `src/sync/run.test.ts` runs
+  `runSync` offline in under a second (first run, incremental run, a 500 on `content`, a time budget, private
+  players), from responses recorded by `pnpm test:record-sync`. Plan: [12 · End-to-end sync test](plans/12-sync-e2e-test.md).
 - [ ] Accessibility review (coral on white contrast, focus, screen readers on the timeline). Plan:
   [13 · Accessibility review](plans/13-accessibility.md).
 - [ ] Revalidate only what a sync changed, not the whole site. First measurement taken on 24 Oct 2026 (Turso
