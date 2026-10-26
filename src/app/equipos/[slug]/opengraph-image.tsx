@@ -1,6 +1,7 @@
 import { crestDataUrl, OG, OG_SIZE, OgCrest, OgFrame, ogImage } from "@/lib/og";
 import type { Outcome } from "@/lib/sportspress/types";
 import { outcomeFor } from "@/lib/standings";
+import { fitPixelSize } from "@/lib/text";
 import { getTeamPageData, teamSummary } from "@/lib/views/team";
 import DefaultImage from "../../opengraph-image";
 
@@ -38,7 +39,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         <OgCrest src={crest} name={team.name} size={260} />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
           <div style={{ fontSize: 28, color: OG.accentText, fontWeight: 700 }}>{teamSummary(data)}</div>
-          <div style={{ fontFamily: "Barlow", fontSize: team.name.length > 16 ? 84 : 110, lineHeight: 0.9, textTransform: "uppercase", color: OG.ink }}>
+          <div style={{ fontFamily: "Barlow", fontSize: fitPixelSize(team.name, { width: 772, base: 110, min: 56, maxLines: 3, emPerChar: 0.46 }), lineHeight: 0.9, textTransform: "uppercase", color: OG.ink }}>
             {team.name}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 28 }}>

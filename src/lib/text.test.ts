@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { fitFontSize, longestWord } from "@/lib/text";
+import { fitFontSize, fitPixelSize, longestWord } from "@/lib/text";
 
 describe("longestWord", () => {
   it("measures the longest word, not the whole name", () => {
@@ -22,5 +22,27 @@ describe("fitFontSize", () => {
 
   it("never divides by zero", () => {
     assert.equal(fitFontSize("", 0.5), "clamp(var(--min), calc(var(--fit-width, 100cqi) / 0.5), var(--base))");
+  });
+});
+
+describe("fitPixelSize", () => {
+  const box = { width: 330, base: 54, min: 32, maxLines: 3, emPerChar: 0.46 };
+
+  it("keeps the base size for names that fit, however many letters they have", () => {
+    assert.equal(fitPixelSize("Embat", box), 54);
+    assert.equal(fitPixelSize("Telefónica Femenino", box), 54);
+    assert.equal(fitPixelSize("Banco Santander Global Tech", box), 54);
+  });
+
+  it("shrinks a word too long for the width", () => {
+    assert.equal(fitPixelSize("Telecomunicaciones", box), 38);
+  });
+
+  it("shrinks a name that would take too many lines", () => {
+    assert.equal(fitPixelSize("Banco de Crédito y Ahorro del Sur de Madrid", box), 44);
+  });
+
+  it("stops at the minimum", () => {
+    assert.equal(fitPixelSize("Supercalifragilisticoespialidoso", box), 32);
   });
 });
