@@ -215,19 +215,23 @@ function toBracket(
 
 /**
  * Matches of a cup in progress by round, with brackets of `size` teams: a team's n-th match is in round n,
- * and whoever plays a round won (or drew) their tie of the one before. Null if they do not fit, so the page
- * lists them by date instead of naming a round wrongly.
+ * and whoever plays a round won (or drew) their tie of the one before. A bracket that is not a power of two
+ * has byes: those teams play their first match in the second round, against a winner of the first. Null if
+ * they do not fit, so the page lists them by date instead of naming a round wrongly.
  */
 function inProgressRounds(matches: Match[], size: number): KnockoutRound[] | null {
-  if (matches.length === 0 || size < 4 || (size & (size - 1)) !== 0) return null;
-  const roundCount = Math.log2(size);
+  if (matches.length === 0 || size < 4) return null;
+  const roundCount = Math.ceil(Math.log2(size));
+  const byes = 2 ** roundCount - size;
   const played = new Map<number, Match[]>();
   const rounds: Match[][] = Array.from({ length: roundCount }, () => []);
   for (const m of [...matches].sort(byDate)) {
     const known = [m.homeId, m.awayId].filter((team) => team > 0);
     const counts = known.map((team) => played.get(team) ?? []);
-    const round = counts[0]?.length ?? -1;
-    if (known.length === 0 || counts.some((list) => list.length !== round) || round >= roundCount) return null;
+    const lengths = counts.map((list) => list.length);
+    const round = Math.max(-1, ...lengths);
+    const fromBye = byes > 0 && round === 1 && lengths.includes(0);
+    if (known.length === 0 || (!fromBye && lengths.some((n) => n !== round)) || round >= roundCount) return null;
     for (const [i, team] of known.entries()) {
       const previous = counts[i].at(-1);
       // Whoever plays on lost nothing before: a decisive score against them means this is not a knockout.
@@ -236,10 +240,15 @@ function inProgressRounds(matches: Match[], size: number): KnockoutRound[] | nul
     }
     rounds[round].push(m);
   }
-  // Every bracket starts with size / 2 ties.
-  if (rounds[0].length === 0 || rounds[0].length % (size / 2) !== 0) return null;
+  // Every bracket starts with the same number of ties: half its teams, less its byes.
+  const firstRound = size - 2 ** (roundCount - 1);
+  if (rounds[0].length === 0 || rounds[0].length % firstRound !== 0) return null;
   return rounds
-    .map((list, r) => ({ name: roundName(roundCount - 1 - r, roundCount), short: shortRoundName(roundCount - 1 - r), matches: list }))
+    .map((list, r) => ({
+      name: r === 0 && byes > 0 ? PLAY_OFF_NAME : roundName(roundCount - 1 - r, roundCount),
+      short: shortRoundName(roundCount - 1 - r),
+      matches: list,
+    }))
     .filter((round) => round.matches.length > 0);
 }
 
