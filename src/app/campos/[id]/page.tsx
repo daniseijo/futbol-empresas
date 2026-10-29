@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { ChampionsBadge } from "@/components/champions";
 import { Crest } from "@/components/crest";
 import { DayMatchCard } from "@/components/day-match-card";
 import { Eyebrow } from "@/components/featured-match";
@@ -89,12 +90,12 @@ async function VenueContent({ params }: Pick<Props, "params">) {
         <div className="flex min-w-0 flex-[999_1_640px] flex-col gap-5.5">
           {data.upcoming.length > 0 && (
             <SectionCard title="Próximos partidos">
-              <MatchList matches={data.upcoming} now={data.now} focusId={focusId} logos={logos} />
+              <MatchList matches={data.upcoming} now={data.now} focusId={focusId} logos={logos} champions={data.champions} />
             </SectionCard>
           )}
           {data.recent.length > 0 && (
             <SectionCard title="Últimos resultados">
-              <MatchList matches={data.recent} now={data.now} focusId={focusId} logos={logos} />
+              <MatchList matches={data.recent} now={data.now} focusId={focusId} logos={logos} champions={data.champions} />
             </SectionCard>
           )}
           {data.total === 0 && (
@@ -151,21 +152,36 @@ function NextDay({ day, now, logos }: { day: NonNullable<VenuePageData["day"]>; 
 }
 
 /** Compact rows: date and time, both teams, and the score or kick-off time. */
-function MatchList({ matches, now, focusId, logos }: { matches: Match[]; now: string; focusId: number | null; logos: Logos }) {
+function MatchList({
+  matches,
+  now,
+  focusId,
+  logos,
+  champions,
+}: {
+  matches: Match[];
+  now: string;
+  focusId: number | null;
+  logos: Logos;
+  /** Champions matches, with their star and blue. */
+  champions: number[];
+}) {
   return (
     <div className="flex flex-col">
       {matches.map((match) => {
         const isFocus = focusId !== null && (match.homeId === focusId || match.awayId === focusId);
+        const isChampions = champions.includes(match.id);
         return (
           <Link
             key={match.id}
             href={`/partidos/${match.id}`}
             className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t border-line-soft px-2 py-2.5 text-sm sm:grid-cols-[150px_minmax(0,1fr)_auto] ${
               isFocus ? "bg-accent-soft" : "hover:bg-canvas"
-            }`}
+            } ${isChampions ? "champions-light" : ""}`}
           >
-            <span className="text-[13px] text-muted max-sm:col-span-2">
+            <span className="flex items-center gap-2 text-[13px] text-muted max-sm:col-span-2 sm:flex-col sm:items-start sm:gap-1">
               {match.played ? `${formatShortDate(match.date, now)} · ${match.date.slice(11, 16)}` : capitalize(relativeDay(match.date, now))}
+              {isChampions && <ChampionsBadge />}
             </span>
             <span className="flex min-w-0 flex-col gap-1">
               <Side id={match.homeId} name={match.homeName} logos={logos} />

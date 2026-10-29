@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { ChampionsBadge } from "@/components/champions";
 import { Crest } from "@/components/crest";
 import { OutcomeBadge } from "@/components/form-badges";
 import { PlayerAvatar } from "@/components/player-avatar";
@@ -176,7 +177,9 @@ function MatchLine({ row, data }: { row: PlayerMatchRow; data: PlayerPageData })
   return (
     <Link
       href={`/partidos/${match.id}`}
-      className="grid grid-cols-[minmax(0,1fr)_56px_28px] items-center gap-2.5 border-b border-line-soft px-1.5 py-2.5 text-sm hover:bg-canvas sm:grid-cols-[112px_minmax(0,1fr)_auto_56px_28px]"
+      className={`grid grid-cols-[minmax(0,1fr)_56px_28px] items-center gap-2.5 border-b border-line-soft px-1.5 py-2.5 text-sm hover:bg-canvas sm:grid-cols-[112px_minmax(0,1fr)_auto_56px_28px] ${
+        row.champions ? "champions-light" : ""
+      }`}
     >
       <span className="text-[13px] whitespace-nowrap text-muted max-sm:hidden">{formatShortDate(match.date, data.now)}</span>
       {/* On mobile, the date and what they did go on a second line under the opponent. */}
@@ -185,6 +188,7 @@ function MatchLine({ row, data }: { row: PlayerMatchRow; data: PlayerPageData })
           <span className="text-xs text-muted">vs</span>
           <Crest src={data.logos[opponentId]} name={opponent} size={24} />
           <span className="truncate">{opponent}</span>
+          {row.champions && <ChampionsBadge />}
           {row.crack && <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold text-accent-text">MVP</span>}
         </span>
         <span className="flex min-w-0 flex-wrap gap-x-2 gap-y-0.5 text-xs sm:hidden">

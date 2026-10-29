@@ -1,5 +1,6 @@
 import { cacheLife } from "next/cache";
 import { getCurrentSeason, getGroupMatches, getLeagues, getSeasons, getTeam, getTeamMatches } from "@/lib/data";
+import { isChampionsNode } from "@/lib/sportspress/champions";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match } from "@/lib/sportspress/types";
 import { computeStandings, outcomeFor } from "@/lib/standings";
@@ -17,6 +18,8 @@ export interface CompetitionStint {
   groupId: number;
   /** "Liga Apertura › Fase 1 › Grupo 20" */
   path: string[];
+  /** A stint in the Champions, drawn with its star. */
+  champions: boolean;
   record: Tally;
   /** Position in the group; null in knockouts and final phases. */
   position: number | null;
@@ -101,6 +104,7 @@ export async function getTeamHistory(slug: string): Promise<TeamHistory | null> 
       stints.push({
         groupId,
         path,
+        champions: isChampionsNode(groupId, tree),
         record: stint,
         position: isLeagueGroup ? (standings.find((r) => r.teamId === team.id)?.position ?? null) : null,
         teams: standings.length,

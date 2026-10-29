@@ -2,6 +2,7 @@ import { cacheLife } from "next/cache";
 import { siteConfig } from "@/config/site";
 import { dayKey, nowInMadrid } from "@/lib/dates";
 import { getCurrentSeason, getLeagues, getSeasonMatches, getTeam, getTeams } from "@/lib/data";
+import { isChampions } from "@/lib/sportspress/champions";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Venue } from "@/lib/sportspress/types";
 import { getVenue, getVenues } from "@/lib/sportspress/venues";
@@ -27,6 +28,8 @@ export interface VenuePageData {
   /** The season's other matches at the venue: upcoming in date order, results newest first. */
   upcoming: Match[];
   recent: Match[];
+  /** Which of those are Champions matches, drawn with its star. */
+  champions: number[];
   total: number;
   teams: VenueTeam[];
 }
@@ -68,11 +71,12 @@ export async function getVenuePageData(id: number): Promise<VenuePageData | null
   ]);
   const now = nowInMadrid();
   const here = matches.filter((m) => m.venueId === id);
+  const tree = new LeagueTree(leagues);
   const picked = pickDay(here, dayKey(now));
   let day: VenuePageData["day"] = null;
   if (picked) {
     // Built from the whole season so the positions in each group are right.
-    const all = buildDay(matches, new LeagueTree(leagues), picked.date, focusTeam?.id ?? null, mainCompetitionId(matches), now);
+    const all = buildDay(matches, tree, picked.date, focusTeam?.id ?? null, mainCompetitionId(matches), now);
     const dayMatches = all.matches.filter((m) => m.venueId === id);
     day = { ...all, matches: dayMatches, venues: 1, when: picked.when };
   }
@@ -88,6 +92,7 @@ export async function getVenuePageData(id: number): Promise<VenuePageData | null
       .filter((m) => m.played)
       .reverse()
       .slice(0, RECENT_RESULTS),
+    champions: rest.filter((m) => isChampions(m, tree)).map((m) => m.id),
     total: here.length,
     teams: topTeams(here, TOP_TEAMS).map((t) => ({ ...t, slug: slugs.get(t.id) ?? null })),
   };

@@ -69,7 +69,8 @@ async function CompetitionContent({ params, searchParams }: Props) {
   };
 
   return (
-    <main className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-7 sm:px-6">
+    // The Champions' pages: a navy header, and its blue in place of the coral below.
+    <main className={`mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-7 sm:px-6 ${data.isChampions ? "champions-light" : ""}`}>
       <Header data={data} />
       {data.children.length > 0 && <Children items={data.children} />}
       {data.brackets.map((bracket, index) => (
@@ -121,7 +122,7 @@ function Header({ data }: { data: CompetitionPageData }) {
     { value: numberFormat.format(data.totals.goals), label: "goles" },
   ];
   return (
-    <section className="flex flex-col gap-4 card px-4 py-6 sm:px-7">
+    <section className={`flex flex-col gap-4 card px-4 py-6 sm:px-7 ${data.isChampions ? "champions-night" : ""}`}>
       {parents.length > 0 && (
         <nav aria-label="Competición" className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {parents.map((crumb, index) => (

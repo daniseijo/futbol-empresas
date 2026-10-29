@@ -1,5 +1,7 @@
 import { cacheLife } from "next/cache";
-import { getCurrentSeason, getPlayerCareer, getSeasons, getTeams } from "@/lib/data";
+import { getCurrentSeason, getLeagues, getPlayerCareer, getSeasons, getTeams } from "@/lib/data";
+import { isChampions } from "@/lib/sportspress/champions";
+import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Outcome, Position } from "@/lib/sportspress/types";
 import { nowInMadrid } from "@/lib/dates";
 import { playerDisplayName } from "@/lib/players";
@@ -24,6 +26,8 @@ export interface PlayerSeasonRow extends PlayerTotals {
 /** A match from the player's point of view: their team, the result and what they did. */
 export interface PlayerMatchRow {
   match: Match;
+  /** A Champions match, drawn with its star. */
+  champions: boolean;
   teamId: number;
   outcome: Outcome | null;
   goals: number;
@@ -67,7 +71,14 @@ export async function getPlayerPageData(id: number): Promise<PlayerPageData | nu
   "use cache";
   cacheLife("results");
 
-  const [career, seasons, current, teams] = await Promise.all([getPlayerCareer(id), getSeasons(), getCurrentSeason(), getTeams()]);
+  const [career, seasons, current, teams, leagues] = await Promise.all([
+    getPlayerCareer(id),
+    getSeasons(),
+    getCurrentSeason(),
+    getTeams(),
+    getLeagues(),
+  ]);
+  const tree = new LeagueTree(leagues);
   if (!career) return null;
   const { player, lines, squads } = career;
   const teamName = new Map(teams.map((t) => [t.id, t.name]));
@@ -114,6 +125,7 @@ export async function getPlayerPageData(id: number): Promise<PlayerPageData | nu
     matches: lines
       .map(({ match, line }) => ({
         match,
+        champions: isChampions(match, tree),
         teamId: line.teamId,
         outcome: outcomeFor(match, line.teamId),
         goals: line.goals,
