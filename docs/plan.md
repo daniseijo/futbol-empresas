@@ -134,6 +134,16 @@ See the steps in the README.
   - The dev-only "cannot have a negative time stamp" error did not show up in five cold loads of 404 pages with
     Next 16.4.2 (browser console and server log); no upstream issue linked.
 
+- [ ] **April 2027: the Champions knockout.** When the league publishes the first knockout matches (the 25/26
+  play-off was on 13–16 April), check with real data that:
+  - the sector page names the rounds while they are played ("Eliminatoria", "Cuartos"…) and shows the bracket
+    once the final is out, with the top four's "Pasa directo";
+  - call-ups say "Convocatoria Champions · Cuartos" (not "Eliminatoria"): `pnpm notify -- --match=<id> --dry-run`;
+  - the knockout tab opens first on the sector page, and the road to the final lights the right phase.
+  `inProgressRounds` takes the bracket's size from 25/26 (12 teams). If 26/27's format is different (more or fewer
+  teams through), the rounds may be listed by date instead: fix the expected size, then draw the standings' zones
+  with the confirmed format.
+
 ## 5. Quality
 
 - [x] Unit tests for `parse.ts` (titles, goals with minute, shortcodes), `standings.ts` and video matching, plus
