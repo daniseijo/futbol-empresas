@@ -38,7 +38,7 @@ export function MatchRow({
       href={`/partidos/${match.id}`}
       className={`grid grid-cols-[42px_1fr_auto] items-center gap-3 rounded-[14px] border px-3.5 py-3 sm:grid-cols-[44px_110px_minmax(0,1fr)_84px_minmax(0,1fr)_32px] ${
         champions
-          ? `bg-champions-soft ${highlight ? "border-accent" : "border-champions-text/30 hover:border-champions-text"}`
+          ? `champions-light bg-champions-soft ${highlight ? "border-accent" : "border-champions-text/30 hover:border-champions-text"}`
           : highlight
             ? "border-accent bg-accent-soft"
             : "border-line-soft hover:border-line hover:bg-canvas"

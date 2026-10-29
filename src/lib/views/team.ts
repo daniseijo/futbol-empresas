@@ -166,7 +166,7 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
   const logos = Object.fromEntries(teams.map((t) => [t.id, t.logoUrl]));
   const slugs = Object.fromEntries(teams.map((t) => [t.id, t.slug]));
   const heroPhoto = team.photoUrl ? { url: team.photoUrl, caption: "" } : (photos[0] ?? null);
-  const featured = await getFeatured(context, seasonMatches, squad, now);
+  const featured = await getFeatured(context, seasonMatches, now);
 
   return {
     ...context,

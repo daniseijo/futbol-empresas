@@ -10,7 +10,6 @@ import {
   getSeasonMatches,
   getSeasonTournaments,
   getSheetTotals,
-  getSquad,
   getTeam,
   getTeams,
   type NewsItem,
@@ -115,8 +114,7 @@ export async function getHomeData(): Promise<HomeData> {
   let focus: FocusBlock | null = null;
   if (focusTeam) {
     const context = buildTeamContext(focusTeam.id, matches, tree, now);
-    const squad = await getSquad(focusTeam.id);
-    focus = { ...context, ...(await getFeatured(context, matches, squad, now)) };
+    focus = { ...context, ...(await getFeatured(context, matches, now)) };
   }
 
   // Matches of the day (today or the next date with matches).

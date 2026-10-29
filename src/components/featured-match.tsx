@@ -195,7 +195,7 @@ function ResultHero({
         )}
         {team.row && <Tile label="En el grupo" value={trend(team.row.position, team.previousPosition)} detail={gap(team.standings, team.row)} />}
         {team.mvpLeader && (
-          <Tile label="Mejor valoración" value={team.mvpLeader.name} detail={`${decimal.format(team.mvpLeader.points)} en la temporada`} />
+          <Tile label="Mejor valoración" value={team.mvpLeader.name} detail={`${decimal.format(team.mvpLeader.points)} ${data.champions ? "en la Champions" : "en la temporada"}`} />
         )}
       </Tiles>
 
@@ -265,14 +265,15 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
           {rows.map((row) => (
             <Comparison key={row.label} label={row.label} home={String(row.home)} away={String(row.away)} bold />
           ))}
-          <Comparison label="A seguir" home={watch(home)} away={watch(away)} />
+          {/* Nobody to watch before anyone has scored in the competition. */}
+          {(home.keyPlayers[0]?.goals ?? 0) + (away.keyPlayers[0]?.goals ?? 0) > 0 && <Comparison label="A seguir" home={watch(home)} away={watch(away)} />}
         </div>
       )}
 
       <Tiles>
         <Tile label="Cara a cara" {...headToHeadTile(data, team.teamId)} />
         {team.mvpLeader && (
-          <Tile label="Mejor valoración" value={team.mvpLeader.name} detail={`${decimal.format(team.mvpLeader.points)} en la temporada`} />
+          <Tile label="Mejor valoración" value={team.mvpLeader.name} detail={`${decimal.format(team.mvpLeader.points)} ${data.champions ? "en la Champions" : "en la temporada"}`} />
         )}
       </Tiles>
 
