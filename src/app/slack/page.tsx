@@ -147,7 +147,7 @@ function SlackMessage({ message }: { message: CallUpMessage }) {
         <p>
           ¡Hola equipo!
           <br />
-          Os dejo por aquí todos los detalles del próximo partido.
+          Os dejo por aquí todos los detalles del {message.subject}.
         </p>
         <p>
           🗓️ <strong>Fecha:</strong> {message.date}
@@ -164,6 +164,12 @@ function SlackMessage({ message }: { message: CallUpMessage }) {
           )}
           <br />
           🆚 <strong>Encuentro:</strong> {message.matchup}
+          {message.competition && (
+            <>
+              <br />
+              🏆 <strong>Competición:</strong> {message.competition}
+            </>
+          )}
         </p>
         <p>
           👉{" "}

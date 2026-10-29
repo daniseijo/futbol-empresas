@@ -4,6 +4,7 @@ import { cacheLife } from "next/cache";
 import { ImageResponse } from "next/og";
 import { initials } from "@/components/crest";
 import { siteConfig } from "@/config/site";
+import { championsStageLabel, type ChampionsStage } from "@/lib/sportspress/champions";
 
 /**
  * Shared pieces of the images shown when a link is shared (opengraph-image.tsx
@@ -24,6 +25,44 @@ export const OG = {
   loss: "#b42318",
   lossSoft: "#fdecea",
 };
+
+/** The Champions night (the `champions*` tokens), for a Champions match's images. */
+export const OG_CHAMPIONS = {
+  deep: "#091238",
+  ink: "#ffffff",
+  muted: "rgba(255, 255, 255, 0.6)",
+  line: "rgba(255, 255, 255, 0.3)",
+  star: "#a9c0ff",
+  pill: "rgba(169, 192, 255, 0.18)",
+  pillText: "#c9d7ff",
+  background: "radial-gradient(120% 160% at 100% 0%, #17287a 0%, #091238 70%)",
+  /** The silver strip that takes the coral one's place. */
+  band: "linear-gradient(90deg, #a9c0ff, #e6ecff, #a9c0ff)",
+};
+
+function OgStar({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20">
+      <path fill={OG_CHAMPIONS.star} d="M10 1l2.4 6.6L19 10l-6.6 2.4L10 19l-2.4-6.6L1 10l6.6-2.4z" />
+    </svg>
+  );
+}
+
+/** The ribbon's text for a Champions match: "La Champions de las Empresas · Fase liga · J1". */
+export function championsRibbon(data: { champions: ChampionsStage | null; path: { name: string }[] }): string | undefined {
+  return data.champions ? [data.path[0]?.name, championsStageLabel(data.champions, true)].filter(Boolean).join(" · ") : undefined;
+}
+
+/** "★ La Champions de las Empresas · Fase liga · J1 ★", over a Champions match. */
+export function OgChampionsRibbon({ children, fontSize = 20 }: { children: string; fontSize?: number }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize, fontWeight: 700, letterSpacing: 3, color: OG_CHAMPIONS.star, textTransform: "uppercase" }}>
+      <OgStar size={fontSize} />
+      {children}
+      <OgStar size={fontSize} />
+    </div>
+  );
+}
 
 // Latin subsets of the site's fonts (Satori needs TTF, not the woff2 next/font serves).
 const fontDir = join(process.cwd(), "src/assets/fonts");
@@ -90,7 +129,7 @@ export function OgCrest({ src, name, size }: { src: string | null; name: string;
 }
 
 /** The site's logo square and name, as in the header. */
-export function OgBrand({ size = 44 }: { size?: number }) {
+export function OgBrand({ size = 44, color = OG.ink }: { size?: number; color?: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: size * 0.3 }}>
       <div
@@ -109,21 +148,37 @@ export function OgBrand({ size = 44 }: { size?: number }) {
       >
         FE
       </div>
-      <div style={{ fontFamily: "Barlow", fontSize: size * 0.6, letterSpacing: 1.5, color: OG.ink }}>{siteConfig.name.toUpperCase()}</div>
+      <div style={{ fontFamily: "Barlow", fontSize: size * 0.6, letterSpacing: 1.5, color }}>{siteConfig.name.toUpperCase()}</div>
     </div>
   );
 }
 
-/** White card with the brand at the top and a coral strip at the bottom. */
-export function OgFrame({ aside, children }: { aside?: string; children: React.ReactNode }) {
+/**
+ * White card with the brand at the top and a coral strip at the bottom. With `champions` (the ribbon's text)
+ * it is the Champions night instead: navy, the ribbon in place of the aside, and a silver strip.
+ */
+export function OgFrame({ aside, champions, children }: { aside?: string; champions?: string; children: React.ReactNode }) {
   return (
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", background: OG.surface, fontFamily: "Inter" }}>
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        background: champions ? OG_CHAMPIONS.background : OG.surface,
+        fontFamily: "Inter",
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 32, padding: "40px 56px 0" }}>
-        <OgBrand />
-        {aside && <div style={{ fontSize: 26, color: OG.muted, maxWidth: 720, textAlign: "right" }}>{aside}</div>}
+        <OgBrand color={champions ? OG_CHAMPIONS.ink : OG.ink} />
+        {champions ? (
+          <OgChampionsRibbon>{champions}</OgChampionsRibbon>
+        ) : (
+          aside && <div style={{ fontSize: 26, color: OG.muted, maxWidth: 720, textAlign: "right" }}>{aside}</div>
+        )}
       </div>
       <div style={{ flex: 1, display: "flex", padding: "0 56px" }}>{children}</div>
-      <div style={{ height: 14, background: OG.accent }} />
+      <div style={{ height: 14, ...(champions ? { backgroundImage: OG_CHAMPIONS.band } : { background: OG.accent }) }} />
     </div>
   );
 }

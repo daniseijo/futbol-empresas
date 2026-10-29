@@ -12,6 +12,8 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import { siteConfig } from "@/config/site";
 import { db, schema } from "@/db/client";
 import { nowInMadrid } from "@/lib/dates";
+import { championsStage } from "@/lib/sportspress/champions";
+import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match } from "@/lib/sportspress/types";
 import { callUpMessage, fingerprint, pendingCallUps, type CallUp, type CallUpMessage } from "./call-ups";
 import { configuredChannels, RevokedWebhookError, slack, subscriptionFooter, type Channel } from "./channels";
@@ -94,14 +96,16 @@ async function unsubscribe(recipient: Recipient) {
 }
 
 function describe(message: CallUpMessage): string {
-  return `${message.title}: ${message.matchup}, ${message.when}${message.venue ? `, ${message.venue.name}` : ""}`;
+  return [`${message.title}: ${message.matchup}, ${message.when}`, message.venue?.name, message.competition].filter(Boolean).join(", ");
 }
 
 export async function runNotify({
   dryRun = false,
   matchId = null,
+  to = null,
   log = console.log,
-}: { dryRun?: boolean; matchId?: number | null; log?: Log } = {}) {
+}: { dryRun?: boolean; matchId?: number | null; to?: string | null; log?: Log } = {}) {
+  if (to !== null && matchId === null) throw new Error("--to only works with --match");
   // Only when it will write: the tests (--dry-run, --match) also work with a read-only token.
   const writes = !dryRun && matchId === null;
   if (writes) await migrate(db, { migrationsFolder: "drizzle" });
@@ -109,19 +113,22 @@ export async function runNotify({
   if (!focus) throw new Error(`Focus team "${siteConfig.focusTeamSlug}" is not in the database`);
   const now = nowInMadrid();
   const recipients = await loadRecipients(focus.id);
+  // A Champions match says so in its call-up.
+  const tree = new LeagueTree(await db.select().from(schema.leagues));
+  const message = (callUp: CallUp, teamId: number) => callUpMessage(callUp, teamId, now, championsStage(callUp.match, tree));
 
   // One target failing (a revoked webhook, Slack or Telegram down) never stops
   // the others; the run fails at the end so the job shows it.
   const failures: string[] = [];
   const deliver = async (recipient: Recipient, callUps: CallUp[], record: boolean) => {
     for (const callUp of callUps) {
-      const message = callUpMessage(callUp, recipient.teamId, now);
+      const text = message(callUp, recipient.teamId);
       if (dryRun) {
-        log(`Would send to ${recipient.label}: ${describe(message)}`);
+        log(`Would send to ${recipient.label}: ${describe(text)}`);
         continue;
       }
       try {
-        await recipient.open().send(message);
+        await recipient.open().send(text);
       } catch (error) {
         if (error instanceof RevokedWebhookError && recipient.subscriptionId !== null) {
           log(`${recipient.label}: the webhook is gone (${error.message}), ${record ? "unsubscribed" : "would unsubscribe"}`);
@@ -132,7 +139,7 @@ export async function runNotify({
         failures.push(recipient.label);
         return;
       }
-      log(`Sent to ${recipient.label}: ${describe(message)}`);
+      log(`Sent to ${recipient.label}: ${describe(text)}`);
       if (!record) continue;
       // Recorded right after each send: if a later one fails, the next run only retries that one.
       const row = { matchId: callUp.match.id, channel: recipient.key, fingerprint: callUp.fingerprint, sentAt: nowInMadrid() };
@@ -150,13 +157,16 @@ export async function runNotify({
   };
 
   // A test: that match, on the configured channels and the subscriptions of
-  // either team, whatever was sent before, and nothing is recorded.
+  // either team (or only the channel `to` names), whatever was sent before, and nothing is recorded.
   if (matchId !== null) {
     const [match] = await loadMatches(eq(schema.matches.id, matchId));
     if (!match) throw new Error(`Match ${matchId} is not in the database`);
     const callUp: CallUp = { match, kind: "new", fingerprint: fingerprint(match) };
-    const targets = recipients.filter((r) => r.subscriptionId === null || r.teamId === match.homeId || r.teamId === match.awayId);
-    if (targets.length === 0) log(`Would send: ${describe(callUpMessage(callUp, focus.id, now))}`);
+    const targets = recipients
+      .filter((r) => r.subscriptionId === null || r.teamId === match.homeId || r.teamId === match.awayId)
+      .filter((r) => to === null || r.key === to);
+    if (to !== null && targets.length === 0) throw new Error(`No channel "${to}" for match ${matchId}`);
+    if (targets.length === 0) log(`Would send: ${describe(message(callUp, focus.id))}`);
     for (const recipient of targets) await deliver(recipient, [callUp], false);
     return finish();
   }
@@ -177,7 +187,7 @@ export async function runNotify({
   if (recipients.length === 0) {
     log("No channel configured (TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID, or SLACK_WEBHOOK_URL) and no subscription");
     const own = upcoming.filter((m) => m.homeId === focus.id || m.awayId === focus.id);
-    for (const callUp of pendingCallUps(own, new Map(), now)) log(`Would send: ${describe(callUpMessage(callUp, focus.id, now))}`);
+    for (const callUp of pendingCallUps(own, new Map(), now)) log(`Would send: ${describe(message(callUp, focus.id))}`);
     return;
   }
 

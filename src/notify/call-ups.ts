@@ -3,6 +3,7 @@
 
 import { siteConfig } from "@/config/site";
 import { capitalize, daysBetween, formatLongDate, formatTime } from "@/lib/dates";
+import type { ChampionsStage } from "@/lib/sportspress/champions";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import type { Match } from "@/lib/sportspress/types";
 import { sendAt, type Schedule } from "./schedule";
@@ -72,6 +73,10 @@ export interface CallUpMessage {
   kind: CallUp["kind"];
   change: Change | null;
   title: string;
+  /** "Champions · Fase liga · Sector Banca y Financiero" for a Champions match, null for any other. */
+  competition: string | null;
+  /** What the message is about: "el próximo partido", "el primer partido de la Champions". */
+  subject: string;
   matchup: string;
   when: string;
   /** "Jueves, 29 de octubre" and "21:10", for Slack's one line each. */
@@ -88,9 +93,21 @@ export interface CallUpMessage {
   question: string;
 }
 
-export function callUpMessage({ match, kind, change, fingerprint }: CallUp, teamId: number, today: string): CallUpMessage {
+/**
+ * `champions` is where a Champions match sits (see `championsStage`): its call-up says so in the title
+ * ("Convocatoria Champions · Jornada 1") and in a line of its own, and names the knockout phase for a match
+ * without a round.
+ */
+export function callUpMessage(
+  { match, kind, change, fingerprint }: CallUp,
+  teamId: number,
+  today: string,
+  champions: ChampionsStage | null = null,
+): CallUpMessage {
   const venue = getVenue(match.venueId);
-  const label = kind === "new" ? "Convocatoria" : CHANGE_LABELS[change ?? "date"];
+  const label = kind === "new" ? (champions ? "Convocatoria Champions" : "Convocatoria") : CHANGE_LABELS[change ?? "date"];
+  const round = match.round ? `Jornada ${match.round}` : champions && champions.phase !== "Fase liga" ? champions.phase : null;
+  const first = champions?.phase === "Fase liga" && match.round === 1;
   const day = formatLongDate(match.date, today);
   const rival = match.homeId === teamId ? match.awayName : match.homeName;
   // "miércoles 4", without the month.
@@ -99,7 +116,11 @@ export function callUpMessage({ match, kind, change, fingerprint }: CallUp, team
   return {
     kind,
     change: kind === "new" ? null : (change ?? "date"),
-    title: match.round ? `${label} · Jornada ${match.round}` : label,
+    title: [label, kind !== "new" && champions && "Champions", round].filter(Boolean).join(" · "),
+    competition: champions
+      ? ["Champions", champions.phase, champions.sector && `Sector ${champions.sector}`].filter(Boolean).join(" · ")
+      : null,
+    subject: champions ? `${first ? "primer" : "próximo"} partido de la Champions` : "próximo partido",
     matchup: `${match.homeName} vs ${match.awayName}`,
     when: `${capitalize(day)} · ${formatTime(match.date)}`,
     date: `${capitalize(weekday)}, ${date.join(" ")}`,
@@ -121,6 +142,7 @@ export function toTelegramHtml(message: CallUpMessage): string {
     `<b>${escapeHtml(message.matchup)}</b>`,
     `📅 ${escapeHtml(message.when)}`,
     message.venue && `📍 ${link(message.venue.url, message.venue.name)}`,
+    message.competition && `🏆 ${escapeHtml(message.competition)}`,
     "",
     link(message.url, "Ver el partido"),
   ]
@@ -147,7 +169,7 @@ export function toSlackMessage(message: CallUpMessage, footer: string | null = n
       section(
         "¡Hola equipo!",
         message.change === null
-          ? "Os dejo por aquí todos los detalles del próximo partido."
+          ? `Os dejo por aquí todos los detalles del ${message.subject}.`
           : `⚠️ *${CHANGE_NOTICES[message.change]}* Estos son los nuevos detalles:`,
       ),
       section(
@@ -155,6 +177,7 @@ export function toSlackMessage(message: CallUpMessage, footer: string | null = n
         `⏰ *Hora:* ${message.time} h`,
         message.venue && `📍 *Lugar:* ${link(message.venue.url, message.venue.name)}`,
         `🆚 *Encuentro:* ${escapeHtml(message.matchup)}`,
+        message.competition && `🏆 *Competición:* ${escapeHtml(message.competition)}`,
       ),
       section(`👉 *${link(message.url, "Ver el partido en la web")}*`),
       { type: "image", image_url: message.imageUrl, alt_text: `${message.matchup}, ${message.when}` },
