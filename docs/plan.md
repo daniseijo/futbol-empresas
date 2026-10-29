@@ -65,6 +65,13 @@ See the steps in the README.
 - [x] **Matches of a day** (`/partidos/dia/[fecha]`): grouped by time or venue (`?orden=campo`), with previous and
   next dates with matches, linked from the home page's match strip and the match page's "Resto de la jornada".
   Current season only.
+- [x] **The Champions de las Empresas** (29 Oct 2026, before its first round on 4 Nov): its own navy and star
+  (`champions*` tokens, `src/lib/sportspress/champions.ts`) on every page that shows it: the featured match, the
+  team header and standings in a Champions week, day cards, match rows, the match page, the Champions and sector
+  pages, venue, player and history lists, and the share and call-up images. Call-ups say "Convocatoria Champions ·
+  Jornada 1" (or the knockout phase) with a "Competición" line. A sector's page is the hub of its Champions (phases,
+  fase liga, knockout, scorers) and the fase liga's page redirects to it. Left for when the league confirms this
+  season's format: the standings' zones (25/26: 1st–4th straight to the quarter-finals, 5th–12th a play-off).
 
 ## 4. Improvements to what exists
 
@@ -169,7 +176,10 @@ See the steps in the README.
   the current season are estimated (`src/lib/expected-matches.ts`): a round robin per group, for groups that were
   one the season before.
 - Round numbers are unreliable: some matches are played early under a later round (round 9 in October), and some
-  have none.
+  have none. The round comes from the title's "J1 –" prefix, which some lack (Singular Bank – Openbank, 134694, in
+  the Champions' first round): `fillMissingRounds` puts such a match in the round whose dates it falls in.
+- The Champions' knockout seeds the fase liga's top four straight into the quarter-finals, so its brackets are not
+  a power of two (12 teams in 25/26): `bracket.ts` reads them from the final back, with byes in the first round.
 - A match can be tagged with the wrong group (IBO – PWC S.A.D Curve, two Grupo 4 teams, in Grupo 3). The teams'
   `leagues` say where they really play, but only for the current season: they do not keep past groups.
 - The same knockout tie entered twice, once as a test ("MANU PRUEBA Redpiso", 131645 next to 131330), and finals
