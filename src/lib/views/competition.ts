@@ -144,6 +144,8 @@ export interface CompetitionPageData {
   /** The best goalkeeper, two defenders, two midfielders and two forwards of the node's matches. */
   ideal: IdealSevenData;
   focusTeamId: number | null;
+  /** The node is the Champions or under it: its page wears the Champions' colours. */
+  isChampions: boolean;
   /** Only on a Champions sector's page. */
   champions: ChampionsSectorData | null;
   logos: Record<number, string | null>;
@@ -490,6 +492,7 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
     cracks: crackTotals.map(toTally),
     ideal,
     focusTeamId,
+    isChampions: isChampionsNode(node.id, tree),
     champions:
       isChampionsNode(node.id, tree) && tree.path(node.id).length === 2
         ? await championsSector(node.id, matches, brackets, group, { season, current, tree, now, focusTeamId, available, seasonHref })
