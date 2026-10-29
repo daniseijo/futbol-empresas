@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChampionsStar } from "@/components/champions";
 import { Crest } from "@/components/crest";
 import type { DayMatch } from "@/lib/views/day";
 
@@ -6,13 +7,18 @@ type Logos = Record<number, string | null>;
 
 /**
  * A match of the day: time, venue, both teams with their position or goals, and the group.
- * The match link stretches over the whole card; the venue link sits above it.
+ * The match link stretches over the whole card; the venue link sits above it. A Champions match is navy,
+ * with the focus team's coral border kept.
  */
 export function DayMatchCard({ match, logos, className = "" }: { match: DayMatch; logos: Logos; className?: string }) {
   return (
     <div
       className={`relative flex flex-col gap-2 rounded-2xl border px-3.5 py-3 ${
-        match.isFocus ? "border-accent bg-accent-soft" : "border-line bg-surface hover:border-ink"
+        match.champions
+          ? `champions-night ${match.isFocus ? "border-accent" : "border-champions hover:border-champions-star"}`
+          : match.isFocus
+            ? "border-accent bg-accent-soft"
+            : "border-line bg-surface hover:border-ink"
       } ${className}`}
     >
       <span className="flex justify-between gap-2 text-xs">
@@ -38,7 +44,14 @@ export function DayMatchCard({ match, logos, className = "" }: { match: DayMatch
         <DayTeam id={match.homeId} name={match.home} position={match.noResult ? null : match.homePosition} goals={match.homeGoals} logos={logos} />
         <DayTeam id={match.awayId} name={match.away} position={match.noResult ? null : match.awayPosition} goals={match.awayGoals} logos={logos} />
       </Link>
-      {match.label && <span className="border-t border-line-soft pt-2 text-xs text-muted">{match.label}</span>}
+      {match.champions ? (
+        <span className="flex items-center gap-1.5 border-t border-line-soft pt-2 text-xs text-muted">
+          <ChampionsStar className="text-champions-star" />
+          <span className="truncate">{["Champions", match.label].filter(Boolean).join(" · ")}</span>
+        </span>
+      ) : (
+        match.label && <span className="border-t border-line-soft pt-2 text-xs text-muted">{match.label}</span>
+      )}
     </div>
   );
 }

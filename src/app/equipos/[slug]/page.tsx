@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { FeaturedFooter, FeaturedHero } from "@/components/featured-match";
+import { FeaturedFooter, FeaturedHero, featuredSurface } from "@/components/featured-match";
 import { IdealSeven } from "@/components/ideal-seven";
 import { Leaders } from "@/components/team/leaders";
 import { MatchRow } from "@/components/team/match-row";
@@ -25,7 +25,7 @@ function Summary({ data }: { data: TeamPageData }) {
       <div className="flex min-w-0 flex-[999_1_640px] flex-col gap-5.5">
         {data.featured && (
           <section className="flex flex-col card overflow-hidden">
-            <div className="flex flex-col gap-5 px-4 py-6 sm:px-7">
+            <div className={`flex flex-col gap-5 px-4 py-6 sm:px-7 ${featuredSurface(data)}`}>
               <FeaturedHero team={data} logos={data.logos} slugs={data.slugs} now={data.now} teamPath={base} />
             </div>
             <FeaturedFooter team={data} />
@@ -37,7 +37,7 @@ function Summary({ data }: { data: TeamPageData }) {
             <p className="text-sm text-muted">Todavía no ha jugado esta temporada.</p>
           ) : (
             recent.map((match) => (
-              <MatchRow key={match.id} match={match} teamId={data.team.id} now={data.now} logos={data.logos} roundLabel={data.roundLabels[match.id]} />
+              <MatchRow key={match.id} match={match} teamId={data.team.id} now={data.now} logos={data.logos} roundLabel={data.roundLabels[match.id]} champions={data.champions[match.id]} />
             ))
           )}
         </SectionCard>
@@ -72,9 +72,11 @@ function Summary({ data }: { data: TeamPageData }) {
 
       <aside className="flex min-w-0 flex-[1_1_340px] flex-col gap-5.5">
         {data.group && data.standings.length > 0 && (
-          <SectionCard title={`Así va el ${data.group.name}`} link={{ href: `${base}/clasificacion`, label: "Clasificación" }}>
-            <StandingsZone rows={data.standings} teamId={data.team.id} logos={data.logos} slugs={data.slugs} />
-          </SectionCard>
+          <div className={data.featured?.champions ? "champions-light" : ""}>
+            <SectionCard title={`Así va el ${data.group.name}`} link={{ href: `${base}/clasificacion`, label: "Clasificación" }}>
+              <StandingsZone rows={data.standings} teamId={data.team.id} logos={data.logos} slugs={data.slugs} />
+            </SectionCard>
+          </div>
         )}
         {data.ideal && <IdealSeven lines={data.ideal} crests={false} link={{ href: `${base}/plantilla`, label: "Ver la plantilla" }} />}
         <SeasonNumbers data={data} />

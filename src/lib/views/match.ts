@@ -1,6 +1,18 @@
 import { cacheLife } from "next/cache";
 import { dayKey, nowInMadrid } from "@/lib/dates";
-import { getCurrentSeason, getHeadToHead, getLeagues, getMatch, getSeasonMatches, getSeasons, getSquad, getTeams } from "@/lib/data";
+import {
+  getCurrentSeason,
+  getHeadToHead,
+  getLeagues,
+  getMatch,
+  getSeasonMatches,
+  getSeasons,
+  getSheetTotals,
+  getSquad,
+  getTeams,
+} from "@/lib/data";
+import { buildKnockout, knockoutLabels } from "@/lib/bracket";
+import { championsStage, type ChampionsStage } from "@/lib/sportspress/champions";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import { getVenue } from "@/lib/sportspress/venues";
 import { playerDisplayName } from "@/lib/players";
@@ -28,13 +40,17 @@ export interface TeamSide {
   stats: { goals: number; assists: number; yellowCards: number; redCards: number; points: number; players: number };
   /** Goals in the score missing from the match sheet (own goals or unrecorded). */
   unattributedGoals: number;
-  /** Players to watch in the preview: those with the most goals (or MVP points). */
+  /** Players to watch in the preview: those with the most goals (or MVP points) in the match's competition. */
   keyPlayers: SquadPlayer[];
+  /** The player with the most points in the match's competition, if anyone has any. */
+  topRated: SquadPlayer | null;
 }
 
 export interface MatchPageData {
   match: MatchDetail;
   now: string;
+  /** Where the match sits in the Champions, or null for any other competition. */
+  champions: ChampionsStage | null;
   path: { name: string; href: string }[];
   /** The page with every match of that date; only for the current season. */
   dayHref: string | null;
@@ -56,25 +72,39 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
 
   const result = await getMatch(id);
   if (!result) return null;
-  const { match, lineups } = result;
+  const { lineups } = result;
   const [leagues, seasons, current, teams, seasonMatches, headToHead, homeSquad, awaySquad] = await Promise.all([
     getLeagues(),
     getSeasons(),
     getCurrentSeason(),
     getTeams(),
-    match.seasonId ? getSeasonMatches(match.seasonId) : Promise.resolve([]),
-    getHeadToHead(match.homeId, match.awayId),
-    getSquad(match.homeId),
-    getSquad(match.awayId),
+    result.match.seasonId ? getSeasonMatches(result.match.seasonId) : Promise.resolve([]),
+    getHeadToHead(result.match.homeId, result.match.awayId),
+    getSquad(result.match.homeId),
+    getSquad(result.match.awayId),
   ]);
   const tree = new LeagueTree(leagues);
+  // The season's matches carry the round the API left out of some.
+  const match = { ...result.match, round: result.match.round ?? seasonMatches.find((m) => m.id === id)?.round ?? null };
   const teamsById = new Map(teams.map((t) => [t.id, t]));
 
   const groupMatches = match.groupId ? seasonMatches.filter((m) => m.groupId === match.groupId) : [];
   const standings = computeStandings(groupMatches);
 
+  // The squads' numbers count the match's competition alone: the league's goals say little about a cup.
+  const competitionGroups = [
+    ...new Set(seasonMatches.filter((m) => m.competitionId === match.competitionId && m.groupId !== null).map((m) => m.groupId!)),
+  ];
+  const totals = match.seasonId && match.competitionId ? await getSheetTotals(match.seasonId, { groupIds: competitionGroups }) : [];
+  const inCompetition = (squad: SquadPlayer[], teamId: number): SquadPlayer[] =>
+    squad.map((player) => {
+      const own = totals.filter((t) => t.playerId === player.id && t.teamId === teamId);
+      const sum = (key: "matches" | "goals" | "assists" | "points") => own.reduce((total, t) => total + t[key], 0);
+      return { ...player, appearances: sum("matches"), goals: sum("goals"), assists: sum("assists"), mvpPoints: sum("points") };
+    });
   const keyPlayers = (squad: SquadPlayer[]) =>
     [...squad].sort((a, b) => b.goals - a.goals || b.mvpPoints - a.mvpPoints).filter((p) => p.appearances > 0).slice(0, 3);
+  const topRated = (squad: SquadPlayer[]) => [...squad].sort((a, b) => b.mvpPoints - a.mvpPoints).find((p) => p.mvpPoints > 0) ?? null;
 
   const side = (teamId: number, name: string, goalsInScore: number | null, squad: SquadPlayer[]): TeamSide => {
     const lineup = lineups.filter((p) => p.teamId === teamId);
@@ -87,6 +117,7 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
       players: lineup.length,
     };
     const team = teamsById.get(teamId);
+    const competitionSquad = inCompetition(squad, teamId);
     return {
       id: teamId,
       name,
@@ -96,7 +127,8 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
       lineup,
       stats,
       unattributedGoals: goalsInScore === null ? 0 : Math.max(0, goalsInScore - stats.goals),
-      keyPlayers: keyPlayers(squad),
+      keyPlayers: keyPlayers(competitionSquad),
+      topRated: topRated(competitionSquad),
     };
   };
   const home = side(match.homeId, match.homeName, match.homeGoals, homeSquad);
@@ -135,12 +167,19 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
     else if (outcome === "D") record.awayWins += 1;
   }
 
+  // A Champions knockout match takes its phase from its round in the sector's bracket.
+  let champions = championsStage(match, tree);
+  if (champions?.phase === "Eliminatoria") {
+    champions = championsStage(match, tree, knockoutLabels(buildKnockout(groupMatches, { now: nowInMadrid() })).get(match.id));
+  }
+
   // Past seasons carry their parameter in the competition link.
   const season = match.seasonId === current.id ? undefined : seasons.find((s) => s.id === match.seasonId)?.name;
   const path = match.groupId ? tree.path(match.groupId).map((l) => ({ name: l.name, href: tree.href(l.id, season) })) : [];
   return {
     match,
     now: nowInMadrid(),
+    champions,
     path,
     dayHref: match.seasonId === current.id ? `/partidos/dia/${dayKey(match.date)}` : null,
     home,

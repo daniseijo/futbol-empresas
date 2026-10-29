@@ -4,7 +4,9 @@ import type { Match } from "@/lib/sportspress/types";
 import { getVenue } from "@/lib/sportspress/venues";
 import { fitFontSize } from "@/lib/text";
 import type { TeamPageData } from "@/lib/views/team";
+import { ChampionsStar } from "../champions";
 import { Crest } from "../crest";
+import { featuredSurface } from "../featured-match";
 import { ShareButton } from "../share-button";
 import { SlackButton } from "../slack-button";
 import { VenueLink } from "../venue-link";
@@ -19,19 +21,23 @@ function homeVenue(matches: Match[], teamId: number) {
   return best ? getVenue(best[0]) : null;
 }
 
-/** Header shared by all of a team's tabs. */
+/**
+ * Header shared by all of a team's tabs. It follows the featured match's group, every number from its row, so
+ * in a Champions week it turns navy and starts again from 0 points.
+ */
 export function TeamHeader({ data }: { data: TeamPageData }) {
-  const { team, row, group, standings, balance } = data;
+  const { team, row, group, standings } = data;
+  const champions = data.featured?.champions ?? null;
   const venue = homeVenue(data.matches, team.id);
   const stats = [
     { value: row ? `${row.position}º` : "—", label: `de ${standings.length || "—"}`, accent: true },
     { value: String(row?.points ?? 0), label: "puntos" },
-    { value: String(balance.played), label: "jugados" },
-    { value: String(balance.goalsFor), label: "a favor" },
-    { value: String(balance.goalsAgainst), label: "en contra" },
+    { value: String(row?.played ?? 0), label: "jugados" },
+    { value: String(row?.goalsFor ?? 0), label: "a favor" },
+    { value: String(row?.goalsAgainst ?? 0), label: "en contra" },
   ];
   return (
-    <section className="relative overflow-hidden border-b border-line bg-surface">
+    <section className={`relative overflow-hidden border-b border-line bg-surface ${featuredSurface(data)}`}>
       {data.heroPhoto ? (
         <>
           <Image
@@ -43,13 +49,15 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
             sizes="62vw"
             className={`left-auto! w-[62%]! object-cover max-md:hidden ${team.photoUrl ? "object-[80%_35%]" : ""}`}
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,#fff_40%,rgba(255,255,255,0.85)_52%,rgba(255,255,255,0)_75%)] max-md:hidden" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--color-surface)_40%,color-mix(in_srgb,var(--color-surface)_85%,transparent)_52%,transparent_75%)] max-md:hidden" />
           {data.heroPhoto.caption && (
-            <span className="absolute right-4 bottom-16 hidden rounded-md bg-white/85 px-2 py-1 text-xs md:block">{data.heroPhoto.caption}</span>
+            <span className="absolute right-4 bottom-16 hidden rounded-md bg-surface/85 px-2 py-1 text-xs md:block">{data.heroPhoto.caption}</span>
           )}
         </>
       ) : (
-        team.logoUrl && (
+        // The blurred crest is a light square on navy.
+        team.logoUrl &&
+        !champions && (
           <Image src={team.logoUrl} alt="" width={420} height={420} className="absolute top-[-60px] right-[-40px] opacity-10 blur-[2px]" />
         )
       )}
@@ -59,14 +67,20 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
           <div className="flex min-w-0 flex-col gap-2.5">
             <div className="flex flex-wrap gap-2">
               {group && (
-                <span className="rounded-full bg-accent px-2.5 py-1 text-xs font-bold tracking-[0.06em] text-on-accent uppercase">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold tracking-[0.06em] uppercase ${
+                    champions ? "bg-champions-star text-champions-deep" : "bg-accent text-on-accent"
+                  }`}
+                >
+                  {champions && <ChampionsStar size={10} />}
                   {group.competition} {data.season.name}
                 </span>
               )}
               {group && (
-                <span className="rounded-full border border-line bg-white px-2.5 py-1 text-xs font-semibold tracking-[0.06em] uppercase">
-                  {group.phase ? `${group.phase} · ` : ""}
-                  {group.name}
+                <span className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-semibold tracking-[0.06em] uppercase">
+                  {champions
+                    ? [champions.sector && `Sector ${champions.sector}`, champions.phase].filter(Boolean).join(" · ")
+                    : `${group.phase ? `${group.phase} · ` : ""}${group.name}`}
                 </span>
               )}
             </div>
@@ -100,7 +114,7 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
         <div className="flex flex-wrap items-center gap-4">
           <div className="grid grid-cols-5 gap-px overflow-hidden rounded-[14px] border border-line bg-line">
             {stats.map((stat) => (
-              <div key={stat.label} className="bg-white px-3 py-3 sm:px-4">
+              <div key={stat.label} className="bg-surface px-3 py-3 sm:px-4">
                 <div className={`font-display text-[32px] leading-none font-extrabold sm:text-[38px] ${stat.accent ? "text-accent-text" : ""}`}>{stat.value}</div>
                 <div className="text-xs whitespace-nowrap text-muted">{stat.label}</div>
               </div>

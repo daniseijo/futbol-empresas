@@ -2,7 +2,7 @@ import type { Outcome } from "@/lib/sportspress/types";
 
 const LABEL: Record<Outcome, string> = { V: "Victoria", E: "Empate", D: "Derrota" };
 const STYLE: Record<Outcome, string> = {
-  V: "bg-ink text-white",
+  V: "bg-ink text-surface",
   E: "bg-line-soft text-ink",
   D: "bg-loss-soft text-loss",
 };
