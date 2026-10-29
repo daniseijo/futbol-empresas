@@ -15,7 +15,9 @@ export function toLocalStamp(apiDate: string): string {
 
 /** Current date and time in Madrid, in the same format as the API's. */
 // Preview only, never merge: the site believes it is Monday 2 November 2026, the Champions' first week.
-export function nowInMadrid(now: Date = new Date("2026-11-02T10:00:00+01:00")): string {
+export function nowInMadrid(
+  now: Date = process.env.VERCEL_ENV === "preview" ? new Date("2026-11-02T10:00:00+01:00") : new Date(),
+): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: siteConfig.timeZone,
     year: "numeric",
