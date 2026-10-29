@@ -12,7 +12,9 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import { siteConfig } from "@/config/site";
 import { db, schema } from "@/db/client";
 import { nowInMadrid } from "@/lib/dates";
-import { championsStage } from "@/lib/sportspress/champions";
+import { bracketSize, buildKnockout, knockoutLabels } from "@/lib/bracket";
+import { fillMissingRounds } from "@/lib/rounds";
+import { championsStage, isChampions } from "@/lib/sportspress/champions";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match } from "@/lib/sportspress/types";
 import { callUpMessage, fingerprint, pendingCallUps, type CallUp, type CallUpMessage } from "./call-ups";
@@ -95,6 +97,34 @@ async function unsubscribe(recipient: Recipient) {
   await db.delete(schema.notifications).where(eq(schema.notifications.channel, recipient.key));
 }
 
+/** What the site knows of a group's matches beyond the API: rounds it left out and knockout rounds. */
+interface Place {
+  rounds: Map<number, number | null>;
+  /** Knockout rounds' short names ("1/4", "F"), for a Champions knockout. */
+  labels: Map<number, string>;
+}
+
+/**
+ * A group's matches this season, as the site reads them: the round the API left out of some
+ * (`fillMissingRounds`) and, in a Champions knockout, each match's round, from a bracket of the size the
+ * sector's had last season.
+ */
+async function placesInGroup(match: Match, tree: LeagueTree, seasons: { id: number; name: string }[], now: string): Promise<Place> {
+  if (match.groupId === null || match.seasonId === null) return { rounds: new Map(), labels: new Map() };
+  const inGroup = (seasonId: number) => and(eq(schema.matches.groupId, match.groupId!), eq(schema.matches.seasonId, seasonId));
+  const list = await loadMatches(inGroup(match.seasonId));
+  const rounds = new Map(fillMissingRounds(list).map((m) => [m.id, m.round]));
+  let labels = new Map<number, string>();
+  if (isChampions(match, tree) && list.every((m) => m.round === null)) {
+    const season = seasons.find((s) => s.id === match.seasonId);
+    const previous = seasons.filter((s) => season && s.name < season.name).sort((a, b) => a.name.localeCompare(b.name)).at(-1);
+    const before = previous ? await loadMatches(inGroup(previous.id)) : [];
+    const expectedSize = bracketSize(buildKnockout(before, { now: "9999-12-31T00:00" }).brackets);
+    labels = knockoutLabels(buildKnockout(list, { now, expectedSize }));
+  }
+  return { rounds, labels };
+}
+
 function describe(message: CallUpMessage): string {
   return [`${message.title}: ${message.matchup}, ${message.when}`, message.venue?.name, message.competition].filter(Boolean).join(", ");
 }
@@ -115,14 +145,23 @@ export async function runNotify({
   const recipients = await loadRecipients(focus.id);
   // A Champions match says so in its call-up.
   const tree = new LeagueTree(await db.select().from(schema.leagues));
-  const message = (callUp: CallUp, teamId: number) => callUpMessage(callUp, teamId, now, championsStage(callUp.match, tree));
+  const seasons = await db.select().from(schema.seasons);
+  const places = new Map<string, Promise<Place>>();
+  const message = async (callUp: CallUp, teamId: number) => {
+    const { match } = callUp;
+    const key = `${match.groupId}|${match.seasonId}`;
+    if (!places.has(key)) places.set(key, placesInGroup(match, tree, seasons, now));
+    const { rounds, labels } = await places.get(key)!;
+    const placed = { ...match, round: match.round ?? rounds.get(match.id) ?? null };
+    return callUpMessage({ ...callUp, match: placed }, teamId, now, championsStage(placed, tree, labels.get(match.id)));
+  };
 
   // One target failing (a revoked webhook, Slack or Telegram down) never stops
   // the others; the run fails at the end so the job shows it.
   const failures: string[] = [];
   const deliver = async (recipient: Recipient, callUps: CallUp[], record: boolean) => {
     for (const callUp of callUps) {
-      const text = message(callUp, recipient.teamId);
+      const text = await message(callUp, recipient.teamId);
       if (dryRun) {
         log(`Would send to ${recipient.label}: ${describe(text)}`);
         continue;
@@ -166,7 +205,7 @@ export async function runNotify({
       .filter((r) => r.subscriptionId === null || r.teamId === match.homeId || r.teamId === match.awayId)
       .filter((r) => to === null || r.key === to);
     if (to !== null && targets.length === 0) throw new Error(`No channel "${to}" for match ${matchId}`);
-    if (targets.length === 0) log(`Would send: ${describe(message(callUp, focus.id))}`);
+    if (targets.length === 0) log(`Would send: ${describe(await message(callUp, focus.id))}`);
     for (const recipient of targets) await deliver(recipient, [callUp], false);
     return finish();
   }
@@ -175,8 +214,7 @@ export async function runNotify({
   // ~100 rows whatever the number of subscriptions. Filtering by team in SQL
   // made SQLite read every match each team ever played (~15,000 rows for 200 teams).
   const teamIds = new Set([focus.id, ...recipients.map((r) => r.teamId)]);
-  const seasons = await db.select().from(schema.seasons);
-  const season = seasons.sort((a, b) => a.name.localeCompare(b.name)).at(-1);
+  const season = [...seasons].sort((a, b) => a.name.localeCompare(b.name)).at(-1);
   const upcoming = season
     ? (
         await loadMatches(
@@ -187,7 +225,7 @@ export async function runNotify({
   if (recipients.length === 0) {
     log("No channel configured (TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID, or SLACK_WEBHOOK_URL) and no subscription");
     const own = upcoming.filter((m) => m.homeId === focus.id || m.awayId === focus.id);
-    for (const callUp of pendingCallUps(own, new Map(), now)) log(`Would send: ${describe(message(callUp, focus.id))}`);
+    for (const callUp of pendingCallUps(own, new Map(), now)) log(`Would send: ${describe(await message(callUp, focus.id))}`);
     return;
   }
 
