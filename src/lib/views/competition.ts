@@ -1,7 +1,7 @@
 import { cacheLife } from "next/cache";
 import { siteConfig } from "@/config/site";
 import { buildKnockout, isBye } from "@/lib/bracket";
-import { dayKey, formatLongDate, nowInMadrid } from "@/lib/dates";
+import { dayKey, formatLongDate, formatShortDate, nowInMadrid } from "@/lib/dates";
 import {
   getCurrentSeason,
   getGroupSeasons,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/data";
 import { playerDisplayName } from "@/lib/players";
 import { expectedTotal } from "@/lib/expected-matches";
+import { CHAMPIONS_PHASES, isChampionsNode, isFaseLiga, type ChampionsPhase } from "@/lib/sportspress/champions";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, StandingRow } from "@/lib/sportspress/types";
 import { computeStandings } from "@/lib/standings";
@@ -99,6 +100,29 @@ export interface GroupData {
   currentRound: string | null;
 }
 
+/** A step on the Champions' road to the final, on the sector page. */
+export interface ChampionsStep {
+  phase: ChampionsPhase;
+  /** "J1 · Mar 3 nov", "Lun 13 abr" or "Por definir". */
+  detail: string;
+  state: "done" | "current" | "next";
+}
+
+/** What a Champions sector's page adds: it is the page of the sector's whole Champions. */
+export interface ChampionsSectorData {
+  /** The fase liga: its standings and rounds or, in seasons that played it as a knockout, its bracket. */
+  faseLiga: { name: string; brackets: BracketData[]; group: GroupData | null } | null;
+  steps: ChampionsStep[];
+  /** Whether the knockout has started: its tab is the one shown first then. */
+  knockoutStarted: boolean;
+  /** The focus team's matches in the sector, with their phase ("J1", "Cuartos"), if it plays in it. */
+  focusPath: { teamName: string; entries: { label: string; match: Match }[] } | null;
+  /** The focus team and the teams it plays in the fase liga, for "Solo mi equipo y sus rivales". */
+  rivals: number[];
+  /** The season before, for its bracket while this one's is not out. */
+  previousSeason: { name: string; href: string } | null;
+}
+
 export interface CompetitionPageData {
   id: number;
   name: string;
@@ -120,6 +144,8 @@ export interface CompetitionPageData {
   /** The best goalkeeper, two defenders, two midfielders and two forwards of the node's matches. */
   ideal: IdealSevenData;
   focusTeamId: number | null;
+  /** Only on a Champions sector's page. */
+  champions: ChampionsSectorData | null;
   logos: Record<number, string | null>;
   slugs: Record<number, string>;
   now: string;
@@ -173,75 +199,23 @@ function top(totals: Map<number, { value: number; teamId: number }>) {
 }
 
 /**
- * Page of a competition, phase or group in one season. `segments` is the URL
- * path and `seasonParam` the requested season ("25-26"); without it, the
- * current one or, if the node was not played this year, the last one it was.
+ * A node's own matches: the brackets they form (cups), and the standings and rounds of the rest. With
+ * brackets, only the matches outside them are listed, without standings.
  */
-export async function getCompetitionPageData(segments: string[], seasonParam: string | null): Promise<CompetitionPageData | null> {
-  "use cache";
-  cacheLife("results");
-
-  const [leagues, seasons, current, groupSeasons, teams] = await Promise.all([
-    getLeagues(),
-    getSeasons(),
-    getCurrentSeason(),
-    getGroupSeasons(),
-    getTeams(),
-  ]);
-  const tree = new LeagueTree(leagues);
-  const node = tree.find(segments.map((s) => decodeURIComponent(s)));
-  if (!node) return null;
-
-  // Seasons in which this node or its children had any match.
-  const inSubtree = (groupId: number) => tree.path(groupId).some((league) => league.id === node.id);
-  const seasonIds = new Set(groupSeasons.filter((row) => inSubtree(row.groupId)).map((row) => row.seasonId));
-  const available = seasons.filter((s) => seasonIds.has(s.id));
-  const requested = seasonParam ? seasons.find((s) => s.name === seasonParam.replace("-", "/")) : undefined;
-  const fallback = available.some((s) => s.id === current.id) ? current : (available[available.length - 1] ?? current);
-  const season = requested ?? fallback;
-  // The current season has no parameter: it is the default for almost every node.
-  const seasonHref = (id: number, s: Season) => tree.href(id, s.id === current.id ? undefined : s.name);
-
-  const now = nowInMadrid();
+async function nodeMatches(
+  nodeId: number,
+  direct: Match[],
+  { season, current, tree, now }: { season: Season; current: Season; tree: LeagueTree; now: string },
+): Promise<{ brackets: BracketData[]; group: GroupData | null }> {
   const today = dayKey(now);
-  const seasonMatches = await getSeasonMatches(season.id);
-  const matches = seasonMatches.filter((m) => m.groupId !== null && inSubtree(m.groupId));
-  const focusTeamId = teams.find((t) => t.slug === siteConfig.focusTeamSlug)?.id ?? null;
-  // Rounds are published a week ahead: this season's totals are estimated; past ones are complete.
-  const rules = season.id === current.id ? await expectedRulesFor(season, tree, teams) : null;
-  const totalOf = (list: Match[]) => (rules ? expectedTotal(list, rules) : list.length);
-
-  // Children with matches this season, with their leader if they are a group with standings.
-  const children: ChildCard[] = tree
-    .children(node.id)
-    .map((child) => {
-      const list = matches.filter((m) => tree.path(m.groupId!).some((league) => league.id === child.id));
-      const direct = list.filter((m) => m.groupId === child.id);
-      const leader = direct.length > 0 ? computeStandings(direct)[0] : undefined;
-      const teamIds = new Set(list.flatMap((m) => [m.homeId, m.awayId]));
-      return {
-        id: child.id,
-        name: child.name,
-        href: seasonHref(child.id, season),
-        teams: teamIds.size,
-        played: list.filter((m) => m.played).length,
-        total: totalOf(list),
-        leader: leader && leader.played > 0 ? { name: leader.name, points: leader.points } : null,
-        hasFocusTeam: focusTeamId !== null && teamIds.has(focusTeamId),
-      };
-    })
-    .filter((child) => child.total > 0)
-    .sort((a, b) => naturalCompare(a.name, b.name));
-
-  const direct = matches.filter((m) => m.groupId === node.id);
   // Only cups have their own matches in a knockout's shape; groups and leagues fall through to the standings.
   const tournaments = direct.length > 0 ? await getSeasonTournaments(season.id) : [];
-  const competitionId = tree.competitionOf(node.id)?.id ?? node.id;
+  const competitionId = tree.competitionOf(nodeId)?.id ?? nodeId;
   const recorded = tournaments.filter(
-    (t) => t.winnerId !== null && t.winnerId > 0 && (t.competitionId === competitionId || t.competitionId === node.id),
+    (t) => t.winnerId !== null && t.winnerId > 0 && (t.competitionId === competitionId || t.competitionId === nodeId),
   );
   // A cup in progress is read with the size of last season's brackets.
-  const expectedSize = direct.length > 0 && season.id === current.id ? await expectedBracketSize(node.id, season, tree) : undefined;
+  const expectedSize = direct.length > 0 && season.id === current.id ? await expectedBracketSize(nodeId, season, tree) : undefined;
   const knockout = buildKnockout(direct, { champions: recorded.map((t) => t.winnerId!), now, expectedSize });
   const brackets = knockout.brackets.map((bracket, index): BracketData => {
     const title = recorded.find((t) => t.winnerId === bracket.championId)?.title;
@@ -306,6 +280,179 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
     group = { standings, rounds, knockout: isKnockout, currentRound: (next ?? rounds[rounds.length - 1])?.key ?? null };
   }
 
+  return { brackets, group };
+}
+
+/** A knockout round's place on the road to the final. */
+const PHASE_OF_ROUND: Record<string, ChampionsPhase> = { Final: "Final", Semifinales: "Semis", Cuartos: "Cuartos" };
+const phaseOfRound = (name: string): ChampionsPhase => PHASE_OF_ROUND[name] ?? "Eliminatoria";
+
+/**
+ * A Champions sector as the page of its whole Champions: its fase liga (a child node) and its knockout (the
+ * sector's own matches, in `brackets` or, in progress, `group`).
+ */
+async function championsSector(
+  sectorId: number,
+  matches: Match[],
+  brackets: BracketData[],
+  knockoutGroup: GroupData | null,
+  context: {
+    season: Season;
+    current: Season;
+    tree: LeagueTree;
+    now: string;
+    focusTeamId: number | null;
+    available: Season[];
+    seasonHref: (id: number, season: Season) => string;
+  },
+): Promise<ChampionsSectorData> {
+  const { tree, now, focusTeamId, season } = context;
+  const node = tree.children(sectorId).find((child) => isFaseLiga(child.name));
+  const faseLigaMatches = node ? matches.filter((m) => m.groupId === node.id) : [];
+  const faseLiga = node && faseLigaMatches.length > 0 ? { name: node.name, ...(await nodeMatches(node.id, faseLigaMatches, context)) } : null;
+
+  // Each knockout match's phase, from its bracket round or, for a knockout in progress, its listed round.
+  const knockoutPhase = new Map<number, ChampionsPhase>();
+  for (const bracket of brackets) {
+    for (const round of bracket.rounds) for (const tie of round.ties) if (!tie.bye) knockoutPhase.set(tie.id, phaseOfRound(round.name));
+  }
+  if (knockoutGroup?.knockout) {
+    for (const round of knockoutGroup.rounds) for (const m of round.matches) knockoutPhase.set(m.id, phaseOfRound(round.label));
+  }
+  const knockoutMatches = matches.filter((m) => m.groupId === sectorId);
+  const knockoutStarted = knockoutMatches.length > 0;
+
+  // The current phase is the first with a match left to play, or the last one with matches.
+  const ligaRounds = faseLiga?.group && !faseLiga.group.knockout ? faseLiga.group.rounds : [];
+  const byPhase = new Map<ChampionsPhase, Match[]>([["Fase liga", faseLigaMatches]]);
+  for (const m of knockoutMatches) {
+    const phase = knockoutPhase.get(m.id) ?? "Eliminatoria";
+    byPhase.set(phase, [...(byPhase.get(phase) ?? []), m]);
+  }
+  const withMatches = CHAMPIONS_PHASES.filter((phase) => (byPhase.get(phase)?.length ?? 0) > 0);
+  const current = withMatches.find((phase) => byPhase.get(phase)!.some((m) => !m.played)) ?? withMatches.at(-1) ?? "Fase liga";
+  const currentIndex = CHAMPIONS_PHASES.indexOf(current);
+  const currentRound = ligaRounds.find((r) => r.key === faseLiga?.group?.currentRound);
+  const steps = CHAMPIONS_PHASES.map((phase, index): ChampionsStep => {
+    const list = [...(byPhase.get(phase) ?? [])].sort((a, b) => a.date.localeCompare(b.date));
+    const detail =
+      phase === "Fase liga" && currentRound && index === currentIndex
+        ? `J${currentRound.matches[0].round ?? ""} · ${formatShortDate(currentRound.date, now)}`
+        : list.length > 0
+          ? formatShortDate(list[0].date, now)
+          : "Por definir";
+    return { phase, detail, state: index < currentIndex ? "done" : index === currentIndex ? "current" : "next" };
+  });
+
+  // The focus team's way through: fase liga rounds, then knockout phases.
+  const own = focusTeamId === null ? [] : matches.filter((m) => m.homeId === focusTeamId || m.awayId === focusTeamId);
+  const focusPath =
+    own.length > 0
+      ? {
+          teamName: own[0].homeId === focusTeamId ? own[0].homeName : own[0].awayName,
+          entries: [...own]
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .map((match) => ({
+              label: match.groupId === sectorId ? (knockoutPhase.get(match.id) ?? "Eliminatoria") : match.round ? `J${match.round}` : "Fase liga",
+              match,
+            })),
+        }
+      : null;
+  const rivals =
+    focusTeamId === null
+      ? []
+      : [
+          ...new Set([
+            focusTeamId,
+            ...faseLigaMatches.filter((m) => m.homeId === focusTeamId || m.awayId === focusTeamId).flatMap((m) => [m.homeId, m.awayId]),
+          ]),
+        ];
+  const previous = context.available.filter((s) => s.name < season.name).sort((a, b) => a.name.localeCompare(b.name)).at(-1);
+  return {
+    faseLiga,
+    steps,
+    knockoutStarted,
+    focusPath,
+    rivals,
+    previousSeason: previous ? { name: previous.name, href: context.seasonHref(sectorId, previous) } : null,
+  };
+}
+
+/**
+ * Where a Champions fase liga's page goes: the sector's, which shows it in its "Fase liga" tab. Null for any
+ * other node.
+ */
+export async function championsFaseLigaRedirect(segments: string[]): Promise<string | null> {
+  const tree = new LeagueTree(await getLeagues());
+  const node = tree.find(segments.map((s) => decodeURIComponent(s)));
+  if (!node || !isFaseLiga(node.name) || !isChampionsNode(node.id, tree)) return null;
+  const path = tree.path(node.id);
+  return path.length === 3 ? tree.href(path[1].id) : null;
+}
+
+/**
+ * Page of a competition, phase or group in one season. `segments` is the URL
+ * path and `seasonParam` the requested season ("25-26"); without it, the
+ * current one or, if the node was not played this year, the last one it was.
+ */
+export async function getCompetitionPageData(segments: string[], seasonParam: string | null): Promise<CompetitionPageData | null> {
+  "use cache";
+  cacheLife("results");
+
+  const [leagues, seasons, current, groupSeasons, teams] = await Promise.all([
+    getLeagues(),
+    getSeasons(),
+    getCurrentSeason(),
+    getGroupSeasons(),
+    getTeams(),
+  ]);
+  const tree = new LeagueTree(leagues);
+  const node = tree.find(segments.map((s) => decodeURIComponent(s)));
+  if (!node) return null;
+
+  // Seasons in which this node or its children had any match.
+  const inSubtree = (groupId: number) => tree.path(groupId).some((league) => league.id === node.id);
+  const seasonIds = new Set(groupSeasons.filter((row) => inSubtree(row.groupId)).map((row) => row.seasonId));
+  const available = seasons.filter((s) => seasonIds.has(s.id));
+  const requested = seasonParam ? seasons.find((s) => s.name === seasonParam.replace("-", "/")) : undefined;
+  const fallback = available.some((s) => s.id === current.id) ? current : (available[available.length - 1] ?? current);
+  const season = requested ?? fallback;
+  // The current season has no parameter: it is the default for almost every node.
+  const seasonHref = (id: number, s: Season) => tree.href(id, s.id === current.id ? undefined : s.name);
+
+  const now = nowInMadrid();
+  const seasonMatches = await getSeasonMatches(season.id);
+  const matches = seasonMatches.filter((m) => m.groupId !== null && inSubtree(m.groupId));
+  const focusTeamId = teams.find((t) => t.slug === siteConfig.focusTeamSlug)?.id ?? null;
+  // Rounds are published a week ahead: this season's totals are estimated; past ones are complete.
+  const rules = season.id === current.id ? await expectedRulesFor(season, tree, teams) : null;
+  const totalOf = (list: Match[]) => (rules ? expectedTotal(list, rules) : list.length);
+
+  // Children with matches this season, with their leader if they are a group with standings.
+  const children: ChildCard[] = tree
+    .children(node.id)
+    .map((child) => {
+      const list = matches.filter((m) => tree.path(m.groupId!).some((league) => league.id === child.id));
+      const direct = list.filter((m) => m.groupId === child.id);
+      const leader = direct.length > 0 ? computeStandings(direct)[0] : undefined;
+      const teamIds = new Set(list.flatMap((m) => [m.homeId, m.awayId]));
+      return {
+        id: child.id,
+        name: child.name,
+        href: seasonHref(child.id, season),
+        teams: teamIds.size,
+        played: list.filter((m) => m.played).length,
+        total: totalOf(list),
+        leader: leader && leader.played > 0 ? { name: leader.name, points: leader.points } : null,
+        hasFocusTeam: focusTeamId !== null && teamIds.has(focusTeamId),
+      };
+    })
+    .filter((child) => child.total > 0)
+    .sort((a, b) => naturalCompare(a.name, b.name));
+
+  const direct = matches.filter((m) => m.groupId === node.id);
+  const { brackets, group } = await nodeMatches(node.id, direct, { season, current, tree, now });
+
   const scorerTotals = top(tally(matches, (s) => s.goals));
   const crackTotals = top(tally(matches, (s) => (s.crack ? 1 : 0)));
   const players = await getPlayers([...new Set([...scorerTotals, ...crackTotals].map(([id]) => id))]);
@@ -343,6 +490,10 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
     cracks: crackTotals.map(toTally),
     ideal,
     focusTeamId,
+    champions:
+      isChampionsNode(node.id, tree) && tree.path(node.id).length === 2
+        ? await championsSector(node.id, matches, brackets, group, { season, current, tree, now, focusTeamId, available, seasonHref })
+        : null,
     logos: Object.fromEntries(teams.map((t) => [t.id, t.logoUrl])),
     slugs: Object.fromEntries(teams.map((t) => [t.id, t.slug])),
     now,

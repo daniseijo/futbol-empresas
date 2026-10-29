@@ -22,10 +22,17 @@ export interface ChampionsStage {
 }
 
 export function isChampions(match: Pick<Match, "competitionId">, tree: LeagueTree): boolean {
-  if (match.competitionId === null) return false;
-  const root = tree.competitionOf(match.competitionId);
+  return match.competitionId !== null && isChampionsNode(match.competitionId, tree);
+}
+
+/** Whether a node of the league tree is the Champions or under it. */
+export function isChampionsNode(id: number, tree: LeagueTree): boolean {
+  const root = tree.competitionOf(id);
   return root !== undefined && slugify(root.name) === CHAMPIONS_NAME;
 }
+
+/** The "Champions Fase Liga - <sector>" node under each sector. */
+export const isFaseLiga = (name: string) => /fase liga/i.test(name);
 
 /** The knockout phase for a bracket round's short name ("1/4", "1/2", "F"). Earlier rounds are the play-off. */
 const KNOCKOUT_PHASES: Record<string, ChampionsPhase> = { F: "Final", "1/2": "Semis", "1/4": "Cuartos" };
@@ -43,7 +50,7 @@ export function championsStage(
   if (!isChampions(match, tree)) return null;
   const path = match.groupId ? tree.path(match.groupId) : [];
   const sector = path[1] ? path[1].name.replace(/^Sector\s+/i, "") : null;
-  const inFaseLiga = match.round !== null || /fase liga/i.test(path.at(-1)?.name ?? "");
+  const inFaseLiga = match.round !== null || isFaseLiga(path.at(-1)?.name ?? "");
   const phase = inFaseLiga ? "Fase liga" : (KNOCKOUT_PHASES[roundLabel ?? ""] ?? "Eliminatoria");
   return { phase, round: inFaseLiga ? match.round : null, sector };
 }
