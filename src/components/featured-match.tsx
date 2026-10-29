@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChampionsBadge, ChampionsRoad } from "@/components/champions";
 import { Crest } from "@/components/crest";
 import { FormBadges, OutcomeBadge } from "@/components/form-badges";
 import { CardIcon } from "@/components/player-events";
@@ -7,6 +8,7 @@ import { sendingOff } from "@/lib/cards";
 import { daysBetween, formatShortDate, relativeDay } from "@/lib/dates";
 import { fitFontSize } from "@/lib/text";
 import { playerDisplayName } from "@/lib/players";
+import { championsStageLabel, type ChampionsStage } from "@/lib/sportspress/champions";
 import type { Match, Outcome } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import { VenueLink } from "./venue-link";
@@ -31,16 +33,27 @@ export function FeaturedHero({ team, logos, slugs, now, teamPath }: { team: Feat
   );
 }
 
+/** The classes for the box around `FeaturedHero`: the navy night when the featured match is a Champions match. */
+export function featuredSurface(team: FeaturedTeam): string {
+  return team.featured?.champions ? "champions-night" : "";
+}
+
+/** "Champions · Fase liga · Jornada 1" for a Champions match, "Jornada 4" for a league one. */
+function roundTitle(match: Match, champions: ChampionsStage | null): string | null {
+  if (champions) return `Champions · ${championsStageLabel(champions)}`;
+  return match.round ? `Jornada ${match.round}` : null;
+}
+
 /** One line with the other match: the next one under a result, the last one under a preview. */
 export function FeaturedFooter({ team }: { team: FeaturedTeam }) {
   const last = team.lastResults[0];
   if (team.mode === "result" && team.nextMatch) return <NextMatchLine match={team.nextMatch} team={team} />;
-  if (team.mode === "preview" && last) return <LastMatchLine match={last} teamId={team.teamId} />;
+  if (team.mode === "preview" && last) return <LastMatchLine match={last} teamId={team.teamId} champions={last.id in team.champions} />;
   return null;
 }
 
 const OUTCOME_LABEL: Record<Outcome, string> = { V: "Victoria", E: "Empate", D: "Derrota" };
-const OUTCOME_CHIP: Record<Outcome, string> = { V: "bg-ink text-white", E: "bg-line-soft text-ink", D: "bg-loss-soft text-loss" };
+const OUTCOME_CHIP: Record<Outcome, string> = { V: "bg-ink text-surface", E: "bg-line-soft text-ink", D: "bg-loss-soft text-loss" };
 
 export function Eyebrow({ children }: { children: React.ReactNode }) {
   return <span className="text-xs font-bold tracking-[0.1em] text-accent-text uppercase">{children}</span>;
@@ -115,12 +128,9 @@ function ResultHero({
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Eyebrow>
-          Último partido · {relativeDay(match.date, now)}
-          {match.round && ` · Jornada ${match.round}`}
-        </Eyebrow>
+        <Eyebrow>{["Último partido", relativeDay(match.date, now), roundTitle(match, data.champions)].filter(Boolean).join(" · ")}</Eyebrow>
         <span className="flex gap-1.5">
-          <Chip className="bg-ink text-white">Final</Chip>
+          <Chip className="bg-ink text-surface">Final</Chip>
           {outcome && <Chip className={OUTCOME_CHIP[outcome]}>{OUTCOME_LABEL[outcome]}</Chip>}
         </span>
       </div>
@@ -149,6 +159,8 @@ function ResultHero({
         </div>
         <Side side={data.away} isFocus={data.away.id === team.teamId} logos={logos} slugs={slugs} />
       </Scoreboard>
+
+      {data.champions && <ChampionsRoad stage={data.champions} />}
 
       {hasEvents && (
         <div className="grid grid-cols-2 gap-x-4 border-y border-line-soft py-3.5 text-[13px] sm:gap-x-8 sm:text-sm">
@@ -188,7 +200,7 @@ function ResultHero({
       </Tiles>
 
       <div className="mt-auto flex flex-wrap gap-2.5 border-t border-line-soft pt-5">
-        <Link href={`/partidos/${match.id}`} className="rounded-full bg-ink px-4.5 py-3 text-sm font-semibold text-white">
+        <Link href={`/partidos/${match.id}`} className="rounded-full bg-ink px-4.5 py-3 text-sm font-semibold text-surface">
           Ver el partido
         </Link>
         <Link href={`${teamPath}/partidos`} className="rounded-full border border-line px-4.5 py-3 text-sm font-semibold hover:border-ink">
@@ -219,11 +231,15 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Eyebrow>
-          Próximo partido
-          {match.round && ` · Jornada ${match.round}`}
-        </Eyebrow>
-        <Chip className={today ? "bg-accent text-on-accent" : "bg-accent-soft text-accent-text"}>{today ? "Hoy" : "Previa"}</Chip>
+        {/* A Champions match names its phase instead: the chip already says it is the preview. */}
+        <Eyebrow>{data.champions ? roundTitle(match, data.champions) : ["Próximo partido", roundTitle(match, null)].filter(Boolean).join(" · ")}</Eyebrow>
+        <Chip
+          className={
+            data.champions ? "bg-champions-star text-champions-deep" : today ? "bg-accent text-on-accent" : "bg-accent-soft text-accent-text"
+          }
+        >
+          {today ? "Hoy" : "Previa"}
+        </Chip>
       </div>
 
       <Scoreboard>
@@ -241,6 +257,8 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
         </div>
         <Side side={away} isFocus={away.id === team.teamId} logos={logos} slugs={slugs} form />
       </Scoreboard>
+
+      {data.champions && <ChampionsRoad stage={data.champions} />}
 
       {rows.length > 0 && (
         <div className="grid grid-cols-[minmax(0,1fr)_130px_minmax(0,1fr)] border-y border-line-soft py-3 text-center text-sm sm:grid-cols-[minmax(0,1fr)_150px_minmax(0,1fr)]">
@@ -260,7 +278,7 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
 
       <div className="mt-auto flex items-center gap-2.5 border-t border-line-soft pt-5 sm:flex-wrap">
         {venue?.address && <span className="hidden flex-[1_1_240px] text-sm text-muted sm:block">{venue.address}</span>}
-        <Link href={`/partidos/${match.id}`} className="rounded-full bg-ink px-4.5 py-3 text-sm font-semibold text-white">
+        <Link href={`/partidos/${match.id}`} className="rounded-full bg-ink px-4.5 py-3 text-sm font-semibold text-surface">
           Ver la previa
         </Link>
         <span className="ml-auto flex gap-2 sm:ml-0 sm:gap-2.5">
@@ -307,6 +325,7 @@ function NextMatchLine({ match, team }: { match: Match; team: FeaturedTeam }) {
       <span className="flex-[1_1_220px]">
         {match.homeName} – {match.awayName}
         {team.nextOpponent && <span className="text-muted"> ({team.nextOpponent.position}º · {team.nextOpponent.points} pts)</span>}
+        {match.id in team.champions && <ChampionsBadge className="ml-2 align-[-1px]" />}
       </span>
       <span className="text-[13px] text-muted">
         {[match.round && `J${match.round}`, venue?.name, when].filter(Boolean).join(" · ")}
@@ -315,7 +334,7 @@ function NextMatchLine({ match, team }: { match: Match; team: FeaturedTeam }) {
   );
 }
 
-function LastMatchLine({ match, teamId }: { match: Match; teamId: number }) {
+function LastMatchLine({ match, teamId, champions }: { match: Match; teamId: number; champions: boolean }) {
   const outcome = outcomeFor(match, teamId);
   return (
     <Link
@@ -330,6 +349,7 @@ function LastMatchLine({ match, teamId }: { match: Match; teamId: number }) {
       <span className="flex flex-[1_1_220px] items-center gap-2">
         {match.homeName} <b>{match.homeGoals}–{match.awayGoals}</b> {match.awayName}
         {outcome && <OutcomeBadge outcome={outcome} size={20} />}
+        {champions && <ChampionsBadge />}
       </span>
     </Link>
   );

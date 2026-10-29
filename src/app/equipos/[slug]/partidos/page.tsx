@@ -35,6 +35,7 @@ function Matches({ data }: { data: TeamPageData }) {
         hasVideo={entry.hasVideo}
         highlight={entry.match.id === nextId}
         roundLabel={data.roundLabels[entry.match.id]}
+        champions={data.champions[entry.match.id]}
       />
     );
 

@@ -1,6 +1,8 @@
 import { cacheLife } from "next/cache";
 import { dayKey, nowInMadrid } from "@/lib/dates";
 import { getCurrentSeason, getHeadToHead, getLeagues, getMatch, getSeasonMatches, getSeasons, getSquad, getTeams } from "@/lib/data";
+import { buildKnockout, knockoutLabels } from "@/lib/bracket";
+import { championsStage, type ChampionsStage } from "@/lib/sportspress/champions";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import { getVenue } from "@/lib/sportspress/venues";
 import { playerDisplayName } from "@/lib/players";
@@ -35,6 +37,8 @@ export interface TeamSide {
 export interface MatchPageData {
   match: MatchDetail;
   now: string;
+  /** Where the match sits in the Champions, or null for any other competition. */
+  champions: ChampionsStage | null;
   path: { name: string; href: string }[];
   /** The page with every match of that date; only for the current season. */
   dayHref: string | null;
@@ -137,12 +141,19 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
     else if (outcome === "D") record.awayWins += 1;
   }
 
+  // A Champions knockout match takes its phase from its round in the sector's bracket.
+  let champions = championsStage(match, tree);
+  if (champions?.phase === "Eliminatoria") {
+    champions = championsStage(match, tree, knockoutLabels(buildKnockout(groupMatches, { now: nowInMadrid() })).get(match.id));
+  }
+
   // Past seasons carry their parameter in the competition link.
   const season = match.seasonId === current.id ? undefined : seasons.find((s) => s.id === match.seasonId)?.name;
   const path = match.groupId ? tree.path(match.groupId).map((l) => ({ name: l.name, href: tree.href(l.id, season) })) : [];
   return {
     match,
     now: nowInMadrid(),
+    champions,
     path,
     dayHref: match.seasonId === current.id ? `/partidos/dia/${dayKey(match.date)}` : null,
     home,

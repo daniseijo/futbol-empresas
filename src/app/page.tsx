@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Crest } from "@/components/crest";
 import { DayMatchCard } from "@/components/day-match-card";
-import { Eyebrow, FeaturedFooter, FeaturedHero } from "@/components/featured-match";
+import { Eyebrow, FeaturedFooter, FeaturedHero, featuredSurface } from "@/components/featured-match";
 import { FormBadges } from "@/components/form-badges";
 import { IdealSeven } from "@/components/ideal-seven";
 import { PlayerAvatar } from "@/components/player-avatar";
@@ -212,7 +212,7 @@ function FocusSection({ focus, logos, slugs, now }: { focus: FocusBlock; logos: 
       </div>
 
       <div className="flex flex-wrap">
-        <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-5 px-4 py-6 sm:px-7">
+        <div className={`flex min-w-0 flex-[999_1_560px] flex-col gap-5 px-4 py-6 sm:px-7 ${featuredSurface(focus)}`}>
           <FeaturedHero team={focus} logos={logos} slugs={slugs} now={now} teamPath={base} />
         </div>
 

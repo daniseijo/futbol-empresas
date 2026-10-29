@@ -13,6 +13,7 @@ import {
   getTeam,
   getTeams,
 } from "@/lib/data";
+import { championsStage } from "@/lib/sportspress/champions";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season, SquadPlayer, Team } from "@/lib/sportspress/types";
 import { outcomeFor } from "@/lib/standings";
@@ -126,7 +127,10 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
         seasonMatches.filter((m) => m.groupId === groupId),
         { champions, now, expectedSize },
       );
-      for (const [id, label] of knockoutLabels(knockout)) roundLabels[id] = label;
+      for (const [id, label] of knockoutLabels(knockout)) {
+        roundLabels[id] = label;
+        if (context.champions[id]) context.champions[id] = championsStage(context.matches.find((m) => m.id === id)!, tree, label)!;
+      }
     }
   }
 

@@ -2,6 +2,7 @@ import { cacheLife } from "next/cache";
 import { siteConfig } from "@/config/site";
 import { addDays, dayKey, nowInMadrid, resultOverdue } from "@/lib/dates";
 import { getCurrentSeason, getLeagues, getSeasonMatches, getTeam } from "@/lib/data";
+import { championsStage } from "@/lib/sportspress/champions";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, StandingRow } from "@/lib/sportspress/types";
 import { getVenue } from "@/lib/sportspress/venues";
@@ -20,8 +21,10 @@ export interface DayMatch {
   awayGoals: number | null;
   venueId: number | null;
   venue: string;
-  /** Group and round, "Grupo 7 · J4", or the competition outside the main one. */
+  /** Group and round, "Grupo 7 · J4", or the competition outside the main one; the sector in the Champions. */
   label: string | null;
+  /** A Champions match, which the card draws in navy. */
+  champions: boolean;
   isFocus: boolean;
   /** Its time has passed and the league has not published a score. */
   noResult: boolean;
@@ -74,8 +77,11 @@ export function buildDay(matches: Match[], tree: LeagueTree, date: string, focus
   const onlyCompetition = competitions.size === 1 ? [...competitions][0] : null;
   const rows = dayMatches.map((m): DayMatch => {
     const round = m.round ? ` · J${m.round}` : "";
-    const where =
-      m.competitionId && m.competitionId !== mainId
+    // "Champions" is the card's own label; the sector says which one.
+    const stage = championsStage(m, tree);
+    const where = stage
+      ? stage.sector
+      : m.competitionId && m.competitionId !== mainId
         ? tree.name(m.competitionId)
         : m.groupId && m.groupId !== m.competitionId
           ? tree.name(m.groupId)
@@ -94,6 +100,7 @@ export function buildDay(matches: Match[], tree: LeagueTree, date: string, focus
       venueId: getVenue(m.venueId)?.id ?? null,
       venue: getVenue(m.venueId)?.name ?? "",
       label: where ? `${where}${round}` : null,
+      champions: stage !== null,
       isFocus: focusTeamId !== null && (m.homeId === focusTeamId || m.awayId === focusTeamId),
       noResult: !m.played && resultOverdue(m.date, now),
     };

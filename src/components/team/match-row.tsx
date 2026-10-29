@@ -1,11 +1,16 @@
 import Link from "next/link";
+import type { ChampionsStage } from "@/lib/sportspress/champions";
 import { formatShortDate, relativeDay, resultOverdue } from "@/lib/dates";
 import type { Match } from "@/lib/sportspress/types";
 import { outcomeFor } from "@/lib/standings";
+import { ChampionsBadge } from "../champions";
 import { Crest } from "../crest";
 import { OutcomeBadge } from "../form-badges";
 
-/** A match row from a team's point of view: round, date, home, score, away and result. */
+/**
+ * A match row from a team's point of view: round, date, home, score, away and result. A Champions match
+ * gets the light navy background, its badge and its phase under the round.
+ */
 export function MatchRow({
   match,
   teamId,
@@ -14,6 +19,7 @@ export function MatchRow({
   hasVideo = false,
   highlight = false,
   roundLabel,
+  champions,
 }: {
   match: Match;
   teamId: number;
@@ -23,24 +29,35 @@ export function MatchRow({
   highlight?: boolean;
   /** A cup knockout round ("1/4", "F"), for matches without a league round. */
   roundLabel?: string;
+  champions?: ChampionsStage;
 }) {
   const outcome = outcomeFor(match, teamId);
   const upcoming = !match.played && match.date >= now;
   return (
     <Link
       href={`/partidos/${match.id}`}
-      className={`grid grid-cols-[36px_1fr_auto] items-center gap-3 rounded-[14px] border px-3.5 py-3 sm:grid-cols-[44px_110px_minmax(0,1fr)_84px_minmax(0,1fr)_32px] ${
-        highlight ? "border-accent bg-accent-soft" : "border-line-soft hover:border-line hover:bg-canvas"
+      className={`grid grid-cols-[42px_1fr_auto] items-center gap-3 rounded-[14px] border px-3.5 py-3 sm:grid-cols-[44px_110px_minmax(0,1fr)_84px_minmax(0,1fr)_32px] ${
+        champions
+          ? `bg-champions-soft ${highlight ? "border-accent" : "border-champions-text/30 hover:border-champions-text"}`
+          : highlight
+            ? "border-accent bg-accent-soft"
+            : "border-line-soft hover:border-line hover:bg-canvas"
       }`}
     >
-      <span className="font-display text-[22px] font-bold text-muted">{match.round ? `J${match.round}` : (roundLabel ?? "–")}</span>
-      <span className="flex items-center gap-1.5 text-[13px] text-muted max-sm:hidden">
-        {upcoming ? relativeDay(match.date, now) : formatShortDate(match.date)} · {match.date.slice(11, 16)}
-        {hasVideo && (
-          <svg width="13" height="13" viewBox="0 0 24 24" className="fill-accent-text" role="img" aria-label="Con vídeo">
-            <path d="M7 4l13 8-13 8z" />
-          </svg>
-        )}
+      <span className={`flex flex-col font-display text-[22px] leading-none font-bold ${champions ? "text-champions-text" : "text-muted"}`}>
+        {match.round ? `J${match.round}` : (roundLabel ?? "–")}
+        {champions?.phase === "Fase liga" && <span className="mt-1 font-sans text-[10px] font-bold tracking-[0.04em] whitespace-nowrap uppercase">F. liga</span>}
+      </span>
+      <span className="flex flex-col items-start gap-1 text-[13px] text-muted max-sm:hidden">
+        <span className="flex items-center gap-1.5">
+          {upcoming ? relativeDay(match.date, now) : formatShortDate(match.date)} · {match.date.slice(11, 16)}
+          {hasVideo && (
+            <svg width="13" height="13" viewBox="0 0 24 24" className="fill-accent-text" role="img" aria-label="Con vídeo">
+              <path d="M7 4l13 8-13 8z" />
+            </svg>
+          )}
+        </span>
+        {champions && <ChampionsBadge />}
       </span>
       <span className="flex items-center justify-end gap-2.5 text-right max-sm:hidden">
         <span className={match.homeId === teamId ? "font-bold" : ""}>{match.homeName}</span>
@@ -48,6 +65,7 @@ export function MatchRow({
       </span>
       <span className="text-sm sm:hidden">
         {match.homeName} – {match.awayName}
+        {champions && <ChampionsBadge className="ml-1.5 align-[-1px]" />}
       </span>
       <span
         className={`rounded-[10px] text-center font-display text-2xl font-extrabold ${
