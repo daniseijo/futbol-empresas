@@ -8,6 +8,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { db, schema } from "@/db/client";
 import type { SheetTotals } from "./ideal-seven";
 import type { Pairing } from "./expected-matches";
+import { fillMissingRounds } from "./rounds";
 import { shortenUrl, type SearchIndexPayload } from "./search";
 import type {
   League,
@@ -238,14 +239,14 @@ async function scorersFor(matchIds: number[]): Promise<Map<number, Scorer[]>> {
   return result;
 }
 
-/** Every match of a season, with scorers. */
+/** Every match of a season, with scorers, and the round the API left out of some (see `fillMissingRounds`). */
 export async function getSeasonMatches(seasonId: number): Promise<Match[]> {
   "use cache";
   cacheLife("results");
   cacheTag(DATA_TAG);
   const rows = await selectMatches().where(eq(schema.matches.seasonId, seasonId)).orderBy(schema.matches.date);
   const scorers = await scorersFor(rows.map((r) => r.match.id));
-  return rows.map((row) => toMatch(row, scorers.get(row.match.id) ?? []));
+  return fillMissingRounds(rows.map((row) => toMatch(row, scorers.get(row.match.id) ?? [])));
 }
 
 /**
@@ -260,7 +261,7 @@ export async function getSeasonPairings(seasonId: number): Promise<Pairing[]> {
   return db.select({ groupId: m.groupId, homeId: m.homeId, awayId: m.awayId }).from(m).where(eq(m.seasonId, seasonId));
 }
 
-/** A group's matches with their photos. */
+/** A group's matches with their photos, and the rounds the API left out (see `fillMissingRounds`). */
 export async function getGroupMatches(groupId: number, seasonId: number): Promise<MatchDetail[]> {
   "use cache";
   cacheLife("results");
@@ -269,7 +270,7 @@ export async function getGroupMatches(groupId: number, seasonId: number): Promis
     .where(and(eq(schema.matches.groupId, groupId), eq(schema.matches.seasonId, seasonId)))
     .orderBy(schema.matches.date);
   const scorers = await scorersFor(rows.map((r) => r.match.id));
-  return rows.map((row) => toMatchDetail(row, scorers.get(row.match.id) ?? []));
+  return fillMissingRounds(rows.map((row) => toMatchDetail(row, scorers.get(row.match.id) ?? [])));
 }
 
 /** A match with its photos, video and both teams' full match sheets. */

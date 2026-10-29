@@ -56,18 +56,20 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
 
   const result = await getMatch(id);
   if (!result) return null;
-  const { match, lineups } = result;
+  const { lineups } = result;
   const [leagues, seasons, current, teams, seasonMatches, headToHead, homeSquad, awaySquad] = await Promise.all([
     getLeagues(),
     getSeasons(),
     getCurrentSeason(),
     getTeams(),
-    match.seasonId ? getSeasonMatches(match.seasonId) : Promise.resolve([]),
-    getHeadToHead(match.homeId, match.awayId),
-    getSquad(match.homeId),
-    getSquad(match.awayId),
+    result.match.seasonId ? getSeasonMatches(result.match.seasonId) : Promise.resolve([]),
+    getHeadToHead(result.match.homeId, result.match.awayId),
+    getSquad(result.match.homeId),
+    getSquad(result.match.awayId),
   ]);
   const tree = new LeagueTree(leagues);
+  // The season's matches carry the round the API left out of some.
+  const match = { ...result.match, round: result.match.round ?? seasonMatches.find((m) => m.id === id)?.round ?? null };
   const teamsById = new Map(teams.map((t) => [t.id, t]));
 
   const groupMatches = match.groupId ? seasonMatches.filter((m) => m.groupId === match.groupId) : [];
