@@ -1,4 +1,4 @@
-import type { Match, SquadPlayer } from "@/lib/sportspress/types";
+import type { Match } from "@/lib/sportspress/types";
 import { playerDisplayName } from "@/lib/players";
 import { featuredMode, positionBefore } from "./featured-rules";
 import { getMatchPageData, type MatchPageData } from "./match";
@@ -13,12 +13,13 @@ export interface Featured {
   /** Position before the last match's round, to tell whether the team moved. */
   previousPosition: number | null;
   daysToNext: number | null;
+  /** The team's best rated player in the featured match's competition. */
   mvpLeader: { name: string; points: number } | null;
 }
 
 export type FeaturedTeam = TeamContext & Featured;
 
-export async function getFeatured(context: TeamContext, seasonMatches: Match[], squad: SquadPlayer[], now: string): Promise<Featured> {
+export async function getFeatured(context: TeamContext, seasonMatches: Match[], now: string): Promise<Featured> {
   const last = context.lastResults[0] ?? null;
   const { mode, matchId, daysToNext } = featuredMode(context, now);
   const featured = matchId ? await getMatchPageData(matchId) : null;
@@ -26,12 +27,13 @@ export async function getFeatured(context: TeamContext, seasonMatches: Match[], 
   const previousPosition =
     mode === "result" && last?.round && context.group ? positionBefore(seasonMatches, context.group.id, context.teamId, last.round) : null;
 
-  const mvp = [...squad].sort((a, b) => b.mvpPoints - a.mvpPoints)[0];
+  const side = featured ? (featured.home.id === context.teamId ? featured.home : featured.away) : null;
+  const mvp = side?.topRated;
   return {
     mode,
     featured,
     previousPosition,
     daysToNext,
-    mvpLeader: mvp && mvp.mvpPoints > 0 ? { name: playerDisplayName(mvp.name, mvp.number), points: mvp.mvpPoints } : null,
+    mvpLeader: mvp ? { name: playerDisplayName(mvp.name, mvp.number), points: mvp.mvpPoints } : null,
   };
 }

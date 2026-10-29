@@ -1,6 +1,16 @@
 import { cacheLife } from "next/cache";
 import { dayKey, nowInMadrid } from "@/lib/dates";
-import { getCurrentSeason, getHeadToHead, getLeagues, getMatch, getSeasonMatches, getSeasons, getSquad, getTeams } from "@/lib/data";
+import {
+  getCurrentSeason,
+  getHeadToHead,
+  getLeagues,
+  getMatch,
+  getSeasonMatches,
+  getSeasons,
+  getSheetTotals,
+  getSquad,
+  getTeams,
+} from "@/lib/data";
 import { buildKnockout, knockoutLabels } from "@/lib/bracket";
 import { championsStage, type ChampionsStage } from "@/lib/sportspress/champions";
 import { LeagueTree } from "@/lib/sportspress/leagues";
@@ -30,8 +40,10 @@ export interface TeamSide {
   stats: { goals: number; assists: number; yellowCards: number; redCards: number; points: number; players: number };
   /** Goals in the score missing from the match sheet (own goals or unrecorded). */
   unattributedGoals: number;
-  /** Players to watch in the preview: those with the most goals (or MVP points). */
+  /** Players to watch in the preview: those with the most goals (or MVP points) in the match's competition. */
   keyPlayers: SquadPlayer[];
+  /** The player with the most points in the match's competition, if anyone has any. */
+  topRated: SquadPlayer | null;
 }
 
 export interface MatchPageData {
@@ -79,8 +91,20 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
   const groupMatches = match.groupId ? seasonMatches.filter((m) => m.groupId === match.groupId) : [];
   const standings = computeStandings(groupMatches);
 
+  // The squads' numbers count the match's competition alone: the league's goals say little about a cup.
+  const competitionGroups = [
+    ...new Set(seasonMatches.filter((m) => m.competitionId === match.competitionId && m.groupId !== null).map((m) => m.groupId!)),
+  ];
+  const totals = match.seasonId && match.competitionId ? await getSheetTotals(match.seasonId, { groupIds: competitionGroups }) : [];
+  const inCompetition = (squad: SquadPlayer[], teamId: number): SquadPlayer[] =>
+    squad.map((player) => {
+      const own = totals.filter((t) => t.playerId === player.id && t.teamId === teamId);
+      const sum = (key: "matches" | "goals" | "assists" | "points") => own.reduce((total, t) => total + t[key], 0);
+      return { ...player, appearances: sum("matches"), goals: sum("goals"), assists: sum("assists"), mvpPoints: sum("points") };
+    });
   const keyPlayers = (squad: SquadPlayer[]) =>
     [...squad].sort((a, b) => b.goals - a.goals || b.mvpPoints - a.mvpPoints).filter((p) => p.appearances > 0).slice(0, 3);
+  const topRated = (squad: SquadPlayer[]) => [...squad].sort((a, b) => b.mvpPoints - a.mvpPoints).find((p) => p.mvpPoints > 0) ?? null;
 
   const side = (teamId: number, name: string, goalsInScore: number | null, squad: SquadPlayer[]): TeamSide => {
     const lineup = lineups.filter((p) => p.teamId === teamId);
@@ -93,6 +117,7 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
       players: lineup.length,
     };
     const team = teamsById.get(teamId);
+    const competitionSquad = inCompetition(squad, teamId);
     return {
       id: teamId,
       name,
@@ -102,7 +127,8 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
       lineup,
       stats,
       unattributedGoals: goalsInScore === null ? 0 : Math.max(0, goalsInScore - stats.goals),
-      keyPlayers: keyPlayers(squad),
+      keyPlayers: keyPlayers(competitionSquad),
+      topRated: topRated(competitionSquad),
     };
   };
   const home = side(match.homeId, match.homeName, match.homeGoals, homeSquad);
