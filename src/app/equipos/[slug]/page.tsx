@@ -72,9 +72,11 @@ function Summary({ data }: { data: TeamPageData }) {
 
       <aside className="flex min-w-0 flex-[1_1_340px] flex-col gap-5.5">
         {data.group && data.standings.length > 0 && (
-          <SectionCard title={`Así va el ${data.group.name}`} link={{ href: `${base}/clasificacion`, label: "Clasificación" }}>
-            <StandingsZone rows={data.standings} teamId={data.team.id} logos={data.logos} slugs={data.slugs} />
-          </SectionCard>
+          <div className={data.featured?.champions ? "champions-light" : ""}>
+            <SectionCard title={`Así va el ${data.group.name}`} link={{ href: `${base}/clasificacion`, label: "Clasificación" }}>
+              <StandingsZone rows={data.standings} teamId={data.team.id} logos={data.logos} slugs={data.slugs} />
+            </SectionCard>
+          </div>
         )}
         {data.ideal && <IdealSeven lines={data.ideal} crests={false} link={{ href: `${base}/plantilla`, label: "Ver la plantilla" }} />}
         <SeasonNumbers data={data} />
