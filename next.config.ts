@@ -11,6 +11,17 @@ const nextConfig: NextConfig = {
     // Teams, competitions and venues: they change a few times a week.
     catalog: { stale: 300, revalidate: 3600, expire: 604800 },
   },
+  // A Champions fase liga lives in its sector's page, in the "Fase liga" tab: the season and round in the
+  // query go along. The page redirects too (championsFaseLigaRedirect), for a node named otherwise.
+  async redirects() {
+    return [
+      {
+        source: "/competiciones/la-champions-de-las-empresas/:sector/:faseLiga(champions-fase-liga[^/]*)",
+        destination: "/competiciones/la-champions-de-las-empresas/:sector?fase=liga",
+        permanent: true,
+      },
+    ];
+  },
   images: {
     // sharp is not built in this setup (pnpm allowBuilds); the league's images
     // already come in small sizes, so we do not optimize them.

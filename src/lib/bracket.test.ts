@@ -293,6 +293,23 @@ describe("buildKnockout", () => {
       assert.deepEqual(buildKnockout(asOf(now), { now }).brackets, [], "a recent final without the expected size waits");
     });
 
+    it("names the rounds of a knockout whose top teams skip the first round", () => {
+      // Champions 25/26: the play-off played, the quarter-finals published, the top four's first match.
+      const now = "2026-05-01T12:00";
+      const rows = championsBanca2026
+        .filter(([, date]) => date.slice(0, 10) <= addDays(now, 7).slice(0, 10))
+        .map(([id, date, home, away, hg, ag]): Row => (date > now ? [id, date, home, away, null, null] : [id, date, home, away, hg, ag]));
+      const knockout = buildKnockout(toMatches(rows), { now, expectedSize: 12 });
+      assert.deepEqual(
+        knockout.rounds?.map((r) => [r.name, r.matches.length]),
+        [
+          ["Eliminatoria", 4],
+          ["Cuartos", 4],
+        ],
+      );
+      assert.equal(knockoutLabels(knockout).get(127081), "1/4");
+    });
+
     it("never takes half a bracket for a whole one", () => {
       const now = "2026-09-15T23:59";
       const { brackets } = buildKnockout(asOf(now), { now, expectedSize: 16 });
