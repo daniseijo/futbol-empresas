@@ -194,5 +194,8 @@ export function teamSummary(data: TeamPageData): string {
   const { group, season } = data;
   if (!group) return `Temporada ${season.name}`;
   const competition = `${group.competition} ${season.name}`;
+  // A Champions group's own name repeats its sector ("Champions Fase Liga - Banca y Financiero").
+  const champions = data.featured?.champions;
+  if (champions) return [competition, champions.sector && `Sector ${champions.sector}`, champions.phase].filter(Boolean).join(" · ");
   return group.name === group.competition ? competition : `${competition} · ${group.name}`;
 }

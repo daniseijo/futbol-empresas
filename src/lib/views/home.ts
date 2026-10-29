@@ -14,6 +14,7 @@ import {
   getTeams,
   type NewsItem,
 } from "@/lib/data";
+import { isChampionsNode } from "@/lib/sportspress/champions";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, Season } from "@/lib/sportspress/types";
 import { expectedTotal } from "@/lib/expected-matches";
@@ -32,6 +33,8 @@ export interface CompetitionCard {
   description: string;
   played: number;
   total: number;
+  /** The Champions, in its colours. */
+  champions: boolean;
 }
 
 export interface GroupLeader {
@@ -151,7 +154,16 @@ export async function getHomeData(): Promise<HomeData> {
       status = played / total < 0.25 ? "starting" : "live";
       description = `${teamsInComp} equipos${groups > 1 ? ` en ${groups} grupos` : ""}.`;
     }
-    return { id: root.id, name: root.name, href: tree.href(root.id), status, description, played, total };
+    return {
+      id: root.id,
+      name: root.name,
+      href: tree.href(root.id),
+      status,
+      description,
+      played,
+      total,
+      champions: isChampionsNode(root.id, tree),
+    };
   });
   const order = { live: 0, starting: 1, upcoming: 2, finished: 3 };
   competitions.sort((a, b) => order[a.status] - order[b.status] || b.total - a.total);

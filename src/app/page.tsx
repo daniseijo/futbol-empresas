@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { ChampionsStar } from "@/components/champions";
 import { Crest } from "@/components/crest";
 import { DayMatchCard } from "@/components/day-match-card";
 import { Eyebrow, FeaturedFooter, FeaturedHero, featuredSurface } from "@/components/featured-match";
@@ -327,11 +328,19 @@ const STATUS: Record<CompetitionCard["status"], string> = {
 function CompetitionRow({ competition, main }: { competition: CompetitionCard; main: HomeData["mainCompetition"] }) {
   const active = competition.status === "live" || competition.status === "starting";
   const description = competition.description.replace(/\.$/, "");
+  // The Champions keeps its star and its blue in place of the coral.
+  const name = (
+    <span className="flex min-w-0 items-center gap-1.5">
+      {competition.champions && <ChampionsStar className="text-champions-text" />}
+      {competition.name}
+    </span>
+  );
+  const champions = competition.champions ? "champions-light" : "";
   if (!active) {
     return (
-      <Link href={competition.href} className="flex flex-col gap-0.5 border-t border-line-soft py-2.5 hover:bg-canvas">
+      <Link href={competition.href} className={`flex flex-col gap-0.5 border-t border-line-soft py-2.5 hover:bg-canvas ${champions}`}>
         <span className="flex justify-between gap-2 text-sm">
-          <span>{competition.name}</span>
+          {name}
           <span className="shrink-0 text-xs text-muted">{STATUS[competition.status]}</span>
         </span>
         {competition.status === "finished" && <span className="text-xs text-muted">{description}</span>}
@@ -341,9 +350,9 @@ function CompetitionRow({ competition, main }: { competition: CompetitionCard; m
   const details = [competition.total > 0 && `${competition.played} de ${competition.total} partidos`, description];
   if (competition.id === main.id && main.played > 0) details.push(`${decimal.format(main.goals / main.played)} goles por partido`);
   return (
-    <Link href={competition.href} className="flex flex-col gap-1.5 border-t border-line-soft py-2.5 hover:bg-canvas">
+    <Link href={competition.href} className={`flex flex-col gap-1.5 border-t border-line-soft py-2.5 hover:bg-canvas ${champions}`}>
       <span className="flex justify-between gap-2">
-        <b className="text-sm">{competition.name}</b>
+        <b className="text-sm">{name}</b>
         <span className="shrink-0 text-xs font-bold text-accent-text">{STATUS[competition.status]}</span>
       </span>
       {competition.total > 0 && (

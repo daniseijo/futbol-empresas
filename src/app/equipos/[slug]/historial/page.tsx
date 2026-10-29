@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { ChampionsStar } from "@/components/champions";
 import { SectionCard } from "@/components/team/section-card";
 import { getTeamHistory, type Tally, type TeamHistory } from "@/lib/views/team-history";
 import { TabSkeleton, tabMetadata } from "../team-page";
@@ -82,7 +83,10 @@ function History({ history }: { history: TeamHistory }) {
           {season.stints.map((stint) => (
             <div key={stint.groupId} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-t border-line-soft py-3 sm:grid-cols-[minmax(0,1fr)_120px_150px_70px]">
               <span className="flex min-w-0 flex-col">
-                <span className="truncate font-semibold">{stint.path[0]}</span>
+                <span className="flex min-w-0 items-center gap-1.5 font-semibold">
+                  {stint.champions && <ChampionsStar className="text-champions-text" />}
+                  <span className="truncate">{stint.path[0]}</span>
+                </span>
                 <span className="truncate text-[13px] text-muted">{stint.path.slice(1).join(" › ")}</span>
               </span>
               {stint.position ? (
