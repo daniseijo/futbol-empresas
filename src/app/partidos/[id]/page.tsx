@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { ChampionsRoad, ChampionsStar } from "@/components/champions";
 import { Crest } from "@/components/crest";
 import { FormBadges, OutcomeBadge } from "@/components/form-badges";
 import { MatchTimeline } from "@/components/match-timeline";
@@ -17,6 +18,7 @@ import { calendarUrl } from "@/lib/calendar";
 import { getSeasonMatches, getCurrentSeason, getTeam } from "@/lib/data";
 import { playerDisplayName } from "@/lib/players";
 import { capitalize, formatLongDate, formatShortDate, relativeDay, resultOverdue } from "@/lib/dates";
+import { championsStageLabel } from "@/lib/sportspress/champions";
 import type { Position } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import { outcomeFor } from "@/lib/standings";
@@ -69,7 +71,12 @@ async function MatchContent({ params }: Pick<PageProps<"/partidos/[id]">, "param
   return (
     <>
       <Scoreboard data={data} />
-      <main className="mx-auto flex max-w-7xl flex-wrap gap-6 px-4 pt-6 sm:px-6">
+      {/* A Champions match's cards keep white, with its blue for the coral (and for the tiles' grey). */}
+      <main
+        className={`mx-auto flex max-w-7xl flex-wrap gap-6 px-4 pt-6 sm:px-6 ${
+          data.champions ? "champions-light [--color-canvas:var(--color-champions-soft)]" : ""
+        }`}
+      >
         <div className="flex min-w-0 flex-[999_1_640px] flex-col gap-5.5">
           {match.video && (
             <VideoEmbed id={match.video.id} title={match.video.title ?? `${match.homeName} – ${match.awayName}`} />
@@ -172,7 +179,7 @@ function Scoreboard({ data }: { data: MatchPageData }) {
   const homeScorers = scorersOf(data, match.homeId);
   const awayScorers = scorersOf(data, match.awayId);
   return (
-    <section className="border-b border-line bg-surface">
+    <section className={`border-b border-line bg-surface ${data.champions ? "champions-night" : ""}`}>
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-6 pb-8 sm:px-6">
         <div className="flex items-start justify-between gap-3">
           <nav aria-label="Competición" className="flex flex-wrap items-center gap-2 text-sm text-muted">
@@ -194,6 +201,18 @@ function Scoreboard({ data }: { data: MatchPageData }) {
           </nav>
           <ShareButton title={`${home.name} – ${away.name}`} />
         </div>
+
+        {data.champions && (
+          <div className="-mb-2 flex items-center justify-center gap-2.5 text-center text-xs font-extrabold tracking-[0.16em] text-champions-star uppercase max-sm:text-[10px] max-sm:tracking-[0.1em]">
+            <ChampionsStar />
+            {/* On a phone the crumbs right above already name the competition. */}
+            <span>
+              <span className="max-sm:hidden">{data.path[0]?.name} · </span>
+              {championsStageLabel(data.champions)}
+            </span>
+            <ChampionsStar />
+          </div>
+        )}
 
         {/* Two blocks that never split: on phones one per line, so no line starts with "·". */}
         <div className="flex flex-col items-center text-center text-[13px] text-muted sm:flex-row sm:flex-wrap sm:justify-center">
@@ -227,7 +246,7 @@ function Scoreboard({ data }: { data: MatchPageData }) {
                   <span className="text-line"> – </span>
                   <span className={match.awayGoals! >= match.homeGoals! ? "" : "text-muted"}>{match.awayGoals}</span>
                 </div>
-                <span className="rounded-full bg-ink px-2.5 py-1 text-xs font-bold tracking-[0.12em] text-white">FINAL</span>
+                <span className="rounded-full bg-ink px-2.5 py-1 text-xs font-bold tracking-[0.12em] text-surface">FINAL</span>
                 {data.halftime && <span className="text-[13px] text-muted">Descanso {data.halftime}</span>}
               </>
             ) : resultOverdue(match.date, data.now) ? (
@@ -254,6 +273,12 @@ function Scoreboard({ data }: { data: MatchPageData }) {
             </>
           )}
         </div>
+
+        {data.champions && (
+          <div className="flex justify-center">
+            <ChampionsRoad stage={data.champions} />
+          </div>
+        )}
 
         {match.played && data.goals.length > 0 && (
           <MatchTimeline
