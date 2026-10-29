@@ -137,6 +137,21 @@ function TieCard({
   now: string;
 }) {
   const focus = focusTeamId !== null && (tie.homeId === focusTeamId || tie.awayId === focusTeamId);
+  // A team that skips this round: no match to link to.
+  if (tie.bye) {
+    return (
+      <div
+        aria-label={`${round}: ${tie.homeName} pasa directo.`}
+        className={`flex flex-col gap-1 rounded-xl border border-dashed px-2.5 py-2 ${focus ? "border-accent bg-accent-soft" : "border-line"}`}
+      >
+        <span className="grid grid-cols-[20px_minmax(0,1fr)] items-center gap-2 text-sm">
+          <Crest src={logos[tie.homeId]} name={tie.homeName} size={20} />
+          <span className="truncate font-bold">{tie.homeName}</span>
+        </span>
+        <span className="text-xs text-muted">Pasa directo</span>
+      </div>
+    );
+  }
   const sides = [
     { id: tie.homeId, name: tie.homeName, goals: tie.homeGoals },
     { id: tie.awayId, name: tie.awayName, goals: tie.awayGoals },

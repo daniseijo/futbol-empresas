@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildKnockout, knockoutLabels, type Bracket } from "@/lib/bracket";
+import { buildKnockout, isBye, knockoutLabels, type Bracket, type Tie } from "@/lib/bracket";
 import { addDays } from "@/lib/dates";
 import type { Match } from "@/lib/sportspress/types";
 import { match } from "@/test/fixtures";
@@ -104,7 +104,28 @@ const copaPlata2023: Row[] = [
   [83406, "2023-06-26T21:00", 40988, -1, null, null],
 ];
 
-const teamsOf = (bracket: Bracket, round: number) => bracket.rounds[round].ties.flatMap((t) => [t.match.homeId, t.match.awayId]);
+/**
+ * Champions 25/26, Banca y Financiero: 5th–12th of the fase liga play a play-off, 1st–4th wait in the
+ * quarter-finals. Redpiso, 5th, won it.
+ */
+const championsBanca2026: Row[] = [
+  [126143, "2026-04-13T21:00", 69342, 114918, 3, 2],
+  [126140, "2026-04-13T21:10", 7478, 8379, 4, 0],
+  [126142, "2026-04-16T20:15", 83518, 70141, 3, 5],
+  [126141, "2026-04-16T21:10", 56692, 41101, 4, 2],
+  [127081, "2026-05-04T20:15", 108280, 56692, 2, 6],
+  [127083, "2026-05-06T21:00", 7805, 69342, 1, 6],
+  [127080, "2026-05-06T21:10", 104529, 7478, 1, 3],
+  [127082, "2026-05-07T22:05", 6075, 70141, 3, 5],
+  [127785, "2026-05-20T22:00", 70141, 69342, 2, 1],
+  [128699, "2026-06-01T22:05", 7478, 56692, 1, 4],
+  [128886, "2026-06-15T22:00", 56692, 70141, 6, 2],
+];
+const REDPISO = 56692;
+
+/** A round's ties, without its byes. */
+const tiesOf = (bracket: Bracket, round: number): Tie[] => bracket.rounds[round].ties.filter((t): t is Tie => !isBye(t));
+const teamsOf = (bracket: Bracket, round: number) => tiesOf(bracket, round).flatMap((t) => [t.match.homeId, t.match.awayId]);
 
 describe("buildKnockout", () => {
   it("splits several brackets in one node and names their rounds", () => {
@@ -134,7 +155,7 @@ describe("buildKnockout", () => {
     const { brackets } = buildKnockout(toMatches(corporateCup2026), {
       now: NOW,
     });
-    const ids = brackets.flatMap((b) => b.rounds.flatMap((r) => r.ties.map((t) => t.match.id)));
+    const ids = brackets.flatMap((b) => b.rounds.flatMap((_, r) => tiesOf(b, r).map((t) => t.match.id)));
     assert.ok(ids.includes(131330));
     assert.ok(!ids.includes(131645));
   });
@@ -144,8 +165,8 @@ describe("buildKnockout", () => {
       now: NOW,
     }).brackets) {
       for (let r = 0; r < bracket.rounds.length - 1; r += 1) {
-        bracket.rounds[r + 1].ties.forEach((next, k) => {
-          const feeders = bracket.rounds[r].ties.slice(2 * k, 2 * k + 2).map((t) => t.winnerId);
+        tiesOf(bracket, r + 1).forEach((next, k) => {
+          const feeders = tiesOf(bracket, r).slice(2 * k, 2 * k + 2).map((t) => t.winnerId);
           assert.deepEqual(feeders, [next.match.homeId, next.match.awayId]);
         });
       }
@@ -159,7 +180,7 @@ describe("buildKnockout", () => {
       now: NOW,
     });
     // Sanitas 6-6 Ecija in the first round; Sanitas played the next one.
-    const tie = brackets.flatMap((b) => b.rounds[0].ties).find((t) => t.match.id === 131050)!;
+    const tie = brackets.flatMap((b) => tiesOf(b, 0)).find((t) => t.match.id === 131050)!;
     assert.equal(tie.winnerId, 4314);
   });
 
@@ -169,7 +190,7 @@ describe("buildKnockout", () => {
     }).brackets;
     assert.deepEqual(teamsOf(bracket, 3), [SECURITAS, GRUPO_COBRA]);
     assert.equal(bracket.championId, null);
-    assert.equal(bracket.rounds[3].ties[0].winnerId, null);
+    assert.equal(tiesOf(bracket, 3)[0].winnerId, null);
     const [settled] = buildKnockout(toMatches(corporatePrimera2023), {
       now: NOW,
       champions: [GRUPO_COBRA],
@@ -210,6 +231,36 @@ describe("buildKnockout", () => {
     const { brackets, others } = buildKnockout(finals, { now: NOW });
     assert.deepEqual(brackets, []);
     assert.equal(others.length, 2);
+  });
+
+  it("reads a bracket whose top teams skip the first round", () => {
+    const { brackets, others } = buildKnockout(toMatches(championsBanca2026), { now: NOW });
+    assert.deepEqual(others, []);
+    const [bracket] = brackets;
+    assert.deepEqual(
+      bracket.rounds.map((r) => [r.name, r.ties.length, r.ties.filter(isBye).length]),
+      [
+        ["Eliminatoria", 8, 4],
+        ["Cuartos", 4, 0],
+        ["Semifinales", 2, 0],
+        ["Final", 1, 0],
+      ],
+    );
+    assert.equal(bracket.championId, REDPISO);
+    // Each quarter-final is fed by a play-off tie and a bye, in its two slots.
+    tiesOf(bracket, 1).forEach((quarter, k) => {
+      const slots = bracket.rounds[0].ties.slice(2 * k, 2 * k + 2).map((t) => (isBye(t) ? t.byeTeamId : t.winnerId));
+      assert.deepEqual(slots, [quarter.match.homeId, quarter.match.awayId]);
+    });
+    const labels = knockoutLabels({ brackets, others: [], rounds: null });
+    assert.equal(labels.get(128886), "F");
+    assert.equal(labels.get(126141), "1/8");
+  });
+
+  it("does not let a team skip more than the first round", () => {
+    // Without the play-off, a team would come straight into the semifinals.
+    const rows = championsBanca2026.filter(([id]) => ![126140, 127080].includes(id));
+    assert.deepEqual(buildKnockout(toMatches(rows), { now: NOW }).brackets, []);
   });
 
   describe("a cup in progress", () => {

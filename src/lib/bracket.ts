@@ -1,8 +1,9 @@
 // Knockout brackets inferred from a competition node's matches. The API has no
 // rounds for knockout matches, so they come from the shape of the matches
-// themselves: a team's n-th match is in round n of its path, and the winners of
-// one round play the next. Anything that does not fit a clean bracket is left
-// out, so the page never shows a wrong one.
+// themselves: from the final back, each team's previous match is the tie it came
+// through. Some teams may skip the first round (the Champions' top four wait in
+// the quarter-finals). Anything that does not fit a clean bracket is left out,
+// so the page never shows a wrong one.
 
 import { dayKey, daysBetween } from "@/lib/dates";
 import type { Match } from "@/lib/sportspress/types";
@@ -13,10 +14,18 @@ export interface Tie {
   winnerId: number | null;
 }
 
+/** A team that goes through to the second round without playing the first. */
+export interface Bye {
+  byeTeamId: number;
+  name: string;
+}
+
+export const isBye = <T extends object>(slot: T | Bye): slot is Bye => "byeTeamId" in slot;
+
 export interface BracketRound {
   name: string;
-  /** Ordered so that ties 2k and 2k+1 feed tie k of the next round. */
-  ties: Tie[];
+  /** Ordered so that slots 2k and 2k+1 feed tie k of the next round. Only the first round has byes. */
+  ties: (Tie | Bye)[];
 }
 
 export interface Bracket {
@@ -55,6 +64,8 @@ export interface KnockoutOptions {
 const SETTLED_DAYS = 14;
 
 const ROUND_NAMES = ["Final", "Semifinales", "Cuartos", "Octavos", "Dieciseisavos"];
+/** A first round that some teams skip is not a full round of 16: a play-off for the places left. */
+const PLAY_OFF_NAME = "Eliminatoria";
 
 /** "Final", "Semifinales"…, counted back from the last round. */
 export function roundName(fromLast: number, total: number): string {
@@ -122,32 +133,50 @@ function toBracket(
 ): Bracket | null {
   const teams = new Set(matches.flatMap((m) => [m.homeId, m.awayId]));
   const size = teams.size;
-  // At least semifinals, a power of two, and one match fewer than teams (no byes, replays or third place).
-  if (size < 4 || (size & (size - 1)) !== 0 || matches.length !== size - 1) return null;
-  const roundCount = Math.log2(size);
+  // At least semifinals, and one match fewer than teams (no replays or third place).
+  if (size < 4 || matches.length !== size - 1) return null;
+  const sorted = [...matches].sort(byDate);
+  const final = sorted[sorted.length - 1];
 
-  const played = new Map<number, number>();
-  const rounds: Match[][] = Array.from({ length: roundCount }, () => []);
-  for (const m of [...matches].sort(byDate)) {
-    const round = played.get(m.homeId) ?? 0;
-    if ((played.get(m.awayId) ?? 0) !== round || round >= roundCount) return null;
-    rounds[round].push(m);
-    played.set(m.homeId, round + 1);
-    played.set(m.awayId, round + 1);
-  }
-  if (rounds.some((list, r) => list.length !== size / 2 ** (r + 1))) return null;
-
+  // From the final back: the tie each of its teams came through is that team's previous match.
+  const depth = new Map<number, number>([[final.id, 0]]);
+  const feeders = new Map<number, (Match | null)[]>();
   const winners = new Map<number, number | null>();
-  for (let r = 0; r < roundCount - 1; r += 1) {
-    for (const m of rounds[r]) {
-      const through = [m.homeId, m.awayId].filter((team) => rounds[r + 1].some((next) => hasTeam(next, team)));
-      if (through.length !== 1) return null;
-      const byScore = scoreWinner(m);
-      if (byScore !== null && byScore !== through[0]) return null;
-      winners.set(m.id, through[0]);
+  const queue = [final];
+  while (queue.length > 0) {
+    const tie = queue.shift()!;
+    const index = sorted.indexOf(tie);
+    const fed = [tie.homeId, tie.awayId].map((team) => sorted.slice(0, index).findLast((m) => hasTeam(m, team)) ?? null);
+    for (const [side, feeder] of fed.entries()) {
+      if (!feeder) continue;
+      // Each match feeds one tie, and only its winner plays on.
+      if (depth.has(feeder.id)) return null;
+      const through = side === 0 ? tie.homeId : tie.awayId;
+      const byScore = scoreWinner(feeder);
+      if (byScore !== null && byScore !== through) return null;
+      winners.set(feeder.id, through);
+      depth.set(feeder.id, depth.get(tie.id)! + 1);
+      queue.push(feeder);
     }
+    feeders.set(tie.id, fed);
   }
-  const final = rounds[roundCount - 1][0];
+  if (depth.size !== matches.length) return null;
+  const roundCount = Math.max(...depth.values()) + 1;
+  if (roundCount < 2 || size > 2 ** roundCount) return null;
+  // With byes almost any tree of matches fits, a league's round among them: such a bracket must look like a
+  // knockout too, without the league's rounds and each round played after the one before.
+  if (size < 2 ** roundCount) {
+    if (matches.some((m) => m.round !== null)) return null;
+    const byRound = Array.from({ length: roundCount }, (_, d) => matches.filter((m) => depth.get(m.id) === d).map((m) => m.date).sort());
+    for (let d = 0; d < roundCount - 1; d += 1) if (byRound[d + 1].at(-1)! >= byRound[d][0]) return null;
+  }
+  // A team may only skip the first round: a tie missing a feeder must be in the second.
+  for (const m of matches) {
+    const missing = feeders.get(m.id)!.some((f) => f === null);
+    if (missing && depth.get(m.id) !== roundCount - 1 && depth.get(m.id) !== roundCount - 2) return null;
+    if (depth.get(m.id) === roundCount - 1 && feeders.get(m.id)!.some((f) => f !== null)) return null;
+  }
+
   // A later match with a team still to be decided may be this bracket's real final.
   if (undecided.some((m) => m.date > final.date)) return null;
   const finalists = [final.homeId, final.awayId].filter((team) => champions.has(team));
@@ -158,22 +187,26 @@ function toBracket(
   const settled = (champion !== null && champions.has(champion)) || size === expectedSize || daysBetween(final.date, now) > SETTLED_DAYS;
   if (!settled) return null;
 
-  // From the final back: each tie is followed by the ties that fed it, home side first.
-  const ordered: Match[][] = Array.from({ length: roundCount }, () => []);
+  // From the final back: each tie is followed by what fed it, home side first; a team that skipped the
+  // first round has a bye there.
+  const ordered: (Match | Bye)[][] = Array.from({ length: roundCount }, () => []);
   ordered[roundCount - 1] = [final];
   for (let r = roundCount - 2; r >= 0; r -= 1) {
     for (const next of ordered[r + 1]) {
-      for (const team of [next.homeId, next.awayId]) ordered[r].push(rounds[r].find((m) => hasTeam(m, team))!);
+      if (isBye(next)) return null;
+      for (const [side, feeder] of feeders.get(next.id)!.entries()) {
+        const team = side === 0 ? next.homeId : next.awayId;
+        if (feeder) ordered[r].push(feeder);
+        else if (r === 0) ordered[r].push({ byeTeamId: team, name: side === 0 ? next.homeName : next.awayName });
+        else return null;
+      }
     }
   }
 
   return {
     rounds: ordered.map((list, r) => ({
-      name: roundName(roundCount - 1 - r, roundCount),
-      ties: list.map((match) => ({
-        match,
-        winnerId: winners.get(match.id) ?? null,
-      })),
+      name: list.some(isBye) ? PLAY_OFF_NAME : roundName(roundCount - 1 - r, roundCount),
+      ties: list.map((slot) => (isBye(slot) ? slot : { match: slot, winnerId: winners.get(slot.id) ?? null })),
     })),
     championId: champion,
     teamIds: [...teams],
@@ -243,7 +276,7 @@ export function knockoutLabels(knockout: Knockout): Map<number, string> {
   const labels = new Map<number, string>();
   for (const bracket of knockout.brackets) {
     bracket.rounds.forEach((round, r) => {
-      for (const tie of round.ties) labels.set(tie.match.id, shortRoundName(bracket.rounds.length - 1 - r));
+      for (const tie of round.ties) if (!isBye(tie)) labels.set(tie.match.id, shortRoundName(bracket.rounds.length - 1 - r));
     });
   }
   for (const round of knockout.rounds ?? []) for (const m of round.matches) labels.set(m.id, round.short);

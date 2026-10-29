@@ -1,6 +1,6 @@
 import { cacheLife } from "next/cache";
 import { siteConfig } from "@/config/site";
-import { buildKnockout } from "@/lib/bracket";
+import { buildKnockout, isBye } from "@/lib/bracket";
 import { dayKey, formatLongDate, nowInMadrid } from "@/lib/dates";
 import {
   getCurrentSeason,
@@ -53,9 +53,11 @@ export interface RoundEntry {
   resting: string[];
 }
 
-/** A knockout tie as the bracket draws it. */
+/** A knockout tie as the bracket draws it, or a team going straight to the next round (`bye`). */
 export interface BracketTie {
+  /** The match's, or minus the team's for a bye. */
   id: number;
+  bye: boolean;
   date: string;
   homeId: number;
   awayId: number;
@@ -243,24 +245,44 @@ export async function getCompetitionPageData(segments: string[], seasonParam: st
   const knockout = buildKnockout(direct, { champions: recorded.map((t) => t.winnerId!), now, expectedSize });
   const brackets = knockout.brackets.map((bracket, index): BracketData => {
     const title = recorded.find((t) => t.winnerId === bracket.championId)?.title;
-    const firstToPlay = bracket.rounds.findIndex((round) => round.ties.some((tie) => !tie.match.played));
+    const firstToPlay = bracket.rounds.findIndex((round) => round.ties.some((tie) => !isBye(tie) && !tie.match.played));
     return {
       name: title?.split(/\s[–-]\s/).pop() ?? (knockout.brackets.length > 1 ? `Cuadro ${index + 1}` : null),
       championId: bracket.championId,
       rounds: bracket.rounds.map((round) => ({
         name: round.name,
-        ties: round.ties.map(({ match: m, winnerId }) => ({
-          id: m.id,
-          date: m.date,
-          homeId: m.homeId,
-          awayId: m.awayId,
-          homeName: m.homeName,
-          awayName: m.awayName,
-          homeGoals: m.homeGoals,
-          awayGoals: m.awayGoals,
-          played: m.played,
-          winnerId,
-        })),
+        ties: round.ties.map((tie): BracketTie => {
+          if (isBye(tie)) {
+            const { byeTeamId: id, name } = tie;
+            return {
+              id: -id,
+              bye: true,
+              date: "",
+              homeId: id,
+              awayId: 0,
+              homeName: name,
+              awayName: "",
+              homeGoals: null,
+              awayGoals: null,
+              played: false,
+              winnerId: id,
+            };
+          }
+          const { match: m, winnerId } = tie;
+          return {
+            id: m.id,
+            bye: false,
+            date: m.date,
+            homeId: m.homeId,
+            awayId: m.awayId,
+            homeName: m.homeName,
+            awayName: m.awayName,
+            homeGoals: m.homeGoals,
+            awayGoals: m.awayGoals,
+            played: m.played,
+            winnerId,
+          };
+        }),
       })),
       currentRound: firstToPlay === -1 ? bracket.rounds.length - 1 : firstToPlay,
     };
