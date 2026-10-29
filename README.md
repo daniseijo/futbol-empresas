@@ -165,7 +165,9 @@ TELEGRAM_BOT_TOKEN=… TELEGRAM_CHAT_ID=… pnpm notify -- --match=104101   # se
 ```
 
 `--dry-run` and `--match` work with a read-only database token. Without a channel set, `pnpm notify` only prints.
-`--match` also sends to the Slack subscriptions of either team in that match (it needs `NOTIFY_ENCRYPTION_KEY`).
+`--match` also sends to the Slack subscriptions of either team in that match (it needs `NOTIFY_ENCRYPTION_KEY`);
+`--to=sub:3` (or `telegram`, `slack`) sends it to that channel alone. Without the key on the laptop, run the Notify
+workflow by hand on GitHub with the `match` and `to` inputs: it has the secrets.
 
 #### Slack subscriptions to any team
 

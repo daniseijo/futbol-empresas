@@ -10,6 +10,15 @@ on:
   schedule:
     - cron: "20 5-21 * * *"
   workflow_dispatch:
+    # Both empty (cron-job.org's runs): the usual run. A match alone sends its call-up to every channel of
+    # its teams as a test, and `to` narrows it to one ("sub:3", "telegram"); a test records nothing.
+    inputs:
+      match:
+        description: "Match id to send as a test (empty: the usual run)"
+        required: false
+      to:
+        description: "Only this channel, with a match (sub:<id>, telegram or slack)"
+        required: false
 
 jobs:
   notify:
@@ -30,8 +39,11 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm notify
+      # The inputs go through env, never into the script itself.
+      - run: pnpm notify -- ${MATCH:+--match=$MATCH} ${TO:+--to=$TO}
         env:
+          MATCH: ${{ inputs.match }}
+          TO: ${{ inputs.to }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_AUTH_TOKEN: ${{ secrets.DATABASE_AUTH_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
