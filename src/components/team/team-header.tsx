@@ -15,11 +15,7 @@ import { TeamTabs } from "./team-tabs";
 function homeVenue(matches: Match[], teamId: number) {
   const counts = new Map<number, number>();
   for (const m of matches) {
-    if (m.venueId)
-      counts.set(
-        m.venueId,
-        (counts.get(m.venueId) ?? 0) + (m.homeId === teamId ? 2 : 1),
-      );
+    if (m.venueId) counts.set(m.venueId, (counts.get(m.venueId) ?? 0) + (m.homeId === teamId ? 2 : 1));
   }
   const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
   return best ? getVenue(best[0]) : null;
@@ -34,20 +30,14 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
   const champions = data.featured?.champions ?? null;
   const venue = homeVenue(data.matches, team.id);
   const stats = [
-    {
-      value: row ? `${row.position}º` : "—",
-      label: `de ${standings.length || "—"}`,
-      accent: true,
-    },
+    { value: row ? `${row.position}º` : "—", label: `de ${standings.length || "—"}`, accent: true },
     { value: String(row?.points ?? 0), label: "puntos" },
     { value: String(row?.played ?? 0), label: "jugados" },
     { value: String(row?.goalsFor ?? 0), label: "a favor" },
     { value: String(row?.goalsAgainst ?? 0), label: "en contra" },
   ];
   return (
-    <section
-      className={`relative overflow-hidden border-b border-line bg-surface ${featuredSurface(data)}`}
-    >
+    <section className={`relative overflow-hidden border-b border-line bg-surface ${featuredSurface(data)}`}>
       {data.heroPhoto ? (
         <>
           <Image
@@ -61,22 +51,14 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--color-surface)_40%,color-mix(in_srgb,var(--color-surface)_85%,transparent)_52%,transparent_75%)] max-md:hidden" />
           {data.heroPhoto.caption && (
-            <span className="absolute right-4 bottom-16 hidden rounded-md bg-surface/85 px-2 py-1 text-xs md:block">
-              {data.heroPhoto.caption}
-            </span>
+            <span className="absolute right-4 bottom-16 hidden rounded-md bg-surface/85 px-2 py-1 text-xs md:block">{data.heroPhoto.caption}</span>
           )}
         </>
       ) : (
         // The blurred crest is a light square on navy.
         team.logoUrl &&
         !champions && (
-          <Image
-            src={team.logoUrl}
-            alt=""
-            width={420}
-            height={420}
-            className="absolute top-[-60px] right-[-40px] opacity-10 blur-[2px]"
-          />
+          <Image src={team.logoUrl} alt="" width={420} height={420} className="absolute top-[-60px] right-[-40px] opacity-10 blur-[2px]" />
         )
       )}
       <div className="@container relative mx-auto flex max-w-7xl flex-col gap-6.5 px-4 pt-12 pb-6 sm:px-6">
@@ -87,9 +69,7 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
               {group && (
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold tracking-[0.06em] uppercase ${
-                    champions
-                      ? "bg-champions-star text-champions-deep"
-                      : "bg-accent text-on-accent"
+                    champions ? "bg-champions-star text-champions-deep" : "bg-accent text-on-accent"
                   }`}
                 >
                   {champions && <ChampionsStar size={10} />}
@@ -99,12 +79,7 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
               {group && (
                 <span className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-semibold tracking-[0.06em] uppercase">
                   {champions
-                    ? [
-                        champions.sector && `Sector ${champions.sector}`,
-                        champions.phase,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")
+                    ? [champions.sector && `Sector ${champions.sector}`, champions.phase].filter(Boolean).join(" · ")
                     : `${group.phase ? `${group.phase} · ` : ""}${group.name}`}
                 </span>
               )}
@@ -140,14 +115,8 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
           <div className="grid grid-cols-5 gap-px overflow-hidden rounded-[14px] border border-line bg-line">
             {stats.map((stat) => (
               <div key={stat.label} className="bg-surface px-3 py-3 sm:px-4">
-                <div
-                  className={`font-display text-[32px] leading-none font-extrabold sm:text-[38px] ${stat.accent ? "text-accent-text" : ""}`}
-                >
-                  {stat.value}
-                </div>
-                <div className="text-xs whitespace-nowrap text-muted">
-                  {stat.label}
-                </div>
+                <div className={`font-display text-[32px] leading-none font-extrabold sm:text-[38px] ${stat.accent ? "text-accent-text" : ""}`}>{stat.value}</div>
+                <div className="text-xs whitespace-nowrap text-muted">{stat.label}</div>
               </div>
             ))}
           </div>
