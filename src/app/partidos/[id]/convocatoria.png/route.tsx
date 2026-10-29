@@ -1,5 +1,5 @@
 import { capitalize, formatLongDate } from "@/lib/dates";
-import { crestDataUrl, OG, OgCrest, ogImage } from "@/lib/og";
+import { championsRibbon, crestDataUrl, OG, OG_CHAMPIONS, OgChampionsRibbon, OgCrest, ogImage } from "@/lib/og";
 import { fitPixelSize } from "@/lib/text";
 import { getMatchPageData, type TeamSide } from "@/lib/views/match";
 
@@ -20,17 +20,34 @@ export async function GET(_request: Request, { params }: RouteContext<"/partidos
   const { match, home, away } = data;
   const day = capitalize(formatLongDate(match.date, data.now));
   const [homeCrest, awayCrest] = await Promise.all([crestDataUrl(home.logoUrl), crestDataUrl(away.logoUrl)]);
+  // A Champions match is drawn on the Champions night, with its phase on a ribbon above.
+  const ribbon = championsRibbon(data);
+  const ink = ribbon ? OG_CHAMPIONS.ink : OG.ink;
 
   const image = await ogImage(
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", background: OG.surface, fontFamily: "Inter" }}>
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        background: ribbon ? OG_CHAMPIONS.background : OG.surface,
+        fontFamily: "Inter",
+      }}
+    >
+      {ribbon && (
+        <div style={{ display: "flex", justifyContent: "center", paddingTop: 24 }}>
+          <OgChampionsRibbon fontSize={18}>{ribbon}</OgChampionsRibbon>
+        </div>
+      )}
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, padding: "0 56px" }}>
-        <Side side={home} crest={homeCrest} />
+        <Side side={home} crest={homeCrest} color={ink} />
         <div style={{ width: CENTER_WIDTH, display: "flex", flexDirection: "column", alignItems: "center", gap: 12, flexShrink: 0 }}>
           <div
             style={{
               display: "flex",
-              background: OG.accentSoft,
-              color: OG.accentText,
+              background: ribbon ? OG_CHAMPIONS.pill : OG.accentSoft,
+              color: ribbon ? OG_CHAMPIONS.pillText : OG.accentText,
               // "Miércoles 30 de septiembre" shrinks instead of wrapping.
               fontSize: fitPixelSize(day, { width: CENTER_WIDTH - 40, base: 24, min: 18, maxLines: 1, emPerChar: 0.68 }),
               fontWeight: 700,
@@ -42,11 +59,11 @@ export async function GET(_request: Request, { params }: RouteContext<"/partidos
           >
             {day}
           </div>
-          <div style={{ fontFamily: "Barlow", fontSize: 130, lineHeight: 1, color: OG.ink }}>{match.date.slice(11, 16)}</div>
+          <div style={{ fontFamily: "Barlow", fontSize: ribbon ? 120 : 130, lineHeight: 1, color: ink }}>{match.date.slice(11, 16)}</div>
         </div>
-        <Side side={away} crest={awayCrest} />
+        <Side side={away} crest={awayCrest} color={ink} />
       </div>
-      <div style={{ height: 12, background: OG.accent }} />
+      <div style={{ height: 12, ...(ribbon ? { backgroundImage: OG_CHAMPIONS.band } : { background: OG.accent }) }} />
     </div>,
     SIZE,
   );
@@ -56,7 +73,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/partidos
   return image;
 }
 
-function Side({ side, crest }: { side: TeamSide; crest: string | null }) {
+function Side({ side, crest, color }: { side: TeamSide; crest: string | null; color: string }) {
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 18, minWidth: 0 }}>
       <OgCrest src={crest} name={side.name} size={150} />
@@ -67,7 +84,7 @@ function Side({ side, crest }: { side: TeamSide; crest: string | null }) {
           lineHeight: 1,
           textAlign: "center",
           textTransform: "uppercase",
-          color: OG.ink,
+          color,
         }}
       >
         {side.name}

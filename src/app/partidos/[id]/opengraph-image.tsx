@@ -1,5 +1,5 @@
 import { capitalize, formatLongDate } from "@/lib/dates";
-import { crestDataUrl, OG, OG_SIZE, OgCrest, OgFrame, ogImage } from "@/lib/og";
+import { championsRibbon, crestDataUrl, OG, OG_CHAMPIONS, OG_SIZE, OgCrest, OgFrame, ogImage } from "@/lib/og";
 import { fitPixelSize } from "@/lib/text";
 import { getMatchPageData, matchSummary, type TeamSide } from "@/lib/views/match";
 import DefaultImage from "../../opengraph-image";
@@ -25,39 +25,45 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const [homeCrest, awayCrest] = await Promise.all([crestDataUrl(home.logoUrl), crestDataUrl(away.logoUrl)]);
   const homeWon = match.played && match.homeGoals! > match.awayGoals!;
   const awayWon = match.played && match.awayGoals! > match.homeGoals!;
+  const ribbon = championsRibbon(data);
+  const colors = ribbon ? OG_CHAMPIONS : OG;
 
   return ogImage(
-    <OgFrame aside={matchSummary(data)}>
+    <OgFrame aside={matchSummary(data)} champions={ribbon}>
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 }}>
-        <Side side={home} crest={homeCrest} faded={awayWon} />
+        <Side side={home} crest={homeCrest} faded={awayWon} colors={colors} />
         <div style={{ width: CENTER_WIDTH, display: "flex", flexDirection: "column", alignItems: "center", gap: 14, flexShrink: 0 }}>
           {match.played ? (
             <>
               <div style={{ display: "flex", alignItems: "center", fontFamily: "Barlow", fontSize: 190, lineHeight: 1 }}>
-                <span style={{ color: awayWon ? OG.muted : OG.ink }}>{match.homeGoals}</span>
-                <span style={{ color: OG.line, margin: "0 18px" }}>–</span>
-                <span style={{ color: homeWon ? OG.muted : OG.ink }}>{match.awayGoals}</span>
+                <span style={{ color: awayWon ? colors.muted : colors.ink }}>{match.homeGoals}</span>
+                <span style={{ color: colors.line, margin: "0 18px" }}>–</span>
+                <span style={{ color: homeWon ? colors.muted : colors.ink }}>{match.awayGoals}</span>
               </div>
-              <Pill background={OG.ink} color={OG.surface}>
+              <Pill background={ribbon ? OG_CHAMPIONS.star : OG.ink} color={ribbon ? OG_CHAMPIONS.deep : OG.surface}>
                 FINAL
               </Pill>
             </>
           ) : (
             <>
-              <Pill background={OG.accentSoft} color={OG.accentText} fontSize={dayFontSize(day)}>
+              <Pill
+                background={ribbon ? OG_CHAMPIONS.pill : OG.accentSoft}
+                color={ribbon ? OG_CHAMPIONS.pillText : OG.accentText}
+                fontSize={dayFontSize(day)}
+              >
                 {day}
               </Pill>
-              <div style={{ fontFamily: "Barlow", fontSize: 150, lineHeight: 1, color: OG.ink }}>{match.date.slice(11, 16)}</div>
+              <div style={{ fontFamily: "Barlow", fontSize: 150, lineHeight: 1, color: colors.ink }}>{match.date.slice(11, 16)}</div>
             </>
           )}
         </div>
-        <Side side={away} crest={awayCrest} faded={homeWon} />
+        <Side side={away} crest={awayCrest} faded={homeWon} colors={colors} />
       </div>
     </OgFrame>,
   );
 }
 
-function Side({ side, crest, faded }: { side: TeamSide; crest: string | null; faded: boolean }) {
+function Side({ side, crest, faded, colors }: { side: TeamSide; crest: string | null; faded: boolean; colors: { ink: string; muted: string } }) {
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 22, minWidth: 0 }}>
       <OgCrest src={crest} name={side.name} size={170} />
@@ -68,7 +74,7 @@ function Side({ side, crest, faded }: { side: TeamSide; crest: string | null; fa
           lineHeight: 1,
           textAlign: "center",
           textTransform: "uppercase",
-          color: faded ? OG.muted : OG.ink,
+          color: faded ? colors.muted : colors.ink,
         }}
       >
         {side.name}
