@@ -1,7 +1,9 @@
 import { cacheLife } from "next/cache";
 import { siteConfig } from "@/config/site";
 import { dayKey, nowInMadrid } from "@/lib/dates";
-import { getTeam, getTeamMatches } from "@/lib/data";
+import { getLeagues, getTeam, getTeamMatches } from "@/lib/data";
+import { championsStage } from "@/lib/sportspress/champions";
+import { LeagueTree } from "@/lib/sportspress/leagues";
 import { callUpMessage, fingerprint, type CallUpMessage } from "@/notify/call-ups";
 
 /**
@@ -18,5 +20,6 @@ export async function getSlackExample(): Promise<CallUpMessage | null> {
   const today = dayKey(nowInMadrid());
   const match = matches.find((m) => !m.played && dayKey(m.date) >= today) ?? matches.findLast((m) => m.played);
   if (!match) return null;
-  return callUpMessage({ match, kind: "new", fingerprint: fingerprint(match) }, team.id, today);
+  const tree = new LeagueTree(await getLeagues());
+  return callUpMessage({ match, kind: "new", fingerprint: fingerprint(match) }, team.id, today, championsStage(match, tree));
 }

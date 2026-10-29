@@ -100,3 +100,35 @@ describe("callUpMessage", () => {
     assert.equal(slack.unfurl_media, false);
   });
 });
+
+describe("callUpMessage for the Champions", () => {
+  const firstRound = { phase: "Fase liga", round: 1, sector: "Banca y Financiero" } as const;
+  const game = match({ homeId: 1, awayId: 2, homeName: "Qaracter", awayName: "Embat", date: "2026-11-04T20:00", round: 1, venueId: 110 });
+
+  it("names the Champions in the title and in a line of its own", () => {
+    const message = callUpMessage({ match: game, kind: "new", fingerprint: fingerprint(game) }, 2, now, firstRound);
+    assert.equal(message.title, "Convocatoria Champions · Jornada 1");
+    assert.equal(message.competition, "Champions · Fase liga · Sector Banca y Financiero");
+    assert.equal(message.subject, "primer partido de la Champions");
+    assert.match(JSON.stringify(toSlackMessage(message).blocks), /🏆 \*Competición:\* Champions · Fase liga · Sector Banca y Financiero/);
+    assert.match(JSON.stringify(toSlackMessage(message).blocks), /detalles del primer partido de la Champions/);
+    assert.match(toTelegramHtml(message), /🏆 Champions · Fase liga · Sector Banca y Financiero/);
+  });
+
+  it("names the knockout phase of a match without a round, and keeps the Champions in a change", () => {
+    const quarter = { ...game, round: null };
+    const stage = { phase: "Cuartos", round: null, sector: "Banca y Financiero" } as const;
+    assert.equal(callUpMessage({ match: quarter, kind: "new", fingerprint: "" }, 2, now, stage).title, "Convocatoria Champions · Cuartos");
+    const second = { ...game, round: 2 };
+    const moved = callUpMessage({ match: second, kind: "rescheduled", change: "date", fingerprint: "" }, 2, now, { ...firstRound, round: 2 });
+    assert.equal(moved.title, "Cambio de horario · Champions · Jornada 2");
+    assert.equal(moved.subject, "próximo partido de la Champions");
+  });
+
+  it("leaves other competitions as they were", () => {
+    const message = callUpMessage({ match: game, kind: "new", fingerprint: "" }, 2, now);
+    assert.equal(message.competition, null);
+    assert.doesNotMatch(toTelegramHtml(message), /🏆/);
+    assert.match(JSON.stringify(toSlackMessage(message).blocks), /detalles del próximo partido\./);
+  });
+});
