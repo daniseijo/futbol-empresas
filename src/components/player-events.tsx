@@ -30,6 +30,18 @@ export function CardIcon({ kind }: { kind: CardKind }) {
   );
 }
 
+/** An assist, as a football boot. */
+export function AssistIcon() {
+  return (
+    <svg viewBox="0 0 16 12" aria-hidden className="inline-block h-3 w-4 shrink-0 fill-current">
+      <path d="M2.3 1h3.9l.6 2.9c2.9.3 5.6 1.4 7.3 3 .8.8.6 2.3-.6 2.3H2.1c-.7 0-1.1-.5-1.1-1.2L1.5 4z" />
+      <rect x="2.4" y="9.6" width="1.7" height="1.6" rx=".5" />
+      <rect x="6.6" y="9.6" width="1.7" height="1.6" rx=".5" />
+      <rect x="11.2" y="9.6" width="1.7" height="1.6" rx=".5" />
+    </svg>
+  );
+}
+
 /** What a player did in a match: goals with their minute, assists and cards. */
 export function PlayerEvents({
   goals,
@@ -62,7 +74,13 @@ export function PlayerEvents({
             : "●".repeat(goals)}
         </span>
       )}
-      {assists > 0 && <span className="text-muted">{"◆".repeat(assists)}</span>}
+      {assists > 0 && (
+        <span role="img" aria-label={`${assists} ${assists === 1 ? "asistencia" : "asistencias"}`} className="inline-flex items-center gap-0.5 text-muted">
+          {Array.from({ length: assists }, (_, index) => (
+            <AssistIcon key={index} />
+          ))}
+        </span>
+      )}
       {cards.length > 0 && (
         <span className="inline-flex items-center gap-1">
           {cards.map((kind) => (
@@ -80,7 +98,9 @@ export function PlayerEventsLegend({ extra }: { extra?: string }) {
   return (
     <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
       <span>● gol (con minuto)</span>
-      <span>◆ asistencia</span>
+      <span className="inline-flex items-center gap-1">
+        <AssistIcon /> asistencia
+      </span>
       <span className="inline-flex items-center gap-1">
         <CardIcon kind="yellow" /> amarilla
       </span>
