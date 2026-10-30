@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChampionsBadge, ChampionsRoad } from "@/components/champions";
 import { Crest } from "@/components/crest";
 import { FormBadges, OutcomeBadge } from "@/components/form-badges";
-import { CardIcon } from "@/components/player-events";
+import { CardIcon, GoalIcon } from "@/components/player-events";
 import { calendarUrl } from "@/lib/calendar";
 import { sendingOff } from "@/lib/cards";
 import { daysBetween, formatShortDate, relativeDay } from "@/lib/dates";
@@ -418,10 +418,9 @@ function CalendarIcon() {
 
 function BallIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" aria-label="Gol" role="img" className="mt-[3px] shrink-0">
-      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M12 7.5l4 2.9-1.5 4.8h-5L8 10.4z" fill="currentColor" />
-    </svg>
+    <span role="img" aria-label="Gol" className="mt-[3px] inline-flex">
+      <GoalIcon className="h-[13px] w-[13px]" />
+    </span>
   );
 }
 
