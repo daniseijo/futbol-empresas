@@ -1,6 +1,6 @@
-import Image from "next/image";
 import { FeaturedFooter, FeaturedHero, featuredSurface } from "@/components/featured-match";
 import { IdealSeven } from "@/components/ideal-seven";
+import { PhotoGallery } from "@/components/photo-gallery";
 import { Leaders } from "@/components/team/leaders";
 import { MatchRow } from "@/components/team/match-row";
 import { SectionCard } from "@/components/team/section-card";
@@ -56,16 +56,16 @@ function Summary({ data }: { data: TeamPageData }) {
 
         {data.photos.length > 0 && (
           <SectionCard title="Fotos" link={data.team.flickrAlbumUrl ? { href: data.team.flickrAlbumUrl, label: "Álbum en Flickr" } : undefined}>
-            <div className="grid auto-rows-[150px] grid-cols-2 gap-2.5 sm:grid-cols-[2fr_1fr_1fr]">
-              {data.photos.slice(0, 5).map((photo, index) => (
-                <figure key={photo.url} className={`relative overflow-hidden rounded-[14px] ${index === 0 ? "sm:row-span-2" : ""}`}>
-                  <Image src={photo.url} alt={photo.caption} fill sizes="(min-width: 640px) 40vw, 50vw" className="object-cover" />
-                  {index === 0 && (
-                    <figcaption className="absolute bottom-3 left-3 rounded-lg bg-white/90 px-2.5 py-1.5 text-[13px] font-semibold">{photo.caption}</figcaption>
-                  )}
-                </figure>
-              ))}
-            </div>
+            <PhotoGallery
+              photos={data.photos}
+              shown={5}
+              alt={`Foto de ${data.team.name}`}
+              fileName={data.team.slug}
+              className="grid auto-rows-[150px] grid-cols-2 gap-2.5 sm:grid-cols-[2fr_1fr_1fr]"
+              tileClassName="rounded-[14px]"
+              sizes="(min-width: 640px) 40vw, 50vw"
+              featureFirst
+            />
           </SectionCard>
         )}
       </div>

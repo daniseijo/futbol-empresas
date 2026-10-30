@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -7,6 +6,7 @@ import { ChampionsRoad, ChampionsStar } from "@/components/champions";
 import { Crest } from "@/components/crest";
 import { FormBadges, OutcomeBadge } from "@/components/form-badges";
 import { MatchTimeline } from "@/components/match-timeline";
+import { PhotoGallery } from "@/components/photo-gallery";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { PlayerEvents, PlayerEventsLegend } from "@/components/player-events";
 import { ShareButton } from "@/components/share-button";
@@ -19,6 +19,7 @@ import { getSeasonMatches, getCurrentSeason, getTeam } from "@/lib/data";
 import { playerDisplayName } from "@/lib/players";
 import { capitalize, formatLongDate, formatShortDate, relativeDay, resultOverdue } from "@/lib/dates";
 import { championsStageLabel } from "@/lib/sportspress/champions";
+import { slugify } from "@/lib/sportspress/leagues";
 import type { Position } from "@/lib/sportspress/types";
 import { getVenue, mapsUrl } from "@/lib/sportspress/venues";
 import { outcomeFor } from "@/lib/standings";
@@ -395,15 +396,17 @@ function Lineups({ data }: { data: MatchPageData }) {
 }
 
 function Photos({ data }: { data: MatchPageData }) {
-  if (data.match.photos.length === 0) return null;
+  const { match } = data;
+  if (match.photos.length === 0) return null;
   return (
-    <section className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-      {data.match.photos.map((url) => (
-        <div key={url} className="relative h-64 overflow-hidden rounded-2xl">
-          <Image src={url} alt={`Foto del partido ${data.match.homeName} – ${data.match.awayName}`} fill sizes="(min-width: 640px) 40vw, 100vw" className="object-cover" />
-        </div>
-      ))}
-    </section>
+    <PhotoGallery
+      photos={match.photos.map((url) => ({ url, caption: "" }))}
+      alt={`Foto del partido ${match.homeName} – ${match.awayName}`}
+      fileName={`${slugify(match.homeName)}-${slugify(match.awayName)}-${match.date.slice(0, 10)}`}
+      className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
+      tileClassName="h-64 rounded-2xl"
+      sizes="(min-width: 640px) 40vw, 100vw"
+    />
   );
 }
 

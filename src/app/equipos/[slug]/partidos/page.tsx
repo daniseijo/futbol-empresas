@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { PhotoGallery } from "@/components/photo-gallery";
 import { MatchRow, RestRow } from "@/components/team/match-row";
 import { SectionCard } from "@/components/team/section-card";
 import type { SeasonEntry, TeamPageData } from "@/lib/views/team";
@@ -56,13 +56,15 @@ function Matches({ data }: { data: TeamPageData }) {
           <section className="flex flex-col gap-3 card px-4 py-5 sm:p-5">
             <h2 className="font-display text-2xl font-extrabold uppercase">Fotos y vídeos</h2>
             {data.photos.length > 0 && (
-              <div className="grid grid-cols-2 gap-2">
-                {data.photos.slice(0, 6).map((photo) => (
-                  <div key={photo.url} className="relative aspect-[4/3] overflow-hidden rounded-xl">
-                    <Image src={photo.url} alt={photo.caption} fill sizes="190px" className="object-cover" />
-                  </div>
-                ))}
-              </div>
+              <PhotoGallery
+                photos={data.photos}
+                shown={6}
+                alt={`Foto de ${data.team.name}`}
+                fileName={data.team.slug}
+                className="grid grid-cols-2 gap-2"
+                tileClassName="aspect-[4/3] rounded-xl"
+                sizes="190px"
+              />
             )}
             <div className="flex flex-col gap-1.5 text-sm font-semibold text-accent-text">
               {data.team.video && (

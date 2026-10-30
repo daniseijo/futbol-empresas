@@ -49,6 +49,11 @@ body {
   font-family: var(--font-sans);
 }
 
+/* A modal dialog (the photo viewer) covers the page: the page does not scroll behind it. */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
 /* Headings wrap into lines of similar length, so a phone never leaves one word ("4") on its own line. */
 h1,
 h2,
