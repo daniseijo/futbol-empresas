@@ -1,12 +1,12 @@
 // The cron-job.org jobs that start GitHub workflows, kept as code: the sync on
-// match nights, and the call-ups every hour a Slack channel can pick. GitHub's
+// match nights and the days after, and the call-ups every hour a Slack channel can pick. GitHub's
 // own schedule starts runs late or drops them on busy hours, so cron-job.org
 // calls the workflow_dispatch API instead (see the README).
 //
 // Usage (reads CRONJOB_API_KEY from .env.local):
 //   pnpm cron-job                 status: each job, its last runs and the next ones
 //   pnpm cron-job diff            what `apply` would change
-//   pnpm cron-job apply           makes the jobs match JOBS below (creates the missing ones)
+//   pnpm cron-job apply           makes the jobs match JOBS below (creates the missing ones, deletes RETIRED)
 //
 // The GitHub token (fine-grained, Actions: read and write on this repository) is
 // not in the repository: `apply` keeps the one a job already has (a new job
@@ -44,28 +44,30 @@ function dispatchJob(title: string, workflow: string, { hours, minutes, wdays }:
 
 type JobSpec = ReturnType<typeof dispatchJob>;
 
+const EVERY_HOUR = Array.from({ length: 24 }, (_, hour) => hour);
+
 /** The fields of the jobs this script owns. Anything else is left as it is. */
 const JOBS: JobSpec[] = [
-  // Matches are Monday to Friday nights, kicking off from 20:00 to 22:05 Madrid time, and the league uploads
-  // the results until about 01:00. Every 20 minutes from 20:30, when the first ones end, to 01:50. A job
-  // runs every hour × minute it lists, and its weekdays are those of the run, so it takes three jobs.
-  dispatchJob("futbol-empresas sync", "sync.yml", { hours: [21, 22, 23], minutes: [10, 30, 50], wdays: [1, 2, 3, 4, 5] }),
-  dispatchJob("futbol-empresas sync (first matches)", "sync.yml", { hours: [20], minutes: [30, 50], wdays: [1, 2, 3, 4, 5] }),
-  dispatchJob("futbol-empresas sync (after midnight)", "sync.yml", { hours: [0, 1], minutes: [10, 30, 50], wdays: [2, 3, 4, 5, 6] }),
-  // The league often uploads results the morning after and the match reports around lunchtime, so on Thursdays and
-  // Fridays the sync also runs every 20 minutes through the day, from 02:10 to 19:50 (the jobs above cover the rest).
-  // A run with nothing new reads ~3,700 rows: these 108 runs a week add ~1.6M a month to Turso's 500M.
-  dispatchJob("futbol-empresas sync (Thursday and Friday daytime)", "sync.yml", {
-    hours: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
-    minutes: [10, 30, 50],
-    wdays: [4, 5],
-  }),
+  // Matches are Monday to Thursday nights, kicking off from 20:00 to 22:05 Madrid time. The league uploads some
+  // results that night, until about 01:00, and the rest the morning after, with the match reports around lunchtime.
+  // So the sync runs every 20 minutes all day from Tuesday to Friday, and on Monday night. A run with nothing new
+  // reads ~3,700 rows: these ~1,300 runs a month read ~5M of Turso's 500M. A job runs every hour × minute it lists,
+  // on the weekdays of the run, hence the Monday one apart.
+  dispatchJob("futbol-empresas sync", "sync.yml", { hours: EVERY_HOUR, minutes: [10, 30, 50], wdays: [2, 3, 4, 5] }),
+  dispatchJob("futbol-empresas sync (Monday night)", "sync.yml", { hours: [20, 21, 22, 23], minutes: [10, 30, 50], wdays: [1] }),
   // Slack channels pick a weekday and a whole hour from 07:00 to 22:00 (src/notify/schedule.ts).
   dispatchJob("futbol-empresas notify", "notify.yml", {
     hours: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
     minutes: [0],
     wdays: [1, 2, 3, 4, 5],
   }),
+];
+
+/** Jobs this script used to own, which `apply` deletes. */
+const RETIRED = [
+  "futbol-empresas sync (first matches)",
+  "futbol-empresas sync (after midnight)",
+  "futbol-empresas sync (Thursday and Friday daytime)",
 ];
 
 type Job = JobSpec & { jobId: number; lastStatus: number; nextExecution: number | null };
@@ -172,6 +174,15 @@ async function status() {
 
 async function apply({ dryRun }: { dryRun: boolean }) {
   const live = await findJobs();
+  const { jobs } = await api<{ jobs: { jobId: number; title: string }[] }>("GET", "/jobs");
+  for (const job of jobs.filter((job) => RETIRED.includes(job.title))) {
+    if (dryRun) {
+      console.log(`Would delete "${job.title}" (#${job.jobId}).`);
+      continue;
+    }
+    await api("DELETE", `/jobs/${job.jobId}`);
+    console.log(`Deleted "${job.title}" (#${job.jobId}).`);
+  }
   for (const spec of JOBS) {
     const job = live.get(spec.title);
     if (!job && dryRun) {
