@@ -121,7 +121,7 @@ minutes on its own; once nothing is pending it ends in a few minutes.
 
 ### The cron-job.org jobs
 
-The jobs start GitHub workflows: **sync** every 20 minutes all day from Tuesday to Friday and on Monday night
+The jobs start GitHub workflows: **sync** every 20 minutes from Tuesday to Friday (except 02:00 to 08:00) and on Monday night
 (`sync.yml`, two jobs, since a job runs every hour × minute it lists on the weekdays of the run: matches are Monday
 to Thursday nights, and the league uploads some results that night and the rest the morning after, with the
 reports around lunchtime), and **notify** on the hour from 07:00 to 22:00, Monday to Friday (`notify.yml`, the Slack call-ups each channel
