@@ -38,4 +38,30 @@ describe("buildTeamContext", () => {
     const context = buildTeamContext(1, matches, tree, "2026-10-31T12:00");
     assert.deepEqual(Object.values(context.champions), [{ phase: "Fase liga", round: 1, sector: "Banca y Financiero" }]);
   });
+
+  describe("a match the league has not scored yet", () => {
+    // Embat played the Champions on Thursday 29 October; the league has not published the score.
+    const played = result(1, 2, 1, 2, { ...league, round: 4, date: "2026-10-22T21:00" });
+    const unscored = match({ homeId: 5, awayId: 1, ...champions, round: 1, date: "2026-10-29T20:00" });
+    const later = (date: string) => match({ homeId: 1, awayId: 3, ...league, round: 5, date });
+
+    it("stays the next match, so the summary keeps its preview", () => {
+      const context = buildTeamContext(1, [played, unscored, later("2026-11-12T21:00")], tree, "2026-10-30T10:00");
+      assert.equal(context.nextMatch?.id, unscored.id);
+      assert.equal(context.group?.name, "Champions Fase Liga - Banca y Financiero");
+    });
+
+    it("gives way from the Monday of the next match's week", () => {
+      const next = later("2026-11-05T21:00");
+      assert.equal(buildTeamContext(1, [played, unscored, next], tree, "2026-11-01T10:00").nextMatch?.id, unscored.id);
+      assert.equal(buildTeamContext(1, [played, unscored, next], tree, "2026-11-02T10:00").nextMatch?.id, next.id);
+    });
+
+    it("gives way after a week, or once a later match has a score", () => {
+      assert.equal(buildTeamContext(1, [played, unscored], tree, "2026-11-05T10:00").nextMatch?.id, unscored.id);
+      assert.equal(buildTeamContext(1, [played, unscored], tree, "2026-11-06T10:00").nextMatch, null);
+      const scored = result(1, 1, 0, 3, { ...league, round: 5, date: "2026-11-03T21:00" });
+      assert.equal(buildTeamContext(1, [played, unscored, scored], tree, "2026-11-04T10:00").nextMatch, null);
+    });
+  });
 });

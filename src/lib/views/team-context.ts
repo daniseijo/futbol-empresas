@@ -1,4 +1,4 @@
-import { dayKey } from "@/lib/dates";
+import { daysBetween, dayKey, weekStart } from "@/lib/dates";
 import { championsStage, type ChampionsStage } from "@/lib/sportspress/champions";
 import type { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Match, StandingRow } from "@/lib/sportspress/types";
@@ -34,9 +34,9 @@ export function involves(match: Match, teamId: number): boolean {
 export function buildTeamContext(teamId: number, seasonMatches: Match[], tree: LeagueTree, now: string): TeamContext {
   const today = dayKey(now);
   const matches = seasonMatches.filter((m) => involves(m, teamId));
-  const upcoming = matches.filter((m) => !m.played && dayKey(m.date) >= today);
-  const nextMatch = upcoming[0] ?? null;
+  const upcoming = matches.find((m) => !m.played && dayKey(m.date) >= today) ?? null;
   const lastResults = matches.filter((m) => m.played).reverse();
+  const nextMatch = awaitingResult(matches, now, upcoming) ?? upcoming;
 
   // The "current" group is the featured match's (the last result until the Monday of the next match's week),
   // so the standings beside it are its own even when the two matches are in different competitions.
@@ -76,4 +76,21 @@ export function buildTeamContext(teamId: number, seasonMatches: Match[], tree: L
     lastResults,
     champions,
   };
+}
+
+/** Days after kickoff a match without a score can stay the featured one while the league publishes it. */
+const AWAITING_RESULT_DAYS = 7;
+
+/**
+ * A match already played whose score the league has not published yet. It stays the team's next match, so the
+ * summary keeps its preview instead of putting the match before it in its place, as if that were the latest
+ * result. It gives way once a later match has a score, after a week, or from the Monday of the next match's week.
+ */
+export function awaitingResult(matches: Match[], now: string, upcoming: Match | null): Match | null {
+  const today = dayKey(now);
+  const pending = matches.findLast((m) => !m.played && dayKey(m.date) < today);
+  if (!pending || daysBetween(pending.date, now) > AWAITING_RESULT_DAYS) return null;
+  if (matches.some((m) => m.played && m.date > pending.date)) return null;
+  if (upcoming && weekStart(upcoming.date) === weekStart(now)) return null;
+  return pending;
 }

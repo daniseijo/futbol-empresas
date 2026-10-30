@@ -215,6 +215,8 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
   const { match, home, away } = data;
   const venue = getVenue(match.venueId);
   const today = daysBetween(now, match.date) === 0;
+  // Played on an earlier day, but the league has not published the score yet.
+  const awaiting = daysBetween(now, match.date) < 0;
   const rows =
     home.standing && away.standing
       ? [
@@ -232,13 +234,19 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         {/* A Champions match names its phase instead: the chip already says it is the preview. */}
-        <Eyebrow>{data.champions ? roundTitle(match, data.champions) : ["Próximo partido", roundTitle(match, null)].filter(Boolean).join(" · ")}</Eyebrow>
+        <Eyebrow>{data.champions ? roundTitle(match, data.champions) : [!awaiting && "Próximo partido", roundTitle(match, null)].filter(Boolean).join(" · ")}</Eyebrow>
         <Chip
           className={
-            data.champions ? "bg-champions-star text-champions-deep" : today ? "bg-accent text-on-accent" : "bg-accent-soft text-accent-text"
+            awaiting
+              ? "bg-line-soft text-muted"
+              : data.champions
+                ? "bg-champions-star text-champions-deep"
+                : today
+                  ? "bg-accent text-on-accent"
+                  : "bg-accent-soft text-accent-text"
           }
         >
-          {today ? "Hoy" : "Previa"}
+          {awaiting ? "Sin resultado" : today ? "Hoy" : "Previa"}
         </Chip>
       </div>
 
@@ -280,21 +288,23 @@ function PreviewHero({ data, team, logos, slugs, now }: { data: MatchPageData; t
       <div className="mt-auto flex items-center gap-2.5 border-t border-line-soft pt-5 sm:flex-wrap">
         {venue?.address && <span className="hidden flex-[1_1_240px] text-sm text-muted sm:block">{venue.address}</span>}
         <Link href={`/partidos/${match.id}`} className="rounded-full bg-ink px-4.5 py-3 text-sm font-semibold text-surface">
-          Ver la previa
+          {awaiting ? "Ver el partido" : "Ver la previa"}
         </Link>
-        <span className="ml-auto flex gap-2 sm:ml-0 sm:gap-2.5">
-          {venue && (
-            <IconButton href={mapsUrl(venue)} label="Cómo llegar">
-              <PinIcon />
+        {!awaiting && (
+          <span className="ml-auto flex gap-2 sm:ml-0 sm:gap-2.5">
+            {venue && (
+              <IconButton href={mapsUrl(venue)} label="Cómo llegar">
+                <PinIcon />
+              </IconButton>
+            )}
+            <IconButton
+              href={calendarUrl(match, venue ? (venue.address ? `${venue.name}, ${venue.address}` : venue.name) : "")}
+              label="Añadir al calendario"
+            >
+              <CalendarIcon />
             </IconButton>
-          )}
-          <IconButton
-            href={calendarUrl(match, venue ? (venue.address ? `${venue.name}, ${venue.address}` : venue.name) : "")}
-            label="Añadir al calendario"
-          >
-            <CalendarIcon />
-          </IconButton>
-        </span>
+          </span>
+        )}
       </div>
     </>
   );
