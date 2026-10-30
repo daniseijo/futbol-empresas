@@ -52,6 +52,14 @@ const JOBS: JobSpec[] = [
   dispatchJob("futbol-empresas sync", "sync.yml", { hours: [21, 22, 23], minutes: [10, 30, 50], wdays: [1, 2, 3, 4, 5] }),
   dispatchJob("futbol-empresas sync (first matches)", "sync.yml", { hours: [20], minutes: [30, 50], wdays: [1, 2, 3, 4, 5] }),
   dispatchJob("futbol-empresas sync (after midnight)", "sync.yml", { hours: [0, 1], minutes: [10, 30, 50], wdays: [2, 3, 4, 5, 6] }),
+  // The league often uploads results the morning after and the match reports around lunchtime, so on Thursdays and
+  // Fridays the sync also runs every 20 minutes through the day, from 02:10 to 19:50 (the jobs above cover the rest).
+  // A run with nothing new reads ~3,700 rows: these 108 runs a week add ~1.6M a month to Turso's 500M.
+  dispatchJob("futbol-empresas sync (Thursday and Friday daytime)", "sync.yml", {
+    hours: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+    minutes: [10, 30, 50],
+    wdays: [4, 5],
+  }),
   // Slack channels pick a weekday and a whole hour from 07:00 to 22:00 (src/notify/schedule.ts).
   dispatchJob("futbol-empresas notify", "notify.yml", {
     hours: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
