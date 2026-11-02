@@ -20,5 +20,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
     steps:
       - run: |
-          gh workflow enable sync.yml
+          # Paused since 2 Nov 2026 (the league answers GitHub Actions with a 403, see
+          # scripts/cron-job.ts): put this line back when the sync is turned on again.
+          # gh workflow enable sync.yml
           gh workflow enable keepalive.yml

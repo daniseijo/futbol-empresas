@@ -20,10 +20,14 @@ const REPOSITORY = "daniseijo/futbol-empresas";
 const AUTH_HEADER = "Authorization";
 
 /** A job that starts a workflow at the given Madrid times. */
-function dispatchJob(title: string, workflow: string, { hours, minutes, wdays }: { hours: number[]; minutes: number[]; wdays: number[] }) {
+function dispatchJob(
+  title: string,
+  workflow: string,
+  { hours, minutes, wdays, enabled = true }: { hours: number[]; minutes: number[]; wdays: number[]; enabled?: boolean },
+) {
   return {
     title,
-    enabled: true,
+    enabled,
     saveResponses: true,
     url: `https://api.github.com/repos/${REPOSITORY}/actions/workflows/${workflow}/dispatches`,
     requestMethod: 1, // POST
@@ -47,6 +51,12 @@ type JobSpec = ReturnType<typeof dispatchJob>;
 /** Every hour but 02:00 to 07:59. */
 const DAY_HOURS = Array.from({ length: 24 }, (_, hour) => hour).filter((hour) => hour < 2 || hour >= 8);
 
+/**
+ * Paused since 2 Nov 2026: the league's Cloudflare answers every request from GitHub Actions with a 403 (it still
+ * works from other networks), and sync.yml is disabled on GitHub too. Try again in December.
+ */
+const SYNC_ENABLED = false;
+
 /** The fields of the jobs this script owns. Anything else is left as it is. */
 const JOBS: JobSpec[] = [
   // Matches are Monday to Thursday nights, kicking off from 20:00 to 22:05 Madrid time. The league uploads some
@@ -54,8 +64,8 @@ const JOBS: JobSpec[] = [
   // So the sync runs every 20 minutes from Tuesday to Friday, except from 02:00 to 08:00, when nobody uploads
   // anything, and on Monday night. A run with nothing new reads ~3,700 rows: these ~1,000 runs a month read ~4M of
   // Turso's 500M. A job runs every hour × minute it lists, on the weekdays of the run, hence the Monday one apart.
-  dispatchJob("futbol-empresas sync", "sync.yml", { hours: DAY_HOURS, minutes: [10, 30, 50], wdays: [2, 3, 4, 5] }),
-  dispatchJob("futbol-empresas sync (Monday night)", "sync.yml", { hours: [20, 21, 22, 23], minutes: [10, 30, 50], wdays: [1] }),
+  dispatchJob("futbol-empresas sync", "sync.yml", { hours: DAY_HOURS, minutes: [10, 30, 50], wdays: [2, 3, 4, 5], enabled: SYNC_ENABLED }),
+  dispatchJob("futbol-empresas sync (Monday night)", "sync.yml", { hours: [20, 21, 22, 23], minutes: [10, 30, 50], wdays: [1], enabled: SYNC_ENABLED }),
   // Slack channels pick a weekday and a whole hour from 07:00 to 22:00 (src/notify/schedule.ts).
   dispatchJob("futbol-empresas notify", "notify.yml", {
     hours: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
