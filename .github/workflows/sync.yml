@@ -2,12 +2,12 @@ name: Sync league data
 
 # Copies the changes from the futbolempresas.es API into the database (Turso) and
 # tells the site to refresh its cache. On Monday night and from Tuesday to Friday
-# (Madrid time, except 02:00 to 08:00), an external cron starts it every 20 minutes through
+# (Madrid time, except 02:00 to 08:00), an external cron starts it every hour through
 # workflow_dispatch, because GitHub starts scheduled runs late or drops them on
 # busy hours (see the README). The schedule here is the fallback, in UTC.
 on:
   schedule:
-    - cron: "7 */3 * * *" # every 3 hours
+    - cron: "7 */6 * * *" # every 6 hours (every 3 until the league's 403 in Nov 2026)
   workflow_dispatch:
     inputs:
       budget_minutes:

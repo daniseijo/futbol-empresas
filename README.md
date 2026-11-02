@@ -91,13 +91,15 @@ Move `futbol-copy.db` over (AirDrop, Drive...), save it as `data/futbol.db` on t
    (`https://<domain>/api/revalidate`), and the variable `SYNC_ENABLED=true`. Without that variable the
    scheduled action does not run (so it does not load the API while there is no remote database).
 
-The `.github/workflows/sync.yml` action syncs every 3 hours, and an external cron starts it every 20 minutes on
+The `.github/workflows/sync.yml` action syncs every 6 hours, and an external cron starts it every hour on
 match nights (Monday to Friday, see below). Each run takes 15 minutes at most, then calls `/api/revalidate` so
 the site refreshes its cache.
 
 The league server is slow (a squad's `/lists` call takes ~10 s, an old match page for its video ~13 s), but it
-keeps a page's time nearly flat with several at once, so the client fetches up to 6 website pages at a time
-(`PAGE_CONCURRENCY` in `src/lib/sportspress/client.ts`) and keeps the API at 2. Even so, a big backfill
+keeps a page's time nearly flat with several at once, so the client used to fetch 6 website pages at a time
+and 2 API calls. Since 1 Nov 2026 the league answers GitHub Actions with a 403, so the sync runs less often and
+the client keeps to 2 pages and 1 API call (`PAGE_CONCURRENCY` and `API_CONCURRENCY` in
+`src/lib/sportspress/client.ts`). Even so, a big backfill
 such as the video archive (~800 matches an hour) takes many runs. To finish it sooner, start a longer manual
 run: `gh workflow run sync.yml -f budget_minutes=120` (up to 330). Scheduled runs queue behind it, and the site
 only refreshes when it ends, so avoid match nights. On Saturday and Sunday at 07:00 UTC a scheduled run gets 330
@@ -114,14 +116,14 @@ minutes on its own; once nothing is pending it ends in a few minutes.
 - **Late or missing scheduled runs:** GitHub's `schedule` is best effort. On busy hours it starts runs hours
   late or drops them (on 22–23 Oct 2026 the 09:07 UTC run started at 11:27, and a match night got 5 of its
   ~21 runs). So match nights are not on GitHub's schedule: a [cron-job.org](https://cron-job.org) job calls the
-  `workflow_dispatch` API every 20 minutes on match nights, from 20:30 (when the first matches end) to 01:50
+  `workflow_dispatch` API every hour on match nights, from 20:30 (when the first matches end) to 01:50
   (the league uploads results until about 01:00), Monday to Friday nights. GitHub answers `204`.
   Runs never overlap (`concurrency: sync`); if one is already waiting, GitHub cancels it in favour of the newer
   one, which is harmless.
 
 ### The cron-job.org jobs
 
-The jobs start GitHub workflows: **sync** every 20 minutes from Tuesday to Friday (except 02:00 to 08:00) and on Monday night
+The jobs start GitHub workflows: **sync** every hour from Tuesday to Friday (except 02:00 to 08:00) and on Monday night
 (`sync.yml`, two jobs, since a job runs every hour × minute it lists on the weekdays of the run: matches are Monday
 to Thursday nights, and the league uploads some results that night and the rest the morning after, with the
 reports around lunchtime), and **notify** on the hour from 07:00 to 22:00, Monday to Friday (`notify.yml`, the Slack call-ups each channel

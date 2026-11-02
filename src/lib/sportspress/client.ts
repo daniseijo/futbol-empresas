@@ -32,7 +32,9 @@ export interface Page<T> {
 // The API answers a single request in ~200 ms, but with several at once each
 // one climbs to 5-7 s, and its heaviest calls (pages of matches with
 // `content`) are already close to a 504. The website's pages take ~13 s each
-// (Oct 2026) but stay nearly that fast with 6 at once.
+// (Oct 2026). Since 1 Nov 2026 the league answers GitHub Actions with a 403,
+// so the client keeps to one API call and two pages at a time to look less
+// like an attack while we ask to be let back in.
 function slots(max: number) {
   let active = 0;
   const waiting: (() => void)[] = [];
@@ -49,9 +51,9 @@ function slots(max: number) {
 }
 
 /** Requests at once to the REST API. */
-const API_CONCURRENCY = 2;
+const API_CONCURRENCY = 1;
 /** Requests at once to the website's pages (for data the API lacks). */
-export const PAGE_CONCURRENCY = 6;
+export const PAGE_CONCURRENCY = 2;
 const apiSlot = slots(API_CONCURRENCY);
 const pageSlot = slots(PAGE_CONCURRENCY);
 

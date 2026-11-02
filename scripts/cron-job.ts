@@ -51,11 +51,11 @@ const DAY_HOURS = Array.from({ length: 24 }, (_, hour) => hour).filter((hour) =>
 const JOBS: JobSpec[] = [
   // Matches are Monday to Thursday nights, kicking off from 20:00 to 22:05 Madrid time. The league uploads some
   // results that night, until about 01:00, and the rest the morning after, with the match reports around lunchtime.
-  // So the sync runs every 20 minutes from Tuesday to Friday, except from 02:00 to 08:00, when nobody uploads
-  // anything, and on Monday night. A run with nothing new reads ~3,700 rows: these ~1,000 runs a month read ~4M of
-  // Turso's 500M. A job runs every hour × minute it lists, on the weekdays of the run, hence the Monday one apart.
-  dispatchJob("futbol-empresas sync", "sync.yml", { hours: DAY_HOURS, minutes: [10, 30, 50], wdays: [2, 3, 4, 5] }),
-  dispatchJob("futbol-empresas sync (Monday night)", "sync.yml", { hours: [20, 21, 22, 23], minutes: [10, 30, 50], wdays: [1] }),
+  // So the sync runs every hour from Tuesday to Friday, except from 02:00 to 08:00, when nobody uploads
+  // anything, and on Monday night. It ran every 20 minutes until the league started answering GitHub with a 403
+  // (1 Nov 2026); hourly keeps the load down while we ask to be let back in. A job runs every hour × minute it lists, on the weekdays of the run, hence the Monday one apart.
+  dispatchJob("futbol-empresas sync", "sync.yml", { hours: DAY_HOURS, minutes: [10], wdays: [2, 3, 4, 5] }),
+  dispatchJob("futbol-empresas sync (Monday night)", "sync.yml", { hours: [20, 21, 22, 23], minutes: [10], wdays: [1] }),
   // Slack channels pick a weekday and a whole hour from 07:00 to 22:00 (src/notify/schedule.ts).
   dispatchJob("futbol-empresas notify", "notify.yml", {
     hours: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
