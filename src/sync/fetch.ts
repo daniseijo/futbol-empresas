@@ -130,6 +130,21 @@ export async function fetchYoutubeInfo(url: string): Promise<{ title: string; th
   return { title: data.title ?? "Vídeos", thumbnailUrl: data.thumbnail_url ?? null };
 }
 
+/**
+ * A crest as a data URL, for the share and call-up images (src/lib/og.tsx).
+ * Null when it cannot be drawn: gone (404) or not a PNG or JPEG, the only
+ * formats Satori draws. Throws on anything that may work later (a timeout, a
+ * 5xx, Cloudflare's 403), so the next run tries again.
+ */
+export async function fetchCrest(url: string): Promise<string | null> {
+  const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  if (response.status === 404 || response.status === 410) return null;
+  if (!response.ok) throw new Error(`Crest ${url}: HTTP ${response.status}`);
+  const type = (response.headers.get("content-type") ?? "").split(";")[0].trim();
+  if (!/^image\/(png|jpe?g)$/.test(type)) return null;
+  return `data:${type};base64,${Buffer.from(await response.arrayBuffer()).toString("base64")}`;
+}
+
 // --- Matches -------------------------------------------------------------------
 
 const POSITION_IDS: Record<number, string> = { 100: "POR", 99: "DEF", 98: "MED", 97: "DEL" };

@@ -16,6 +16,7 @@ import { PAGE_CONCURRENCY, SportsPressError } from "@/lib/sportspress/client";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Season } from "@/lib/sportspress/types";
 import {
+  fetchCrest,
   fetchLeagues,
   fetchMatchesPage,
   fetchMatchVideo,
@@ -478,6 +479,62 @@ async function backfillMatchVideos(ctx: Context, { current }: { current: boolean
   return hasTime(ctx);
 }
 
+/** A crest that could not be drawn (gone, or WebP) is checked again after this many days. */
+const CREST_RECHECK_DAYS = 30;
+/** Crests are small static files, served by Cloudflare. */
+const CREST_CONCURRENCY = 6;
+
+/** The teams' crest URLs with no stored copy yet, or whose copy failed long enough ago. */
+async function pendingCrests(ctx: Context): Promise<string[]> {
+  const t = schema.teams;
+  const c = schema.crests;
+  const rows = await db
+    .selectDistinct({ url: t.logoUrl })
+    .from(t)
+    .leftJoin(c, eq(c.url, t.logoUrl))
+    .where(
+      and(
+        sql`${t.logoUrl} is not null`,
+        or(isNull(c.url), and(isNull(c.dataUrl), lt(c.checkedAt, addDays(ctx.startedAt, -CREST_RECHECK_DAYS)))),
+      ),
+    );
+  return rows.map((row) => row.url).filter((url): url is string => url !== null);
+}
+
+/**
+ * Copies the teams' crests into the database, for the share and call-up
+ * images, which cannot fetch them from the league while rendering. A crest
+ * whose URL changes is a new row. One that fails for now (a timeout,
+ * Cloudflare) is left out and tried again on the next run.
+ */
+async function backfillCrests(ctx: Context): Promise<boolean> {
+  const urls = await pendingCrests(ctx);
+  let stored = 0;
+  let undrawable = 0;
+  let failed = 0;
+  for (let i = 0; i < urls.length && hasTime(ctx); i += CREST_CONCURRENCY) {
+    const rows = await Promise.all(
+      urls.slice(i, i + CREST_CONCURRENCY).map(async (url) => {
+        try {
+          return { url, dataUrl: await fetchCrest(url), checkedAt: ctx.startedAt };
+        } catch {
+          failed += 1;
+          return null;
+        }
+      }),
+    );
+    const found = rows.filter((row) => row !== null);
+    await upsert(schema.crests, found, [schema.crests.url]);
+    stored += found.filter((row) => row.dataUrl).length;
+    undrawable += found.filter((row) => !row.dataUrl).length;
+  }
+  if (urls.length > 0) {
+    ctx.writes += stored;
+    ctx.log(`Crests: ${stored} stored, ${undrawable} not drawable${failed ? `, ${failed} failed (next run)` : ""}`);
+  }
+  return hasTime(ctx);
+}
+
 async function countMigrations(): Promise<number> {
   const rows = await db.all<{ n: number }>(sql`select count(*) as n from __drizzle_migrations`).catch(() => [{ n: 0 }]);
   return rows[0]?.n ?? 0;
@@ -597,6 +654,7 @@ export async function runSync({
         return details && squads;
       },
     ],
+    ["Crests", () => backfillCrests(ctx)],
     ["Scorer names", () => backfillPlayerNames(ctx, { withStats: true })],
     ["Current season videos", () => backfillMatchVideos(ctx, { current: true }), () => videosLeft(true)],
     [

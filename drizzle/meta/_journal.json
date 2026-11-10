@@ -85,6 +85,13 @@
       "when": 1793023128499,
       "tag": "0011_match_players_scorers",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1794301606959,
+      "tag": "0012_crests",
+      "breakpoints": true
     }
   ]
 }

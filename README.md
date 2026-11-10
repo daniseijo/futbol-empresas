@@ -29,8 +29,10 @@ session against production reads 1-3M rows an hour, and rows read are the limit 
 Turso CLI, `pnpm sync` builds the database from the API instead (hours the first time; resumable).
 
 The sync is **progressive and resumable**: it works by priority (current season, focus team and its group,
-squads, videos, past seasons) and saves its progress after every page or team. It can be stopped with Ctrl+C
-and restarted at any time; each run also pulls whatever changed since the previous one first.
+team crests, squads, videos, past seasons) and saves its progress after every page or team. It can be stopped with
+Ctrl+C and restarted at any time; each run also pulls whatever changed since the previous one first. The crests are
+copied into the database because the share and call-up images draw them, and fetching them from the league while
+rendering fails: its Cloudflare answers Vercel with a 403.
 
 ```bash
 pnpm sync                         # resumes where it stopped
