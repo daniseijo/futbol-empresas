@@ -1,9 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { cacheLife } from "next/cache";
+import { eq } from "drizzle-orm";
+import { cacheLife, cacheTag } from "next/cache";
 import { ImageResponse } from "next/og";
 import { initials } from "@/components/crest";
 import { siteConfig } from "@/config/site";
+import { db, schema } from "@/db/client";
+import { DATA_TAG } from "@/lib/data";
 import { championsStageLabel, type ChampionsStage } from "@/lib/sportspress/champions";
 
 /**
@@ -85,22 +88,20 @@ export async function ogImage(element: React.ReactElement, size: { width: number
 }
 
 /**
- * A crest as a data URL, or null when it cannot be fetched. Crests live on the
- * league's WordPress, which is slow or down at times: a missing crest falls
- * back to initials instead of failing the whole image.
+ * A crest as a data URL, or null to draw the initials instead. The sync stores
+ * them (the `crests` table): fetching them from the league here failed, since
+ * its Cloudflare answers Vercel with a 403. One primary key read per crest.
  */
 export async function crestDataUrl(url: string | null): Promise<string | null> {
   "use cache";
   cacheLife("catalog");
+  cacheTag(DATA_TAG);
   if (!url) return null;
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(4000) });
-    const type = response.headers.get("content-type") ?? "";
-    // Satori draws PNG and JPEG; anything else (WebP, an HTML error page) gets the initials.
-    if (!response.ok || !/^image\/(png|jpe?g)/.test(type)) return null;
-    const data = Buffer.from(await response.arrayBuffer()).toString("base64");
-    return `data:${type};base64,${data}`;
+    const [row] = await db.select({ dataUrl: schema.crests.dataUrl }).from(schema.crests).where(eq(schema.crests.url, url));
+    return row?.dataUrl ?? null;
   } catch {
+    // The table arrives with the sync's migration, which can run after the deploy.
     return null;
   }
 }
