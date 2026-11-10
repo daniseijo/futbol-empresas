@@ -84,6 +84,10 @@ function trim(url: URL, body: string, headers: Record<string, string>): string {
   return body;
 }
 
+/** What every recorded crest answers with. */
+const CREST_FILE = "crest.jpg.txt";
+const CREST_BODY = "crest";
+
 function fileName(url: URL, key: string, contentType: string): string {
   const name = url.pathname.split("/").filter(Boolean).pop() || "page";
   const hash = createHash("sha1").update(key).digest("hex").slice(0, 10);
@@ -103,6 +107,12 @@ async function main() {
   globalThis.fetch = async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : input);
     const key = normalizeUrl(url);
+    if (url.pathname.startsWith("/wp-content/uploads/")) {
+      // A crest (`fetchCrest`): the fixtures are text, and the test only needs some JPEG.
+      writeFileSync(join(FIXTURES_DIR, CREST_FILE), CREST_BODY);
+      index[key] = { status: 200, file: CREST_FILE, contentType: "image/jpeg", headers: {} };
+      return new Response(CREST_BODY, { status: 200, headers: { "content-type": "image/jpeg" } });
+    }
     const target = narrow(url);
     if (!(target instanceof URL)) {
       index[key] = { status: target.status, contentType: "application/json", headers: {} };

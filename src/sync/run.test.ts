@@ -149,6 +149,11 @@ describe("runSync", () => {
     }
     assert.ok((await count(m.schema.tournaments)) > 0);
     assert.ok((await count(m.schema.news)) > 0);
+
+    // A copy of every crest, for the share and call-up images.
+    const crests = await m.db.select().from(m.schema.crests);
+    assert.deepEqual(crests.map((c) => c.url).sort(), teams.map((t) => t.logoUrl).sort());
+    for (const crest of crests) assert.equal(crest.dataUrl, `data:image/jpeg;base64,${Buffer.from("crest").toString("base64")}`);
   });
 
   it("keeps going when WordPress cannot render a match's content", async () => {
@@ -279,5 +284,28 @@ describe("runSync", () => {
     assert.deepEqual(resumed.pending, []);
     const unchecked = await m.db.$count(m.schema.matches, m.and(m.eq(m.schema.matches.played, true), m.isNull(m.schema.matches.videoCheckedAt)));
     assert.equal(unchecked, 0);
+  });
+
+  it("stores a crest it cannot draw as null, and tries a failed one again on the next run", async () => {
+    const teams = await teamRows();
+    const crestOf = (id: number) => teams.find((t) => t.id === id)!.logoUrl!;
+    await m.db.delete(m.schema.crests);
+    mock.timers.tick(HOUR);
+    modifiedAfter([]);
+    fake.override((url) => url.href === crestOf(EMBAT), { status: 403, body: "" });
+    fake.override((url) => url.href === crestOf(INSPARYA), { body: "RIFF", headers: { "content-type": "image/webp" } });
+
+    const result = await run();
+    assert.ok(result.lines.includes("Crests: 1 stored, 1 not drawable, 1 failed (next run)"), result.lines.join("\n"));
+    const stored = Object.fromEntries((await m.db.select().from(m.schema.crests)).map((c) => [c.url, c.dataUrl]));
+    assert.equal(stored[crestOf(INSPARYA)], null);
+    assert.ok(stored[crestOf(EY)]);
+    assert.ok(!(crestOf(EMBAT) in stored), "a failed crest is not stored");
+
+    fake.clearOverrides();
+    modifiedAfter([]);
+    const again = await run();
+    assert.ok(again.lines.includes("Crests: 1 stored, 0 not drawable"), "only the failed one, the undrawable waits a month");
+    assert.ok((await m.db.select().from(m.schema.crests).where(m.eq(m.schema.crests.url, crestOf(EMBAT))))[0]?.dataUrl);
   });
 });

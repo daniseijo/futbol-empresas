@@ -47,6 +47,24 @@
     "contentType": "text/html",
     "headers": {}
   },
+  "https://www.futbolempresas.es/wp-content/uploads/2016/08/ernstyoung_logos-128x128.jpg": {
+    "status": 200,
+    "file": "crest.jpg.txt",
+    "contentType": "image/jpeg",
+    "headers": {}
+  },
+  "https://www.futbolempresas.es/wp-content/uploads/2026/09/EMBAT-LOGO-128x128.jpg": {
+    "status": 200,
+    "file": "crest.jpg.txt",
+    "contentType": "image/jpeg",
+    "headers": {}
+  },
+  "https://www.futbolempresas.es/wp-content/uploads/2026/09/INSPARYA-LOGO-128x128.jpg": {
+    "status": 200,
+    "file": "crest.jpg.txt",
+    "contentType": "image/jpeg",
+    "headers": {}
+  },
   "https://www.futbolempresas.es/wp-json/sportspress/v2/events?_fields=id%2Ccontent&include=131988%2C132045%2C132944%2C132950%2C133417&per_page=5": {
     "status": 200,
     "file": "events-0f1814f44c.json",
