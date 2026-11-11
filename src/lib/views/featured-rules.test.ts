@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { featuredMode, gap, positionBefore, trend } from "@/lib/views/featured-rules";
+import { closestMatches, featuredMode, gap, positionBefore, trend } from "@/lib/views/featured-rules";
 import { match, result, standingRow } from "@/test/fixtures";
 
 describe("featuredMode", () => {
@@ -102,5 +102,20 @@ describe("gap", () => {
   it("has nothing to say for a lone leader", () => {
     const rows = table(3);
     assert.equal(gap(rows, rows[0]), null);
+  });
+});
+
+describe("closestMatches", () => {
+  const standings = [1, 2, 3, 4, 5, 6, 7, 8].map((position) => standingRow({ position, points: 0 }));
+  const round = [match({ homeId: 1, awayId: 8 }), match({ homeId: 2, awayId: 7 }), match({ homeId: 3, awayId: 6 })];
+
+  it("keeps the matches of the teams closest in the table, in their order", () => {
+    // Team 5: 3-6 is one place away, 2-7 two, 1-8 three.
+    assert.deepEqual(closestMatches(round, standings, 5, 2), [round[1], round[2]]);
+    assert.deepEqual(closestMatches(round, standings, 1, 1), [round[0]]);
+  });
+
+  it("takes the first matches when the team is not in the table", () => {
+    assert.deepEqual(closestMatches(round, standings, 42, 2), [round[0], round[1]]);
   });
 });

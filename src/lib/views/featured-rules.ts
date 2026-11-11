@@ -46,3 +46,21 @@ export function gap(rows: StandingRow[], row: StandingRow): string | null {
   const diff = above.points - row.points;
   return diff === 0 ? `Empatado a puntos con ${above.name}` : `A ${points(diff)} de ${above.name}`;
 }
+
+/**
+ * The `count` matches of the round that matter most to the team: those between the teams closest to it in
+ * the table, kept in their original order. A Champions round has 15 matches, too many for the home card.
+ */
+export function closestMatches(round: Match[], standings: StandingRow[], teamId: number, count: number): Match[] {
+  const position = new Map(standings.map((r) => [r.teamId, r.position]));
+  const own = position.get(teamId);
+  if (own == null) return round.slice(0, count);
+  const distance = (id: number) => Math.abs((position.get(id) ?? Infinity) - own);
+  const picked = round
+    .map((m, i) => ({ i, d: Math.min(distance(m.homeId), distance(m.awayId)) }))
+    .sort((a, b) => a.d - b.d || a.i - b.i)
+    .slice(0, count)
+    .map((x) => x.i)
+    .sort((a, b) => a - b);
+  return picked.map((i) => round[i]);
+}

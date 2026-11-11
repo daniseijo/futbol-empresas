@@ -296,9 +296,9 @@ function Scoreboard({ data }: { data: MatchPageData }) {
 
 // --- Body -------------------------------------------------------------------------
 
-function Card({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+function Card({ id, title, action, children }: { id?: string; title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-3 card px-4 py-5 sm:p-5.5">
+    <section id={id} className="flex scroll-mt-24 flex-col gap-3 card px-4 py-5 sm:p-5.5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="font-display text-[26px] font-extrabold uppercase">{title}</h2>
         {action}
@@ -581,6 +581,7 @@ function RestOfRound({ data }: { data: MatchPageData }) {
   if (data.round.length === 0) return null;
   return (
     <Card
+      id="jornada"
       title={`Resto de la jornada\u00a0${data.match.round}`}
       action={
         data.dayHref && (

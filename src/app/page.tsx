@@ -12,10 +12,14 @@ import { SectionCard } from "@/components/team/section-card";
 import { siteConfig } from "@/config/site";
 import { capitalize, daysBetween, formatLongDate, formatNewsDate, formatShortDate } from "@/lib/dates";
 import { getTeams } from "@/lib/data";
+import { closestMatches } from "@/lib/views/featured-rules";
 import { getHomeData, type CompetitionCard, type FocusBlock, type HomeData } from "@/lib/views/home";
 
 const numberFormat = new Intl.NumberFormat("es-ES");
 const decimal = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/** Matches of the rest of the round shown beside the featured match before linking to all of them. */
+const ROUND_PREVIEW = 3;
 
 type Logos = Record<number, string | null>;
 type Slugs = Record<number, string>;
@@ -183,6 +187,11 @@ function FocusSection({ focus, logos, slugs, now }: { focus: FocusBlock; logos: 
     ? [group?.competition, champions.sector && `Sector ${champions.sector}`, champions.phase]
     : [group?.competition, group?.phase, group?.name];
   const groupIds = new Set(focus.standings.map((r) => r.teamId));
+  // A long round (a Champions one has 15 matches) shows only the ones nearest the team in the table.
+  const roundShown =
+    featured && featured.round.length > ROUND_PREVIEW + 1
+      ? closestMatches(featured.round, focus.standings, focus.teamId, ROUND_PREVIEW)
+      : (featured?.round ?? []);
 
   return (
     <section aria-labelledby="tu-equipo" className="card flex flex-col overflow-hidden max-sm:-mt-7 max-sm:border-t-0">
@@ -248,7 +257,7 @@ function FocusSection({ focus, logos, slugs, now }: { focus: FocusBlock; logos: 
             {focus.mode === "preview" && featured && featured.round.length > 0 && (
               <div className="flex flex-col">
                 <h3 className="mb-1 text-sm font-bold">Resto de la jornada{"\u00a0"}{featured.match.round}</h3>
-                {featured.round.map((match) => (
+                {roundShown.map((match) => (
                   <Link
                     key={match.id}
                     href={`/partidos/${match.id}`}
@@ -260,7 +269,17 @@ function FocusSection({ focus, logos, slugs, now }: { focus: FocusBlock; logos: 
                     <span className="text-muted">{match.played ? `${match.homeGoals}–${match.awayGoals}` : match.date.slice(11, 16)}</span>
                   </Link>
                 ))}
-                {featured.restingTeam && <span className="border-t border-line-soft py-1.5 text-[13px] text-muted">Descansa {featured.restingTeam}</span>}
+                {featured.restingTeam && roundShown.length === featured.round.length && (
+                  <span className="border-t border-line-soft py-1.5 text-[13px] text-muted">Descansa {featured.restingTeam}</span>
+                )}
+                {roundShown.length < featured.round.length && (
+                  <Link
+                    href={`/partidos/${featured.match.id}#jornada`}
+                    className="mt-1 self-start px-1.5 py-1 text-[13px] font-semibold text-accent-text hover:underline"
+                  >
+                    Ver los {featured.round.length} partidos de la jornada →
+                  </Link>
+                )}
               </div>
             )}
           </aside>
