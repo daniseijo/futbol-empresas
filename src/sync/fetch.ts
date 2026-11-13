@@ -408,7 +408,6 @@ export async function fetchSquad(teamId: number, listIds: number[]): Promise<{ s
   }
 
   const rows = Object.entries(main.data).filter(([key]) => key !== "0");
-  const photos = await fetchPlayerPhotos(rows.map(([key]) => Number(key)));
   const squad: SquadRow[] = [];
   const players: PlayerRow[] = [];
   for (const [key, stats] of rows) {
@@ -427,7 +426,8 @@ export async function fetchSquad(teamId: number, listIds: number[]): Promise<{ s
       crack: toNumber(stats.crack),
       dandy: toNumber(stats.dandy),
     });
-    players.push({ id: playerId, name: decodeHtml(String(stats.name ?? "")), photoUrl: photos.get(playerId) ?? null });
+    // No photo: the sync checks each player's once and then follows their changes (backfillPlayerPhotos).
+    players.push({ id: playerId, name: decodeHtml(String(stats.name ?? "")) });
   }
   return { squad, players };
 }

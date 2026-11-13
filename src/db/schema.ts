@@ -150,6 +150,12 @@ export const players = sqliteTable("players", {
   name: text("name").notNull(),
   photoUrl: text("photo_url"),
   /**
+   * When the photo was last read from the league; null for a player whose
+   * photo was never checked. After that, a new photo comes with the player's
+   * modification (updateChangedPhotos in the sync).
+   */
+  photoCheckedAt: text("photo_checked_at"),
+  /**
    * Team of their latest match (or, if they have not played, of their squad),
    * kept by the sync so the search index does not have to scan every lineup.
    */

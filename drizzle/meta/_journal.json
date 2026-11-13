@@ -99,6 +99,13 @@
       "when": 1794583148426,
       "tag": "0013_player_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1794590322308,
+      "tag": "0014_player_photo_checked",
+      "breakpoints": true
     }
   ]
 }

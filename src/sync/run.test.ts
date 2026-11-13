@@ -336,8 +336,11 @@ describe("runSync", () => {
       ],
     });
 
+    const requested = fake.requests.length;
     const result = await run();
     assert.ok(result.lines.includes("Player photos changed: 1 of 2 modified players"), result.lines.join("\n"));
+    const lookups = fake.requests.slice(requested).filter((r) => r.includes("/players?") && r.includes("include="));
+    assert.deepEqual(lookups, [], "every saved player's photo was checked already: no lookup by id");
     const [after] = await m.db.select().from(m.schema.players).where(m.eq(m.schema.players.id, player.id));
     assert.equal(after.photoUrl, photo);
     const [copy] = await m.db.select().from(m.schema.playerPhotos).where(m.eq(m.schema.playerPhotos.url, photo));

@@ -275,7 +275,8 @@ drizzle/                 migrations (generated with `pnpm db:generate`)
 - **Player photos:** a player's photo is their featured image. Most players have the generic avatar
   (`avatar_OK-200x228-1.jpg`), and some old ones a silhouette; those are ignored. Images attached to a player
   are no guide: an old photo stays attached after a new one is uploaded, and many photos were uploaded from
-  elsewhere. A player's profile is modified when their photo changes, so each run asks
-  `/players?modified_after=…` and finds a new photo even on a player whose team no longer plays. Without a
+  elsewhere. Each player's photo is read once (`players.photo_checked_at`); after that, since a player's
+  profile is modified when their photo changes, each run asks `/players?modified_after=…` and finds a new
+  photo even on a player whose team no longer plays, so refreshing a squad reads no photos. Without a
   photo, the shirt number is shown on the position's colour and, without a number, the initials.
 - **Search:** `teams?search=…` needs `search_columns=post_title`, or it also searches inside the HTML.

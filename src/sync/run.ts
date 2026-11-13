@@ -248,14 +248,14 @@ async function syncSquad(ctx: Context, teamId: number) {
   const p = schema.players;
   const ids = squad.map((s) => s.playerId);
   const before = new Map(
-    (await db.select({ id: p.id, name: p.name, photoUrl: p.photoUrl, lastTeamId: p.lastTeamId, lastMatchDate: p.lastMatchDate }).from(p).where(inArray(p.id, ids))).map(
+    (await db.select({ id: p.id, name: p.name, lastTeamId: p.lastTeamId, lastMatchDate: p.lastMatchDate }).from(p).where(inArray(p.id, ids))).map(
       (row) => [row.id, row],
     ),
   );
   await upsert(p, players, [p.id]);
-  for (const { id, name, photoUrl } of players) {
+  for (const { id, name } of players) {
     const old = id === undefined ? undefined : before.get(id);
-    if (name && (!old || old.name !== name || old.photoUrl !== (photoUrl ?? null))) ctx.searchChanged = true;
+    if (name && (!old || old.name !== name)) ctx.searchChanged = true;
   }
   // A squad can bring a player's first row, after their lineups were saved;
   // whoever has not played yet takes this team.
@@ -272,22 +272,27 @@ async function syncSquad(ctx: Context, teamId: number) {
   ctx.writes += 1;
 }
 
-/** Stores these players' photos (null: none), for the saved players among them; returns how many changed. */
+/**
+ * Stores these players' photos (null: none) and marks them checked, for the
+ * saved players among them; returns how many photos changed.
+ */
 async function applyPhotos(ctx: Context, photos: Map<number, string | null>): Promise<number> {
   if (photos.size === 0) return 0;
   const p = schema.players;
   const saved = await db.select({ id: p.id, name: p.name, photoUrl: p.photoUrl }).from(p).where(inArray(p.id, [...photos.keys()]));
   const changed = saved.filter((row) => row.photoUrl !== photos.get(row.id));
   for (const row of changed) await db.update(p).set({ photoUrl: photos.get(row.id) }).where(eq(p.id, row.id));
+  await db.update(p).set({ photoCheckedAt: ctx.startedAt }).where(inArray(p.id, saved.map((row) => row.id)));
   if (changed.some((row) => row.name)) ctx.searchChanged = true;
   ctx.writes += changed.length;
   return changed.length;
 }
 
 /**
- * New, changed or removed photos of the players modified since `after`, so a
- * photo added to an old profile shows up without downloading every squad again.
- * Only players already saved: a new one arrives with their squad or lineup.
+ * New, changed or removed photos of the players modified since `after`: a
+ * player's profile is modified when their photo changes, so a photo added to
+ * an old profile shows up without reading every player or squad again. Only
+ * players already saved: a new one gets theirs from backfillPlayerPhotos.
  */
 async function updateChangedPhotos(ctx: Context, after: string) {
   const photos = await fetchChangedPlayerPhotos(after);
@@ -295,35 +300,28 @@ async function updateChangedPhotos(ctx: Context, after: string) {
   if (changed > 0) ctx.log(`Player photos changed: ${changed} of ${photos.size} modified players`);
 }
 
-const PHOTOS_CHECKED = "backfill:player-photos";
-
 /**
- * Reads every named player's photo once again, by their featured image (see
- * `fetchPlayerPhotos`): the sync used to take the first image attached to them,
- * which was an old photo for a third of them. Resumes from the last id done.
+ * Reads the photo of every named player whose photo was never checked: all of
+ * them the first time (a few minutes), then only the players new since the
+ * last run, whether a squad or a lineup brought them. Players with a private
+ * profile have no name and no public photo.
  */
 async function backfillPlayerPhotos(ctx: Context): Promise<boolean> {
   const p = schema.players;
   let changed = 0;
   let checked = 0;
   while (hasTime(ctx)) {
-    const state = await getState(PHOTOS_CHECKED);
-    if (state === "done") break;
     const rows = await db
       .select({ id: p.id })
       .from(p)
-      .where(and(sql`${p.name} <> ''`, sql`${p.id} > ${Number(state ?? 0)}`))
+      .where(and(sql`${p.name} <> ''`, isNull(p.photoCheckedAt)))
       .orderBy(p.id)
       .limit(100);
-    if (rows.length === 0) {
-      await setState(PHOTOS_CHECKED, "done");
-      break;
-    }
+    if (rows.length === 0) break;
     const ids = rows.map((row) => row.id);
     const photos = await fetchPlayerPhotos(ids);
     changed += await applyPhotos(ctx, new Map(ids.map((id) => [id, photos.get(id) ?? null])));
     checked += ids.length;
-    await setState(PHOTOS_CHECKED, String(ids.at(-1)));
   }
   if (checked > 0) ctx.log(`Player photos checked: ${checked} players, ${changed} changed`);
   return hasTime(ctx);
@@ -744,9 +742,10 @@ export async function runSync({
       async () => forEachTeam(ctx, "Squads", await pendingTeams(ctx, schema.teams.squadSyncedAt), (id) => syncSquad(ctx, id)),
       () => teamsLeft(schema.teams.squadSyncedAt),
     ],
-    ["Player photos (featured)", () => backfillPlayerPhotos(ctx)],
-    ["Player photos", () => backfillImages(ctx, "Player photos")],
     ["Lineup names", () => backfillPlayerNames(ctx, { withStats: false })],
+    // After every task that brings new players: squads and lineups.
+    ["Player photos (check)", () => backfillPlayerPhotos(ctx)],
+    ["Player photos", () => backfillImages(ctx, "Player photos")],
     [
       "Past season champions",
       async () => {
