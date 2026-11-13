@@ -54,9 +54,13 @@ function recordedContent(id: number): RawEvent["content"] {
   return undefined;
 }
 
-/** The API's answer to "modified after": these events, and no team changed. */
-function modifiedAfter(events: (RawEvent & { modified?: string })[]) {
+/** The API's answer to "modified after": these events and players, and no team changed. */
+function modifiedAfter(events: (RawEvent & { modified?: string })[], players: { id: number; featured_media: number }[] = []) {
   fake.override((url) => url.pathname.endsWith("/teams") && url.searchParams.has("modified_after"), { body: [] });
+  fake.override((url) => url.pathname.endsWith("/players") && url.searchParams.has("modified_after"), {
+    body: players,
+    headers: { "x-wp-total": String(players.length), "x-wp-totalpages": "1" },
+  });
   fake.override((url) => url.pathname.endsWith("/events") && url.searchParams.has("modified_after"), {
     body: events,
     headers: { "x-wp-total": String(events.length), "x-wp-totalpages": "1" },
@@ -314,5 +318,30 @@ describe("runSync", () => {
     const again = await run();
     assert.ok(again.lines.includes("Crests: 1 stored, 0 not drawable"), "only the failed one, the undrawable waits a month");
     assert.ok((await m.db.select().from(m.schema.crests).where(m.eq(m.schema.crests.url, crestOf(EMBAT))))[0]?.dataUrl);
+  });
+
+  it("picks up a new photo of a player modified since the last run, and copies it", async () => {
+    const [player] = await m.db.select().from(m.schema.players).where(m.sql`${m.schema.players.name} <> ''`).limit(1);
+    const photo = "https://www.futbolempresas.es/wp-content/uploads/2026/11/New-Photo.jpg";
+    mock.timers.tick(HOUR);
+    // A saved player with a new photo, and one the database does not have yet (left for their squad).
+    modifiedAfter([], [
+      { id: player.id, featured_media: 900001 },
+      { id: 1, featured_media: 900002 },
+    ]);
+    fake.override((url) => url.pathname.endsWith("/wp/v2/media") && url.searchParams.get("include") === "900001,900002", {
+      body: [
+        { id: 900001, post: player.id, source_url: photo },
+        { id: 900002, post: 1, source_url: "https://www.futbolempresas.es/wp-content/uploads/2026/11/Other.jpg" },
+      ],
+    });
+
+    const result = await run();
+    assert.ok(result.lines.includes("Player photos changed: 1 of 2 modified players"), result.lines.join("\n"));
+    const [after] = await m.db.select().from(m.schema.players).where(m.eq(m.schema.players.id, player.id));
+    assert.equal(after.photoUrl, photo);
+    const [copy] = await m.db.select().from(m.schema.playerPhotos).where(m.eq(m.schema.playerPhotos.url, photo));
+    assert.ok(copy?.dataUrl, "the new photo is copied in the same run");
+    fake.clearOverrides();
   });
 });

@@ -100,6 +100,15 @@ export function extractHeaderMediaId(html: string | undefined): number | null {
   return match ? Number(match[1]) : null;
 }
 
+/**
+ * The league's stand-ins for a player without a photo: the generic avatar
+ * (avatar_OK-200x228-1.jpg, the featured image of most players) and older
+ * silhouettes (*-silueta-*, player-single-*).
+ */
+export function isPlaceholderPlayerPhoto(url: string): boolean {
+  return /avatar|silueta|player-single/i.test(url.split("/").pop() ?? "");
+}
+
 /** *-CABECERA.jpg headers are the silhouette template, not a photo. */
 export function isPlaceholderTeamPhoto(url: string): boolean {
   return /cabecera/i.test(url.split("/").pop() ?? "");

@@ -5,6 +5,7 @@ import {
   extractFlickrPhotos,
   extractHeaderMediaId,
   extractYoutubeUrl,
+  isPlaceholderPlayerPhoto,
   isPlaceholderTeamPhoto,
   parseEventTitle,
   parseGoals,
@@ -116,5 +117,15 @@ describe("parseMatchVideo", () => {
   it("is null when the page has no video section or no YouTube link", () => {
     assert.equal(parseMatchVideo('<iframe src="https://www.youtube.com/embed/abcdefghijk"></iframe>'), null);
     assert.equal(parseMatchVideo('<div class="sp-event-video"><p>Pronto</p></div>'), null);
+  });
+});
+
+describe("isPlaceholderPlayerPhoto", () => {
+  it("spots the generic avatar and the silhouettes", () => {
+    const uploads = "https://www.futbolempresas.es/wp-content/uploads/";
+    assert.equal(isPlaceholderPlayerPhoto(`${uploads}2023/08/avatar_OK-200x228-1.jpg`), true);
+    assert.equal(isPlaceholderPlayerPhoto(`${uploads}2017/10/CLH-ALBERTO-GALLEGO-SILUETA-278x300.png`), true);
+    assert.equal(isPlaceholderPlayerPhoto(`${uploads}2019/10/player-single-370x400-1-278x300.png`), true);
+    assert.equal(isPlaceholderPlayerPhoto(`${uploads}2026/10/Embat-Alexander-Hamsen-1.jpg`), false);
   });
 });

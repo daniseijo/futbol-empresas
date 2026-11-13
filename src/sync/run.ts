@@ -16,13 +16,15 @@ import { PAGE_CONCURRENCY, SportsPressError } from "@/lib/sportspress/client";
 import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Season } from "@/lib/sportspress/types";
 import {
+  fetchChangedPlayerPhotos,
   fetchCrest,
-  fetchPhoto,
   fetchLeagues,
   fetchMatchesPage,
   fetchMatchVideo,
   fetchNews,
+  fetchPhoto,
   fetchPlayerNames,
+  fetchPlayerPhotos,
   fetchSeasons,
   fetchSquad,
   fetchTeamDetail,
@@ -268,6 +270,63 @@ async function syncSquad(ctx: Context, teamId: number) {
   }
   await db.update(schema.teams).set({ squadSyncedAt: ctx.startedAt }).where(eq(schema.teams.id, team.id));
   ctx.writes += 1;
+}
+
+/** Stores these players' photos (null: none), for the saved players among them; returns how many changed. */
+async function applyPhotos(ctx: Context, photos: Map<number, string | null>): Promise<number> {
+  if (photos.size === 0) return 0;
+  const p = schema.players;
+  const saved = await db.select({ id: p.id, name: p.name, photoUrl: p.photoUrl }).from(p).where(inArray(p.id, [...photos.keys()]));
+  const changed = saved.filter((row) => row.photoUrl !== photos.get(row.id));
+  for (const row of changed) await db.update(p).set({ photoUrl: photos.get(row.id) }).where(eq(p.id, row.id));
+  if (changed.some((row) => row.name)) ctx.searchChanged = true;
+  ctx.writes += changed.length;
+  return changed.length;
+}
+
+/**
+ * New, changed or removed photos of the players modified since `after`, so a
+ * photo added to an old profile shows up without downloading every squad again.
+ * Only players already saved: a new one arrives with their squad or lineup.
+ */
+async function updateChangedPhotos(ctx: Context, after: string) {
+  const photos = await fetchChangedPlayerPhotos(after);
+  const changed = await applyPhotos(ctx, photos);
+  if (changed > 0) ctx.log(`Player photos changed: ${changed} of ${photos.size} modified players`);
+}
+
+const PHOTOS_CHECKED = "backfill:player-photos";
+
+/**
+ * Reads every named player's photo once again, by their featured image (see
+ * `fetchPlayerPhotos`): the sync used to take the first image attached to them,
+ * which was an old photo for a third of them. Resumes from the last id done.
+ */
+async function backfillPlayerPhotos(ctx: Context): Promise<boolean> {
+  const p = schema.players;
+  let changed = 0;
+  let checked = 0;
+  while (hasTime(ctx)) {
+    const state = await getState(PHOTOS_CHECKED);
+    if (state === "done") break;
+    const rows = await db
+      .select({ id: p.id })
+      .from(p)
+      .where(and(sql`${p.name} <> ''`, sql`${p.id} > ${Number(state ?? 0)}`))
+      .orderBy(p.id)
+      .limit(100);
+    if (rows.length === 0) {
+      await setState(PHOTOS_CHECKED, "done");
+      break;
+    }
+    const ids = rows.map((row) => row.id);
+    const photos = await fetchPlayerPhotos(ids);
+    changed += await applyPhotos(ctx, new Map(ids.map((id) => [id, photos.get(id) ?? null])));
+    checked += ids.length;
+    await setState(PHOTOS_CHECKED, String(ids.at(-1)));
+  }
+  if (checked > 0) ctx.log(`Player photos checked: ${checked} players, ${changed} changed`);
+  return hasTime(ctx);
 }
 
 // --- Initial backfill tasks (in priority order) --------------------------------------
@@ -517,6 +576,12 @@ async function pendingImages(ctx: Context, { table, source }: (typeof IMAGE_KIND
  */
 async function backfillImages(ctx: Context, label: keyof typeof IMAGE_KINDS): Promise<boolean> {
   const kind = IMAGE_KINDS[label];
+  // A replaced crest or photo is no longer anyone's: its copy goes.
+  const orphans = await db
+    .delete(kind.table)
+    .where(sql`${kind.table.url} not in (select ${kind.source} from ${kind.source.table} where ${kind.source} is not null)`)
+    .returning({ url: kind.table.url });
+  if (orphans.length > 0) ctx.log(`${label}: ${orphans.length} no longer used, removed`);
   const urls = await pendingImages(ctx, kind);
   let stored = 0;
   let unusable = 0;
@@ -630,6 +695,7 @@ export async function runSync({
         `${unchanged ? ` (${unchanged} already saved)` : ""} (${touched.size} squads to refresh)`,
     );
     for (const teamId of teams.map((t) => t.id)) await syncTeamDetail(ctx, teamId);
+    await updateChangedPhotos(ctx, after);
     // Marked as pending first, so the "Squads" task picks up those the budget leaves out.
     if (touched.size > 0) await db.update(schema.teams).set({ squadSyncedAt: null }).where(inArray(schema.teams.id, [...touched]));
     const squads = touched.size > 0 ? await pendingTeams(ctx, schema.teams.squadSyncedAt, [...touched]) : [];
@@ -678,6 +744,7 @@ export async function runSync({
       async () => forEachTeam(ctx, "Squads", await pendingTeams(ctx, schema.teams.squadSyncedAt), (id) => syncSquad(ctx, id)),
       () => teamsLeft(schema.teams.squadSyncedAt),
     ],
+    ["Player photos (featured)", () => backfillPlayerPhotos(ctx)],
     ["Player photos", () => backfillImages(ctx, "Player photos")],
     ["Lineup names", () => backfillPlayerNames(ctx, { withStats: false })],
     [

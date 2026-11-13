@@ -82,6 +82,25 @@ export interface FakeFetch {
  */
 const UPLOAD_KEY = "https://www.futbolempresas.es/wp-content/uploads/2026/09/EMBAT-LOGO-128x128.jpg";
 
+/**
+ * The answer to a lookup by ids (`include=`) of player photos or media that was not recorded with exactly
+ * those ids, put together from every recorded answer of the same kind, as the API would: the sync's
+ * one-off photo pass (backfillPlayerPhotos) groups players differently from the squads that were recorded.
+ */
+function byInclude(index: FixtureIndex, url: URL): Response | undefined {
+  const include = url.searchParams.get("include");
+  const kind = `${url.pathname}?_fields=${url.searchParams.get("_fields")}`;
+  if (!include || !["/wp-json/sportspress/v2/players?_fields=id,featured_media", "/wp-json/wp/v2/media?_fields=id,source_url,media_details"].includes(kind)) return undefined;
+  const items = new Map<number, { id: number }>();
+  for (const [key, recorded] of Object.entries(index)) {
+    const other = new URL(key);
+    if (recorded.status !== 200 || `${other.pathname}?_fields=${other.searchParams.get("_fields")}` !== kind) continue;
+    for (const item of JSON.parse(readFixtureBody(recorded)) as { id: number }[]) items.set(item.id, item);
+  }
+  const body = include.split(",").flatMap((id) => items.get(Number(id)) ?? []);
+  return Response.json(body, { headers: { "x-wp-total": String(body.length), "x-wp-totalpages": "1" } });
+}
+
 export function fakeFetch(index: FixtureIndex): FakeFetch {
   const overrides: { matches: (url: URL) => boolean; override: Override }[] = [];
   const fake: FakeFetch = {
@@ -101,6 +120,8 @@ export function fakeFetch(index: FixtureIndex): FakeFetch {
       }
       const recorded = index[key] ?? (url.pathname.startsWith("/wp-content/uploads/") ? index[UPLOAD_KEY] : undefined);
       if (!recorded) {
+        const composed = byInclude(index, url);
+        if (composed) return composed;
         fake.unknown.push(key);
         throw new Error(`No recorded response for ${key}. Re-record with \`pnpm test:record-sync\` (see README).`);
       }

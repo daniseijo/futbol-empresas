@@ -32,8 +32,8 @@ The sync is **progressive and resumable**: it works by priority (current season,
 team crests, squads, videos, past seasons) and saves its progress after every page or team. It can be stopped with
 Ctrl+C and restarted at any time; each run also pulls whatever changed since the previous one first. The crests are
 copied into the database because the share and call-up images draw them, and fetching them from the league while
-rendering fails: its Cloudflare answers Vercel with a 403. The player photos are copied too (~1,460 files,
-~26 MB, about a minute the first time). The pages load both from the site, at `/escudos/<path>` and
+rendering fails: its Cloudflare answers Vercel with a 403. The player photos are copied too (~2,100 files,
+~25 MB, a couple of minutes the first time); a replaced crest or photo is removed. The pages load both from the site, at `/escudos/<path>` and
 `/fotos/<path>` (the path under the league's `wp-content/uploads`, cached for a year by the browser and the CDN),
 so readers never reach the league for them; one the database lacks redirects to the league's copy.
 
@@ -258,7 +258,7 @@ drizzle/                 migrations (generated with `pnpm db:generate`)
 
 - **`/players` is the slowest endpoint** (10 s or more), because it computes every player's stats. Squads come
   from the team's lists (`/lists`): the "Plantilla" list gives the stats, the per-position lists give the
-  position, and photos are fetched with `media?parent=`. `_embed` is very slow too.
+  position. `_embed` is very slow too, but `/players?include=…&_fields=id,featured_media` takes ~1.5 s per 100.
 - **Incremental sync:** `modified_after` returns only what changed since the last run (Madrid local time;
   requested with one hour of overlap). Matches the overlap brings back with the same `modified` are skipped, so
   only a real change rewrites a match and refreshes both teams' squads.
@@ -272,6 +272,10 @@ drizzle/                 migrations (generated with `pnpm db:generate`)
   pages without it and isolates the broken match.
 - **Team photos:** they are banners in the team content. `*-CABECERA.jpg` files are the silhouette template and
   are ignored; the latest match photo (from Flickr) is used instead.
-- **Player photos:** the generic avatar is not attached to any player. Without a photo, the shirt number is
-  shown on the position's colour and, without a number, the initials.
+- **Player photos:** a player's photo is their featured image. Most players have the generic avatar
+  (`avatar_OK-200x228-1.jpg`), and some old ones a silhouette; those are ignored. Images attached to a player
+  are no guide: an old photo stays attached after a new one is uploaded, and many photos were uploaded from
+  elsewhere. A player's profile is modified when their photo changes, so each run asks
+  `/players?modified_after=…` and finds a new photo even on a player whose team no longer plays. Without a
+  photo, the shirt number is shown on the position's colour and, without a number, the initials.
 - **Search:** `teams?search=…` needs `search_columns=post_title`, or it also searches inside the HTML.

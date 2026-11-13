@@ -11,6 +11,7 @@ import {
   extractHeaderMediaId,
   extractYoutubeUrl,
   isFlag,
+  isPlaceholderPlayerPhoto,
   isPlaceholderTeamPhoto,
   parseEventTitle,
   parseGoals,
@@ -322,22 +323,58 @@ export async function fetchPlayerNames(ids: number[]): Promise<PlayerRow[]> {
 }
 
 /**
- * Real player photos: images attached to each player. The league's generic
- * avatar is not attached to anyone, so it never shows up.
+ * Real player photos: each player's featured image, unless it is one of the
+ * league's placeholders. Earlier the sync took the first image attached to the
+ * player, which kept an old photo when a new one was uploaded (a third of
+ * them), and missed those uploaded from elsewhere, which are not attached.
  */
-export async function fetchPlayerPhotos(playerIds: number[]): Promise<Map<number, string>> {
-  const photos = new Map<number, string>();
-  for (let i = 0; i < playerIds.length; i += 100) {
-    const { items } = await getPage<RawMedia & { post: number }>("/wp/v2/media", {
-      parent: playerIds.slice(i, i + 100).join(","),
+async function photosOf(players: { id: number; featured_media: number }[]): Promise<Map<number, string>> {
+  const featured = players.filter((p) => p.featured_media > 0);
+  const mediaIds = [...new Set(featured.map((p) => p.featured_media))];
+  const media = new Map<number, RawMedia>();
+  for (let i = 0; i < mediaIds.length; i += 100) {
+    const { items } = await getPage<RawMedia>("/wp/v2/media", {
+      include: mediaIds.slice(i, i + 100).join(","),
       per_page: 100,
-      orderby: "id",
-      order: "asc",
-      _fields: "id,post,source_url,media_details",
+      _fields: "id,source_url,media_details",
     });
-    for (const media of items) if (!photos.has(media.post)) photos.set(media.post, pickSize(media, SIZES.photo));
+    for (const item of items) media.set(item.id, item);
+  }
+  const photos = new Map<number, string>();
+  for (const player of featured) {
+    const image = media.get(player.featured_media);
+    if (image && !isPlaceholderPlayerPhoto(image.source_url)) photos.set(player.id, pickSize(image, SIZES.photo));
   }
   return photos;
+}
+
+/** The photos of these players (see `photosOf`); a private player or one without a photo is left out. */
+export async function fetchPlayerPhotos(playerIds: number[]): Promise<Map<number, string>> {
+  const players: { id: number; featured_media: number }[] = [];
+  for (let i = 0; i < playerIds.length; i += 100) {
+    const { items } = await getPage<{ id: number; featured_media: number }>(`${SP}/players`, {
+      include: playerIds.slice(i, i + 100).join(","),
+      per_page: 100,
+      _fields: "id,featured_media",
+    });
+    players.push(...items);
+  }
+  return photosOf(players);
+}
+
+/**
+ * The photos of the players modified since `modifiedAfter` (Madrid local
+ * time): a player's profile is modified when their photo changes, so this
+ * finds a new photo for anyone, including players whose team no longer plays.
+ * A player in the map without a photo has lost it.
+ */
+export async function fetchChangedPlayerPhotos(modifiedAfter: string): Promise<Map<number, string | null>> {
+  const players = await getAll<{ id: number; featured_media: number }>(`${SP}/players`, {
+    modified_after: modifiedAfter,
+    _fields: "id,featured_media",
+  });
+  const photos = await photosOf(players);
+  return new Map(players.map((p) => [p.id, photos.get(p.id) ?? null]));
 }
 
 const POSITION_LISTS: [RegExp, string][] = [
