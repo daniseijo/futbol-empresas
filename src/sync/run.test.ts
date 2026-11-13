@@ -154,6 +154,13 @@ describe("runSync", () => {
     const crests = await m.db.select().from(m.schema.crests);
     assert.deepEqual(crests.map((c) => c.url).sort(), teams.map((t) => t.logoUrl).sort());
     for (const crest of crests) assert.equal(crest.dataUrl, `data:image/jpeg;base64,${Buffer.from("crest").toString("base64")}`);
+
+    // And of every player photo, for the pages.
+    const photoUrls = (await m.db.selectDistinct({ url: m.schema.players.photoUrl }).from(m.schema.players)).flatMap((p) => (p.url ? [p.url] : []));
+    assert.ok(photoUrls.length > 0, "some player has a photo");
+    const photos = await m.db.select().from(m.schema.playerPhotos);
+    assert.deepEqual(photos.map((p) => p.url).sort(), photoUrls.sort());
+    assert.ok(photos.every((p) => p.dataUrl));
   });
 
   it("keeps going when WordPress cannot render a match's content", async () => {

@@ -1,12 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { eq } from "drizzle-orm";
-import { cacheLife, cacheTag } from "next/cache";
 import { ImageResponse } from "next/og";
 import { initials } from "@/components/crest";
 import { siteConfig } from "@/config/site";
-import { db, schema } from "@/db/client";
-import { DATA_TAG } from "@/lib/data";
+import { storedDataUrl } from "@/lib/stored-images";
 import { championsStageLabel, type ChampionsStage } from "@/lib/sportspress/champions";
 
 /**
@@ -90,21 +87,10 @@ export async function ogImage(element: React.ReactElement, size: { width: number
 /**
  * A crest as a data URL, or null to draw the initials instead. The sync stores
  * them (the `crests` table): fetching them from the league here failed, since
- * its Cloudflare answers Vercel with a 403. One primary key read per crest.
- * The share images draw it, and /escudos/ serves it to the pages.
+ * its Cloudflare answers Vercel with a 403.
  */
-export async function crestDataUrl(url: string | null): Promise<string | null> {
-  "use cache";
-  cacheLife("catalog");
-  cacheTag(DATA_TAG);
-  if (!url) return null;
-  try {
-    const [row] = await db.select({ dataUrl: schema.crests.dataUrl }).from(schema.crests).where(eq(schema.crests.url, url));
-    return row?.dataUrl ?? null;
-  } catch {
-    // The table arrives with the sync's migration, which can run after the deploy.
-    return null;
-  }
+export function crestDataUrl(url: string | null): Promise<string | null> {
+  return storedDataUrl("crests", url);
 }
 
 /** A crest on a white tile, or the team's initials in the same shape. */

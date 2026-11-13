@@ -108,7 +108,7 @@ async function main() {
     const url = new URL(input instanceof Request ? input.url : input);
     const key = normalizeUrl(url);
     if (url.pathname.startsWith("/wp-content/uploads/")) {
-      // A crest (`fetchCrest`): the fixtures are text, and the test only needs some JPEG.
+      // A crest or a player photo (`fetchCrest`, `fetchPhoto`): the fixtures are text, and the test only needs some JPEG.
       writeFileSync(join(FIXTURES_DIR, CREST_FILE), CREST_BODY);
       index[key] = { status: 200, file: CREST_FILE, contentType: "image/jpeg", headers: {} };
       return new Response(CREST_BODY, { status: 200, headers: { "content-type": "image/jpeg" } });

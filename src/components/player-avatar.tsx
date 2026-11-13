@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import type { Position } from "@/lib/sportspress/types";
+import { photoSrc } from "@/lib/uploads";
 import { initials } from "./crest";
 
 const POSITION_STYLE: Record<Position, string> = {
@@ -35,7 +36,7 @@ export function PlayerAvatar({
   if (photoUrl && !failed) {
     return (
       <Image
-        src={photoUrl}
+        src={photoSrc(photoUrl)}
         onError={() => setFailed(true)}
         // An image that failed before hydration never fires onError: check it on mount.
         ref={(img) => {

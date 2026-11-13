@@ -92,6 +92,13 @@
       "when": 1794301606959,
       "tag": "0012_crests",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1794583148426,
+      "tag": "0013_player_photos",
+      "breakpoints": true
     }
   ]
 }

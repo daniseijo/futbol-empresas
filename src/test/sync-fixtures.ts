@@ -76,6 +76,12 @@ export interface FakeFetch {
  * A `fetch` that answers from the recordings and fails loudly on any URL it
  * does not know, so a new request in the sync shows up as a test failure.
  */
+/**
+ * The recording every league image (a crest, a player photo) is answered with: the recorder stores the
+ * same placeholder for all of them (scripts/record-sync.ts), so one not recorded gets it too.
+ */
+const UPLOAD_KEY = "https://www.futbolempresas.es/wp-content/uploads/2026/09/EMBAT-LOGO-128x128.jpg";
+
 export function fakeFetch(index: FixtureIndex): FakeFetch {
   const overrides: { matches: (url: URL) => boolean; override: Override }[] = [];
   const fake: FakeFetch = {
@@ -93,7 +99,7 @@ export function fakeFetch(index: FixtureIndex): FakeFetch {
         const body = typeof override.body === "string" ? override.body : JSON.stringify(override.body);
         return new Response(body, { status: override.status ?? 200, headers: override.headers });
       }
-      const recorded = index[key];
+      const recorded = index[key] ?? (url.pathname.startsWith("/wp-content/uploads/") ? index[UPLOAD_KEY] : undefined);
       if (!recorded) {
         fake.unknown.push(key);
         throw new Error(`No recorded response for ${key}. Re-record with \`pnpm test:record-sync\` (see README).`);

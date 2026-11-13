@@ -17,6 +17,7 @@ import { LeagueTree } from "@/lib/sportspress/leagues";
 import type { Season } from "@/lib/sportspress/types";
 import {
   fetchCrest,
+  fetchPhoto,
   fetchLeagues,
   fetchMatchesPage,
   fetchMatchVideo,
@@ -479,44 +480,52 @@ async function backfillMatchVideos(ctx: Context, { current }: { current: boolean
   return hasTime(ctx);
 }
 
-/** A crest that could not be drawn (gone, or WebP) is checked again after this many days. */
-const CREST_RECHECK_DAYS = 30;
-/** Crests are small static files, served by Cloudflare. */
-const CREST_CONCURRENCY = 6;
+/** A crest or photo that could not be used (gone, or a crest in WebP) is checked again after this many days. */
+const IMAGE_RECHECK_DAYS = 30;
+/** Crests and photos are small static files, served by Cloudflare. */
+const IMAGE_CONCURRENCY = 6;
 
-/** The teams' crest URLs with no stored copy yet, or whose copy failed long enough ago. */
-async function pendingCrests(ctx: Context): Promise<string[]> {
-  const t = schema.teams;
-  const c = schema.crests;
+/**
+ * The league images the site keeps a copy of: team crests (drawn by the share and call-up images, which
+ * cannot fetch them from the league while rendering) and player photos. The pages load both from the site
+ * (src/lib/uploads.ts).
+ */
+const IMAGE_KINDS = {
+  Crests: { table: schema.crests, source: schema.teams.logoUrl, fetch: fetchCrest },
+  "Player photos": { table: schema.playerPhotos, source: schema.players.photoUrl, fetch: fetchPhoto },
+};
+
+/** The image URLs with no stored copy yet, or whose copy failed long enough ago. */
+async function pendingImages(ctx: Context, { table, source }: (typeof IMAGE_KINDS)[keyof typeof IMAGE_KINDS]): Promise<string[]> {
+  const owner = source.table;
   const rows = await db
-    .selectDistinct({ url: t.logoUrl })
-    .from(t)
-    .leftJoin(c, eq(c.url, t.logoUrl))
+    .selectDistinct({ url: source })
+    .from(owner)
+    .leftJoin(table, eq(table.url, source))
     .where(
       and(
-        sql`${t.logoUrl} is not null`,
-        or(isNull(c.url), and(isNull(c.dataUrl), lt(c.checkedAt, addDays(ctx.startedAt, -CREST_RECHECK_DAYS)))),
+        sql`${source} is not null`,
+        or(isNull(table.url), and(isNull(table.dataUrl), lt(table.checkedAt, addDays(ctx.startedAt, -IMAGE_RECHECK_DAYS)))),
       ),
     );
   return rows.map((row) => row.url).filter((url): url is string => url !== null);
 }
 
 /**
- * Copies the teams' crests into the database, for the share and call-up
- * images, which cannot fetch them from the league while rendering. A crest
- * whose URL changes is a new row. One that fails for now (a timeout,
- * Cloudflare) is left out and tried again on the next run.
+ * Copies the league images of one kind into the database. An image whose URL changes is a new row. One
+ * that fails for now (a timeout, Cloudflare) is left out and tried again on the next run.
  */
-async function backfillCrests(ctx: Context): Promise<boolean> {
-  const urls = await pendingCrests(ctx);
+async function backfillImages(ctx: Context, label: keyof typeof IMAGE_KINDS): Promise<boolean> {
+  const kind = IMAGE_KINDS[label];
+  const urls = await pendingImages(ctx, kind);
   let stored = 0;
-  let undrawable = 0;
+  let unusable = 0;
   let failed = 0;
-  for (let i = 0; i < urls.length && hasTime(ctx); i += CREST_CONCURRENCY) {
+  for (let i = 0; i < urls.length && hasTime(ctx); i += IMAGE_CONCURRENCY) {
     const rows = await Promise.all(
-      urls.slice(i, i + CREST_CONCURRENCY).map(async (url) => {
+      urls.slice(i, i + IMAGE_CONCURRENCY).map(async (url) => {
         try {
-          return { url, dataUrl: await fetchCrest(url), checkedAt: ctx.startedAt };
+          return { url, dataUrl: await kind.fetch(url), checkedAt: ctx.startedAt };
         } catch {
           failed += 1;
           return null;
@@ -524,13 +533,14 @@ async function backfillCrests(ctx: Context): Promise<boolean> {
       }),
     );
     const found = rows.filter((row) => row !== null);
-    await upsert(schema.crests, found, [schema.crests.url]);
+    await upsert(kind.table, found, [kind.table.url]);
     stored += found.filter((row) => row.dataUrl).length;
-    undrawable += found.filter((row) => !row.dataUrl).length;
+    unusable += found.filter((row) => !row.dataUrl).length;
   }
   if (urls.length > 0) {
     ctx.writes += stored;
-    ctx.log(`Crests: ${stored} stored, ${undrawable} not drawable${failed ? `, ${failed} failed (next run)` : ""}`);
+    const what = label === "Crests" ? "not drawable" : "gone";
+    ctx.log(`${label}: ${stored} stored, ${unusable} ${what}${failed ? `, ${failed} failed (next run)` : ""}`);
   }
   return hasTime(ctx);
 }
@@ -654,7 +664,7 @@ export async function runSync({
         return details && squads;
       },
     ],
-    ["Crests", () => backfillCrests(ctx)],
+    ["Crests", () => backfillImages(ctx, "Crests")],
     ["Scorer names", () => backfillPlayerNames(ctx, { withStats: true })],
     ["Current season videos", () => backfillMatchVideos(ctx, { current: true }), () => videosLeft(true)],
     [
@@ -668,6 +678,7 @@ export async function runSync({
       async () => forEachTeam(ctx, "Squads", await pendingTeams(ctx, schema.teams.squadSyncedAt), (id) => syncSquad(ctx, id)),
       () => teamsLeft(schema.teams.squadSyncedAt),
     ],
+    ["Player photos", () => backfillImages(ctx, "Player photos")],
     ["Lineup names", () => backfillPlayerNames(ctx, { withStats: false })],
     [
       "Past season champions",

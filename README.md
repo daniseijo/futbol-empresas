@@ -32,9 +32,10 @@ The sync is **progressive and resumable**: it works by priority (current season,
 team crests, squads, videos, past seasons) and saves its progress after every page or team. It can be stopped with
 Ctrl+C and restarted at any time; each run also pulls whatever changed since the previous one first. The crests are
 copied into the database because the share and call-up images draw them, and fetching them from the league while
-rendering fails: its Cloudflare answers Vercel with a 403. The pages load them from the site too, at
-`/escudos/<path under wp-content/uploads>` (cached for a year by the browser and the CDN), so readers never reach
-the league for a crest; one the database lacks redirects to the league's copy.
+rendering fails: its Cloudflare answers Vercel with a 403. The player photos are copied too (~1,460 files,
+~26 MB, about a minute the first time). The pages load both from the site, at `/escudos/<path>` and
+`/fotos/<path>` (the path under the league's `wp-content/uploads`, cached for a year by the browser and the CDN),
+so readers never reach the league for them; one the database lacks redirects to the league's copy.
 
 ```bash
 pnpm sync                         # resumes where it stopped

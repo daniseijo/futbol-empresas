@@ -131,18 +131,30 @@ export async function fetchYoutubeInfo(url: string): Promise<{ title: string; th
 }
 
 /**
- * A crest as a data URL, for the share and call-up images (src/lib/og.tsx).
- * Null when it cannot be drawn: gone (404) or not a PNG or JPEG, the only
- * formats Satori draws. Throws on anything that may work later (a timeout, a
- * 5xx, Cloudflare's 403), so the next run tries again.
+ * A league image as a data URL. Null when there is nothing to keep: gone (404)
+ * or not one of the `types`. Throws on anything that may work later (a
+ * timeout, a 5xx, Cloudflare's 403), so the next run tries again.
  */
-export async function fetchCrest(url: string): Promise<string | null> {
+async function fetchImage(url: string, types: RegExp): Promise<string | null> {
   const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
   if (response.status === 404 || response.status === 410) return null;
-  if (!response.ok) throw new Error(`Crest ${url}: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`Image ${url}: HTTP ${response.status}`);
   const type = (response.headers.get("content-type") ?? "").split(";")[0].trim();
-  if (!/^image\/(png|jpe?g)$/.test(type)) return null;
+  if (!types.test(type)) return null;
   return `data:${type};base64,${Buffer.from(await response.arrayBuffer()).toString("base64")}`;
+}
+
+/**
+ * A crest, for the pages and the share and call-up images (src/lib/og.tsx):
+ * only PNG or JPEG, the formats Satori draws.
+ */
+export function fetchCrest(url: string): Promise<string | null> {
+  return fetchImage(url, /^image\/(png|jpe?g)$/);
+}
+
+/** A player's photo, for the pages: any image a browser shows. */
+export function fetchPhoto(url: string): Promise<string | null> {
+  return fetchImage(url, /^image\/(png|jpe?g|gif|webp|avif)$/);
 }
 
 // --- Matches -------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { Fragment } from "react";
-import { crestSrc } from "@/lib/crests";
+import { crestSrc } from "@/lib/uploads";
 import type { Match } from "@/lib/sportspress/types";
 import { getVenue } from "@/lib/sportspress/venues";
 import { fitFontSize } from "@/lib/text";

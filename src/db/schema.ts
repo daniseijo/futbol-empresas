@@ -46,12 +46,26 @@ export const teams = sqliteTable(
 /**
  * Team crests, downloaded by the sync. The share and call-up images draw them
  * (src/lib/og.tsx), and fetching them from the league while rendering failed:
- * its Cloudflare answers some networks (Vercel's, GitHub's) with a 403.
+ * its Cloudflare answers some networks (Vercel's, GitHub's) with a 403. The
+ * pages load them from the site too (/escudos/…, see src/lib/uploads.ts).
  */
 export const crests = sqliteTable("crests", {
   /** The team's `logo_url`. */
   url: text("url").primaryKey(),
   /** A `data:image/...;base64,` URL, or null when the crest cannot be drawn (missing, or not PNG or JPEG). */
+  dataUrl: text("data_url"),
+  /** Madrid local time of the last download attempt. */
+  checkedAt: text("checked_at").notNull(),
+});
+
+/**
+ * Player photos, downloaded by the sync so the pages load them from the site
+ * (/fotos/…, see src/lib/uploads.ts) instead of from the league.
+ */
+export const playerPhotos = sqliteTable("player_photos", {
+  /** The player's `photo_url`. */
+  url: text("url").primaryKey(),
+  /** A `data:image/...;base64,` URL, or null when the league no longer has it (or it is not an image). */
   dataUrl: text("data_url"),
   /** Madrid local time of the last download attempt. */
   checkedAt: text("checked_at").notNull(),

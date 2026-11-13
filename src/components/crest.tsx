@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { crestSrc } from "@/lib/crests";
+import { crestSrc } from "@/lib/uploads";
 
 export function initials(name: string): string {
   return name
