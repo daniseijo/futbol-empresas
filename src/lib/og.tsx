@@ -91,6 +91,7 @@ export async function ogImage(element: React.ReactElement, size: { width: number
  * A crest as a data URL, or null to draw the initials instead. The sync stores
  * them (the `crests` table): fetching them from the league here failed, since
  * its Cloudflare answers Vercel with a 403. One primary key read per crest.
+ * The share images draw it, and /escudos/ serves it to the pages.
  */
 export async function crestDataUrl(url: string | null): Promise<string | null> {
   "use cache";

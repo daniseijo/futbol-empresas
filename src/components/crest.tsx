@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { crestSrc } from "@/lib/crests";
 
 export function initials(name: string): string {
   return name
@@ -37,7 +38,7 @@ export function Crest({
   }
   return (
     <Image
-      src={src}
+      src={crestSrc(src)}
       alt=""
       width={size}
       height={size}

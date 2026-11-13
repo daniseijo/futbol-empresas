@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Fragment } from "react";
+import { crestSrc } from "@/lib/crests";
 import type { Match } from "@/lib/sportspress/types";
 import { getVenue } from "@/lib/sportspress/venues";
 import { fitFontSize } from "@/lib/text";
@@ -58,7 +59,7 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
         // The blurred crest is a light square on navy.
         team.logoUrl &&
         !champions && (
-          <Image src={team.logoUrl} alt="" width={420} height={420} className="absolute top-[-60px] right-[-40px] opacity-10 blur-[2px]" />
+          <Image src={crestSrc(team.logoUrl)} alt="" width={420} height={420} className="absolute top-[-60px] right-[-40px] opacity-10 blur-[2px]" />
         )
       )}
       <div className="@container relative mx-auto flex max-w-7xl flex-col gap-6.5 px-4 pt-12 pb-6 sm:px-6">
