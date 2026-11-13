@@ -1,5 +1,5 @@
-// The cron-job.org jobs that start GitHub workflows, kept as code: the sync on
-// match nights and the days after, and the call-ups every hour a Slack channel can pick. GitHub's
+// The cron-job.org jobs that start GitHub workflows, kept as code: the sync once
+// per match night, and the call-ups every hour a Slack channel can pick. GitHub's
 // own schedule starts runs late or drops them on busy hours, so cron-job.org
 // calls the workflow_dispatch API instead (see the README).
 //
@@ -48,24 +48,14 @@ function dispatchJob(
 
 type JobSpec = ReturnType<typeof dispatchJob>;
 
-/** Every hour but 02:00 to 07:59. */
-const DAY_HOURS = Array.from({ length: 24 }, (_, hour) => hour).filter((hour) => hour < 2 || hour >= 8);
-
-/**
- * Paused since 2 Nov 2026: the league's Cloudflare answers every request from GitHub Actions with a 403 (it still
- * works from other networks), and sync.yml is disabled on GitHub too. Try again in December.
- */
-const SYNC_ENABLED = false;
-
 /** The fields of the jobs this script owns. Anything else is left as it is. */
 const JOBS: JobSpec[] = [
-  // Matches are Monday to Thursday nights, kicking off from 20:00 to 22:05 Madrid time. The league uploads some
-  // results that night, until about 01:00, and the rest the morning after, with the match reports around lunchtime.
-  // So the sync runs every 20 minutes from Tuesday to Friday, except from 02:00 to 08:00, when nobody uploads
-  // anything, and on Monday night. A run with nothing new reads ~3,700 rows: these ~1,000 runs a month read ~4M of
-  // Turso's 500M. A job runs every hour × minute it lists, on the weekdays of the run, hence the Monday one apart.
-  dispatchJob("futbol-empresas sync", "sync.yml", { hours: DAY_HOURS, minutes: [10, 30, 50], wdays: [2, 3, 4, 5], enabled: SYNC_ENABLED }),
-  dispatchJob("futbol-empresas sync (Monday night)", "sync.yml", { hours: [20, 21, 22, 23], minutes: [10, 30, 50], wdays: [1], enabled: SYNC_ENABLED }),
+  // Matches are Monday to Thursday nights, kicking off from 20:00 to 22:05 Madrid time, and the league uploads
+  // that night's results until about 01:00. The sync runs once, at 01:00 from Tuesday to Friday: since 2 Nov 2026
+  // the league's Cloudflare blocks GitHub's IPs, so the sync goes out through the owner's home connection (see the
+  // README), and one run a night keeps that IP clear of any rate limit. It ran every 20 minutes before; raise it
+  // again only gradually.
+  dispatchJob("futbol-empresas sync", "sync.yml", { hours: [1], minutes: [0], wdays: [2, 3, 4, 5] }),
   // Slack channels pick a weekday and a whole hour from 07:00 to 22:00 (src/notify/schedule.ts).
   dispatchJob("futbol-empresas notify", "notify.yml", {
     hours: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
@@ -76,6 +66,7 @@ const JOBS: JobSpec[] = [
 
 /** Jobs this script used to own, which `apply` deletes. */
 const RETIRED = [
+  "futbol-empresas sync (Monday night)",
   "futbol-empresas sync (first matches)",
   "futbol-empresas sync (after midnight)",
   "futbol-empresas sync (Thursday and Friday daytime)",

@@ -33,6 +33,10 @@ See the steps in the README.
   Friday, with a fine-grained token limited to Actions on this repository. Steps in the README ("Keeping an eye
   on the sync"). Since 26 Oct 2026 from 20:30, when the first matches end, to 01:50, as the league uploads results
   until about 01:00.
+- [x] Get round the league's block of GitHub's IPs (a Cloudflare `403` since 2 Nov 2026): the sync job goes out
+  through a Tailscale exit node at home, logging in with GitHub's OIDC token. One run a night (01:00, Tuesday to
+  Friday) so the home IP is not rate limited. Steps in the README ("The sync's exit node").
+- [ ] Once the nightly runs are steady, run the sync more often again (`scripts/cron-job.ts`), a step at a time.
 
 ## 3. New pages
 

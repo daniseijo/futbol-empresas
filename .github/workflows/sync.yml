@@ -1,17 +1,19 @@
 name: Sync league data
 
 # Copies the changes from the futbolempresas.es API into the database (Turso) and
-# tells the site to refresh its cache. On Monday night and from Tuesday to Friday
-# (Madrid time, except 02:00 to 08:00), an external cron starts it every 20 minutes through
-# workflow_dispatch, because GitHub starts scheduled runs late or drops them on
-# busy hours (see the README). The schedule here is the fallback, in UTC.
+# tells the site to refresh its cache. An external cron (cron-job.org, see
+# scripts/cron-job.ts) starts it through workflow_dispatch once per match night,
+# at 01:00 Madrid time from Tuesday to Friday; there is no GitHub schedule.
+#
+# The league's Cloudflare answers GitHub's IPs with a 403, so the job joins the
+# owner's tailnet as an ephemeral `tag:ci` node and sends its traffic through an
+# exit node at home (see "The sync's exit node" in the README). The Tailscale
+# login uses GitHub's OIDC token: there is no long-lived Tailscale secret.
 on:
-  schedule:
-    - cron: "7 */3 * * *" # every 3 hours
   workflow_dispatch:
     inputs:
       budget_minutes:
-        description: "Minutes before the sync pauses, up to 330 (longer runs advance the backfill faster; scheduled runs wait meanwhile)"
+        description: "Minutes before the sync pauses, up to 330 (longer runs advance the backfill faster)"
         type: number
         default: 15
 
@@ -27,10 +29,11 @@ jobs:
     runs-on: ubuntu-latest
     # Room for the budget, installing and the unit running when it expires.
     # Expressions have no arithmetic, so long runs get GitHub's maximum.
-    timeout-minutes: ${{ (github.event.schedule == '0 7 * * 6,0' || fromJSON(inputs.budget_minutes || 15) > 15) && 360 || 30 }}
+    timeout-minutes: ${{ fromJSON(inputs.budget_minutes || 15) > 15 && 360 || 30 }}
     permissions:
       contents: read
       issues: write
+      id-token: write # the OIDC token Tailscale's workload identity federation trades for a node key
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -43,15 +46,25 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # After installing, so only the sync goes out through home. `quiet` keeps
+      # routine output (peers, endpoints) out of this public log, and the ping
+      # fails the run early, with a clear error, when the exit node is offline.
+      - name: Route through the home exit node
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+          args: --exit-node=${{ secrets.TS_EXIT_NODE }}
+          ping: ${{ secrets.TS_EXIT_NODE }}
+          log-mode: quiet
       # Progressive: resumes the backfill where it stopped and stops after the
-      # budget: 15 minutes, unless a manual run asks for more. The weekend run
-      # gets 330, so a big backfill (the video archive) advances while there are
-      # no matches to delay; with nothing pending it ends in a few minutes.
+      # budget: 15 minutes, unless a manual run asks for more.
       # A workflow_dispatch number input arrives as "15.0", and bash arithmetic
       # only takes integers, so the decimal part is dropped first.
       - run: SYNC_BUDGET_SECONDS=$((${BUDGET_MINUTES%.*} * 60)) pnpm sync
         env:
-          BUDGET_MINUTES: ${{ inputs.budget_minutes || (github.event.schedule == '0 7 * * 6,0' && 330) || 15 }}
+          BUDGET_MINUTES: ${{ inputs.budget_minutes || 15 }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_AUTH_TOKEN: ${{ secrets.DATABASE_AUTH_TOKEN }}
           REVALIDATE_URL: ${{ secrets.REVALIDATE_URL }}
