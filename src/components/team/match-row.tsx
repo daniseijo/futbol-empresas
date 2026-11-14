@@ -36,7 +36,7 @@ export function MatchRow({
   return (
     <Link
       href={`/partidos/${match.id}`}
-      className={`grid grid-cols-[42px_1fr_auto] items-center gap-3 rounded-[14px] border px-3.5 py-3 sm:grid-cols-[44px_110px_minmax(0,1fr)_84px_minmax(0,1fr)_32px] ${
+      className={`grid grid-cols-[42px_1fr_auto] items-center gap-3 rounded-[14px] border px-3.5 py-3 sm:grid-cols-[44px_140px_minmax(0,1fr)_84px_minmax(0,1fr)_32px] ${
         champions
           ? `champions-light bg-champions-soft ${highlight ? "border-accent" : "border-champions-text/30 hover:border-champions-text"}`
           : highlight
@@ -49,7 +49,7 @@ export function MatchRow({
         {champions?.phase === "Fase liga" && <span className="mt-1 font-sans text-[10px] font-bold tracking-[0.04em] whitespace-nowrap uppercase">F. liga</span>}
       </span>
       <span className="flex flex-col items-start gap-1 text-[13px] text-muted max-sm:hidden">
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-1.5 whitespace-nowrap">
           {upcoming ? relativeDay(match.date, now) : formatShortDate(match.date)} · {match.date.slice(11, 16)}
           {hasVideo && (
             <svg width="13" height="13" viewBox="0 0 24 24" className="fill-accent-text" role="img" aria-label="Con vídeo">
