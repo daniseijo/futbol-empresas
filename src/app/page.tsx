@@ -201,7 +201,7 @@ function FocusSection({ focus, logos, slugs, now }: { focus: FocusBlock; logos: 
         }`}
       >
         <div className="flex min-w-0 flex-[1_1_260px] items-center gap-3.5">
-          <Crest src={logos[focus.teamId]} name={teamName} size={56} />
+          <Crest src={logos[focus.teamId]} name={teamName} size={56} priority />
           <div className="min-w-0">
             <div className="text-xs font-bold tracking-[0.12em]">TU EQUIPO</div>
             <h2 id="tu-equipo" className="font-display text-[40px] leading-[0.9] font-extrabold uppercase sm:text-[46px]">

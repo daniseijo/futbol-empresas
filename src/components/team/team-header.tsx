@@ -64,7 +64,7 @@ export function TeamHeader({ data }: { data: TeamPageData }) {
       )}
       <div className="@container relative mx-auto flex max-w-7xl flex-col gap-6.5 px-4 pt-12 pb-6 sm:px-6">
         <div className="flex flex-wrap items-center gap-5.5">
-          <Crest src={team.logoUrl} name={team.name} size={108} />
+          <Crest src={team.logoUrl} name={team.name} size={108} priority />
           <div className="flex min-w-0 flex-col gap-2.5">
             <div className="flex flex-wrap gap-2">
               {group && (

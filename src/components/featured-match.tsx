@@ -82,6 +82,7 @@ function Side({ side, isFocus, logos, slugs, form = false }: { side: TeamSide; i
         src={logos[side.id]}
         name={side.name}
         size={72}
+        priority
         className={`self-center ${isFocus ? "outline-3 outline-offset-2 outline-accent" : ""}`}
       />
       {/* Full width so the name can fit it; a container (the subgrid item itself cannot be one). */}
