@@ -81,13 +81,17 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
   ]);
   const context = buildTeamContext(team.id, seasonMatches, tree, now);
 
-  // Photos and videos of the group matches the team played.
-  const groupMatches = !context.group
-    ? []
-    : context.group.id === enrolledGroup
-      ? enrolledMatches
-      : await getGroupMatches(context.group.id, season.id);
-  const ownPlayed = groupMatches.filter((m) => involves(m, team.id) && m.played).reverse();
+  // Every group the team played in this season (league and Champions), not only the current one: the
+  // matches' photos and videos and the bye weeks come from all of them.
+  const ownGroups = [...new Set(context.matches.map((m) => m.groupId).filter((id): id is number => id !== null))];
+  const groupLists = await Promise.all(
+    ownGroups.map((id) => (id === enrolledGroup ? enrolledMatches : getGroupMatches(id, season.id))),
+  );
+  const ownDetails = groupLists
+    .flat()
+    .filter((m) => involves(m, team.id))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const ownPlayed = ownDetails.filter((m) => m.played).reverse();
   const photos: Photo[] = ownPlayed.flatMap((m) =>
     m.photos.map((url) => ({ url, caption: `${m.round ? `Jornada ${m.round} · ` : ""}${score(m)}` })),
   );
@@ -95,19 +99,21 @@ export async function getTeamPageData(slug: string): Promise<TeamPageData | null
   const latestVideo = withVideo?.video
     ? { matchId: withVideo.id, id: withVideo.video.id, title: withVideo.video.title ?? score(withVideo) }
     : null;
-  const videoIds = new Set(groupMatches.filter((m) => m.video).map((m) => m.id));
+  const videoIds = new Set(ownDetails.filter((m) => m.video).map((m) => m.id));
 
   // Bye weeks: group rounds in which the team does not play. A match of its own on that day counts as
   // playing even when the API left its round empty, or the list would show a bye next to the match.
   const entries: SeasonEntry[] = context.matches.map((match) => ({ kind: "match", match, hasVideo: videoIds.has(match.id) }));
-  const ownRounds = new Set(context.matches.map((m) => m.round));
   const ownDays = new Set(context.matches.map((m) => dayKey(m.date)));
-  const roundDates = new Map<number, string>();
-  for (const m of groupMatches) {
-    if (m.round && !roundDates.has(m.round)) roundDates.set(m.round, m.date);
-  }
-  for (const [round, date] of roundDates) {
-    if (!ownRounds.has(round) && !ownDays.has(dayKey(date))) entries.push({ kind: "rest", round, date });
+  for (const [i, groupId] of ownGroups.entries()) {
+    const ownRounds = new Set(context.matches.filter((m) => m.groupId === groupId).map((m) => m.round));
+    const roundDates = new Map<number, string>();
+    for (const m of groupLists[i]) {
+      if (m.round && !roundDates.has(m.round)) roundDates.set(m.round, m.date);
+    }
+    for (const [round, date] of roundDates) {
+      if (!ownRounds.has(round) && !ownDays.has(dayKey(date))) entries.push({ kind: "rest", round, date });
+    }
   }
   entries.sort((a, b) => {
     const dateA = a.kind === "match" ? a.match.date : a.date;
