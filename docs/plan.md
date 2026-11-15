@@ -184,7 +184,8 @@ See the steps in the README.
 - Some matches make WordPress fail with a persistent 500 when rendering their `content` (e.g. 86748).
 - Rounds are published about a week ahead, so a phase in progress has far fewer matches than it will. Totals in
   the current season are estimated (`src/lib/expected-matches.ts`): a round robin per group, for groups that were
-  one the season before.
+  one the season before, and each team's rounds in a league phase (the Champions' fase liga: 4 per team in 25/26,
+  published one round at a time). Knockouts keep their published count.
 - Round numbers are unreliable: some matches are played early under a later round (round 9 in October), and some
   have none. The round comes from the title's "J1 –" prefix, which some lack (Singular Bank – Openbank, 134694, in
   the Champions' first round): `fillMissingRounds` puts such a match in the round whose dates it falls in.
