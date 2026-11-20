@@ -2,10 +2,10 @@ import { cacheLife } from "next/cache";
 import { dayKey, nowInMadrid } from "@/lib/dates";
 import {
   getCurrentSeason,
+  getGroupMatches,
   getHeadToHead,
   getLeagues,
   getMatch,
-  getSeasonMatches,
   getSeasons,
   getSheetTotals,
   getSquad,
@@ -73,29 +73,34 @@ export async function getMatchPageData(id: number): Promise<MatchPageData | null
   const result = await getMatch(id);
   if (!result) return null;
   const { lineups } = result;
-  const [leagues, seasons, current, teams, seasonMatches, headToHead, homeSquad, awaySquad] = await Promise.all([
-    getLeagues(),
-    getSeasons(),
-    getCurrentSeason(),
-    getTeams(),
-    result.match.seasonId ? getSeasonMatches(result.match.seasonId) : Promise.resolve([]),
-    getHeadToHead(result.match.homeId, result.match.awayId),
-    getSquad(result.match.homeId),
-    getSquad(result.match.awayId),
-  ]);
+  const { seasonId, groupId, competitionId, homeId, awayId } = result.match;
+  // Only what the page shows: the match's group (not the whole season, ~45,000 lineup rows) and both
+  // teams' sheets in its competition (not every team's). Each page render is a fresh read when a
+  // crawler walks every match.
+  // The squads' numbers count the match's competition alone: the league's goals say little about a cup.
+  const competitionTotals = (teamId: number) =>
+    seasonId && competitionId ? getSheetTotals(seasonId, { teamId, competitionId }) : Promise.resolve([]);
+  const [leagues, seasons, current, teams, groupMatches, headToHead, homeSquad, awaySquad, homeTotals, awayTotals] =
+    await Promise.all([
+      getLeagues(),
+      getSeasons(),
+      getCurrentSeason(),
+      getTeams(),
+      seasonId && groupId ? getGroupMatches(groupId, seasonId) : Promise.resolve([]),
+      getHeadToHead(homeId, awayId),
+      getSquad(homeId),
+      getSquad(awayId),
+      competitionTotals(homeId),
+      competitionTotals(awayId),
+    ]);
   const tree = new LeagueTree(leagues);
-  // The season's matches carry the round the API left out of some.
-  const match = { ...result.match, round: result.match.round ?? seasonMatches.find((m) => m.id === id)?.round ?? null };
+  // The group's matches carry the round the API left out of some.
+  const match = { ...result.match, round: result.match.round ?? groupMatches.find((m) => m.id === id)?.round ?? null };
   const teamsById = new Map(teams.map((t) => [t.id, t]));
 
-  const groupMatches = match.groupId ? seasonMatches.filter((m) => m.groupId === match.groupId) : [];
   const standings = computeStandings(groupMatches);
 
-  // The squads' numbers count the match's competition alone: the league's goals say little about a cup.
-  const competitionGroups = [
-    ...new Set(seasonMatches.filter((m) => m.competitionId === match.competitionId && m.groupId !== null).map((m) => m.groupId!)),
-  ];
-  const totals = match.seasonId && match.competitionId ? await getSheetTotals(match.seasonId, { groupIds: competitionGroups }) : [];
+  const totals = [...homeTotals, ...awayTotals];
   const inCompetition = (squad: SquadPlayer[], teamId: number): SquadPlayer[] =>
     squad.map((player) => {
       const own = totals.filter((t) => t.playerId === player.id && t.teamId === teamId);
