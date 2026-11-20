@@ -2,7 +2,7 @@
 // that (src/sync). Reads are cached with "use cache" and the sync invalidates
 // them through the "data" tag.
 
-import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { cacheLife, cacheTag } from "next/cache";
 import { db, schema } from "@/db/client";
@@ -350,10 +350,14 @@ export async function getPlayers(ids: number[]): Promise<Record<number, PlayerIn
 
 /**
  * Every player's match sheets in a season's played matches, added up by team
- * and line: those of some groups (a competition page) or of one team. What
- * the ideal 7 is scored from (see `ideal-seven.ts`).
+ * and line: those of some groups (a competition page) or of one team, in
+ * every competition or in one (a match page). What the ideal 7 is scored from
+ * (see `ideal-seven.ts`).
  */
-export async function getSheetTotals(seasonId: number, scope: { groupIds: number[] } | { teamId: number }): Promise<SheetTotals[]> {
+export async function getSheetTotals(
+  seasonId: number,
+  scope: { groupIds: number[] } | { teamId: number; competitionId?: number },
+): Promise<SheetTotals[]> {
   "use cache";
   cacheLife("results");
   cacheTag(DATA_TAG);
@@ -383,7 +387,11 @@ export async function getSheetTotals(seasonId: number, scope: { groupIds: number
         "groupIds" in scope
           ? inArray(m.groupId, scope.groupIds)
           : // Through the matches' team indexes: lineups have none by team.
-            and(or(eq(m.homeId, scope.teamId), eq(m.awayId, scope.teamId)), eq(mp.teamId, scope.teamId)),
+            and(
+              or(eq(m.homeId, scope.teamId), eq(m.awayId, scope.teamId)),
+              eq(mp.teamId, scope.teamId),
+              scope.competitionId === undefined ? undefined : and(eq(m.competitionId, scope.competitionId), isNotNull(m.groupId)),
+            ),
       ),
     )
     .groupBy(mp.playerId, mp.teamId, mp.position);
