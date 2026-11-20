@@ -1,9 +1,11 @@
 name: Keep schedules alive
 
 # GitHub disables scheduled workflows in public repositories after 60 days
-# without commits, and the sync never commits (it writes to Turso). Enabling a
-# workflow through the API resets that count, so once a month this re-enables
-# the sync and itself.
+# without commits, and the automation never commits (it writes to Turso). A
+# disabled workflow cannot be dispatched either, so cron-job.org's calls would
+# fail too. Enabling a workflow through the API resets that count, so once a
+# month this re-enables the call-ups (on a schedule as a fallback) and itself.
+# The sync has no schedule, so GitHub never disables it.
 on:
   schedule:
     - cron: "17 4 1 * *"
@@ -20,7 +22,5 @@ jobs:
       GH_REPO: ${{ github.repository }}
     steps:
       - run: |
-          # Paused since 2 Nov 2026 (the league answers GitHub Actions with a 403, see
-          # scripts/cron-job.ts): put this line back when the sync is turned on again.
-          # gh workflow enable sync.yml
+          gh workflow enable notify.yml
           gh workflow enable keepalive.yml

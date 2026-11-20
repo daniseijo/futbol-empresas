@@ -8,7 +8,8 @@ Unofficial website for the Madrid company 7-a-side football league, built on top
 
 ```
 League API ──pnpm sync──▶ own database (SQLite / Turso) ──▶ Next.js pages
-  (slow)    (GitHub Actions)                                (read the DB only)
+  (slow)    (GitHub Actions,                                (read the DB only)
+             via a home exit node)
 ```
 
 The league API is slow (0.2 to 12 s per call) and chokes on parallel requests. That is why the site
@@ -77,7 +78,7 @@ sqlite3 data/futbol.db ".backup futbol-copy.db"
 Move `futbol-copy.db` over (AirDrop, Drive...), save it as `data/futbol.db` on the other machine and run
 `pnpm sync`: it carries on where it stopped, because the backfill state lives inside the database itself.
 
-## Deploying (Vercel + Turso + GitHub Actions)
+## Deploying (Vercel + Turso + GitHub Actions + Tailscale)
 
 1. **Turso database, with the backfill already done locally:** make a consistent copy
    (`sqlite3 data/futbol.db ".backup futbolempresas.db"`), switch it to WAL mode with the log checkpointed
@@ -94,42 +95,83 @@ Move `futbol-copy.db` over (AirDrop, Drive...), save it as `data/futbol.db` on t
 4. **GitHub:** under *Settings › Secrets and variables › Actions*, create the secrets `DATABASE_URL`,
    `DATABASE_AUTH_TOKEN`, `REVALIDATE_SECRET` (same as in Vercel) and `REVALIDATE_URL`
    (`https://<domain>/api/revalidate`), and the variable `SYNC_ENABLED=true`. Without that variable the
-   scheduled action does not run (so it does not load the API while there is no remote database).
+   actions do not run (so they do not load the API while there is no remote database).
+5. **Tailscale:** the sync's exit node, below.
 
-The `.github/workflows/sync.yml` action syncs every 3 hours, and an external cron starts it every 20 minutes on
-match nights (Monday to Friday, see below). Each run takes 15 minutes at most, then calls `/api/revalidate` so
-the site refreshes its cache.
+The `.github/workflows/sync.yml` action has no GitHub schedule: cron-job.org starts it once per match night, at
+01:00 Madrid time from Tuesday to Friday (see below). Each run takes 15 minutes at most, then calls
+`/api/revalidate` so the site refreshes its cache.
+
+### The sync's exit node
+
+Since 2 Nov 2026 the league's Cloudflare answers every request from GitHub Actions with a `403` (it still works
+from other networks). So the sync job joins the owner's [Tailscale](https://tailscale.com) network as an
+ephemeral node tagged `tag:ci` and sends its traffic through an **exit node at home**: the league sees a home
+connection. The job only installs dependencies before joining; `pnpm notify` never talks to the league and runs
+without it.
+
+- **Login without a stored secret:** the action trades GitHub's OIDC token for a node key (Tailscale's
+  *workload identity federation*), so nothing long-lived could leak. The node is ephemeral and removed when the
+  job ends.
+- **Nothing private in the public logs:** the action runs with `log-mode: quiet`, and no step prints peers or
+  endpoints. Keep it that way (no `tailscale status` or `netcheck` in the workflow).
+- **When the exit node is off,** the action's ping fails and the run opens the usual `sync-failure` issue.
+- **One run a night,** so the home IP stays clear of the league's rate limits. Raise it slowly in
+  `scripts/cron-job.ts` if needed.
+
+Setting it up:
+
+1. On the machine at home (it must be on, and awake, at 01:00): install Tailscale, turn on *Run as exit node*,
+   then in the admin console approve it as an exit node and *Disable key expiry*. A Mac can wake itself up
+   for it: `sudo pmset repeat wakeorpoweron TWRF 00:55:00`, plugged in and with sleep prevented while on power.
+2. In the tailnet policy file, own the tag and let it use exit nodes and nothing else (no access to the
+   machines or the home network):
+
+   ```jsonc
+   "tagOwners": { "tag:ci": ["autogroup:admin"] },
+   "grants": [
+     // …the existing grants…
+     { "src": ["tag:ci"], "dst": ["autogroup:internet"], "ip": ["*"] },
+   ],
+   ```
+
+   With the default policy (allow all), replace its catch-all grant with one for `autogroup:member`, or
+   `tag:ci` can reach everything.
+3. *Settings › Trust credentials › Credential › OpenID Connect*, issuer **GitHub**, subject
+   `repo:daniseijo/futbol-empresas:ref:refs/heads/main` (only runs from `main`), scope **Auth Keys: write**
+   with tag `tag:ci`. It shows a client id and an audience.
+4. GitHub secrets: `TS_OAUTH_CLIENT_ID` (the client id), `TS_AUDIENCE` (the audience) and `TS_EXIT_NODE`
+   (the exit node's Tailscale IP, `100.x.y.z`).
+5. Re-enable the workflow if it was paused (`gh workflow enable sync.yml`), try a run
+   (`gh workflow run sync.yml`) and `pnpm cron-job apply`.
 
 The league server is slow (a squad's `/lists` call takes ~10 s, an old match page for its video ~13 s), but it
 keeps a page's time nearly flat with several at once, so the client fetches up to 6 website pages at a time
 (`PAGE_CONCURRENCY` in `src/lib/sportspress/client.ts`) and keeps the API at 2. Even so, a big backfill
 such as the video archive (~800 matches an hour) takes many runs. To finish it sooner, start a longer manual
-run: `gh workflow run sync.yml -f budget_minutes=120` (up to 330). Scheduled runs queue behind it, and the site
-only refreshes when it ends, so avoid match nights. On Saturday and Sunday at 07:00 UTC a scheduled run gets 330
-minutes on its own; once nothing is pending it ends in a few minutes.
+run: `gh workflow run sync.yml -f budget_minutes=120` (up to 330). The nightly run queues behind it, and the site
+only refreshes when it ends, so avoid match nights.
 
 ### Keeping an eye on the sync
 
 - **Failures** open an issue labelled `sync-failure` (GitHub notifies the owner). Later failures comment on it,
   and the next successful run closes it. Running out of the 15-minute budget is not a failure.
 - **Stale data** shows on the site: the footer's "Datos actualizados…" turns red after 12 hours without a sync.
-- **The 60-day shutdown:** GitHub disables schedules in public repositories after 60 days without commits, and
-  the sync never commits. `.github/workflows/keepalive.yml` re-enables both workflows on the 1st of every
-  month. If a schedule was disabled anyway: `gh workflow enable sync.yml`.
+- **Stale data between nights:** with one run a night, the footer is red for most of the week, and results
+  uploaded in the morning (and the match reports) show up the next night.
+- **The 60-day shutdown:** GitHub disables scheduled workflows in public repositories after 60 days without
+  commits, and a disabled workflow cannot be dispatched either. The sync has no schedule; `notify.yml` and
+  `keepalive.yml` do, and `.github/workflows/keepalive.yml` re-enables them on the 1st of every month.
 - **Late or missing scheduled runs:** GitHub's `schedule` is best effort. On busy hours it starts runs hours
   late or drops them (on 22–23 Oct 2026 the 09:07 UTC run started at 11:27, and a match night got 5 of its
-  ~21 runs). So match nights are not on GitHub's schedule: a [cron-job.org](https://cron-job.org) job calls the
-  `workflow_dispatch` API every 20 minutes on match nights, from 20:30 (when the first matches end) to 01:50
-  (the league uploads results until about 01:00), Monday to Friday nights. GitHub answers `204`.
-  Runs never overlap (`concurrency: sync`); if one is already waiting, GitHub cancels it in favour of the newer
-  one, which is harmless.
+  ~21 runs). So the sync is not on GitHub's schedule: a [cron-job.org](https://cron-job.org) job calls the
+  `workflow_dispatch` API instead. GitHub answers `204`. Runs never overlap (`concurrency: sync`).
 
 ### The cron-job.org jobs
 
-The jobs start GitHub workflows: **sync** every 20 minutes from Tuesday to Friday (except 02:00 to 08:00) and on Monday night
-(`sync.yml`, two jobs, since a job runs every hour × minute it lists on the weekdays of the run: matches are Monday
-to Thursday nights, and the league uploads some results that night and the rest the morning after, with the
-reports around lunchtime), and **notify** on the hour from 07:00 to 22:00, Monday to Friday (`notify.yml`, the Slack call-ups each channel
+The jobs start GitHub workflows: **sync** at 01:00 from Tuesday to Friday (`sync.yml`: matches are Monday to
+Thursday nights, and the league uploads that night's results until about 01:00; it ran every 20 minutes until
+the league blocked GitHub, see "The sync's exit node"), and **notify** on the hour from 07:00 to 22:00, Monday to Friday (`notify.yml`, the Slack call-ups each channel
 schedules). They are defined in
 `scripts/cron-job.ts` and managed through cron-job.org's API, with `CRONJOB_API_KEY` in `.env.local`
 (cron-job.org › Settings › API; 100 calls a day on the free plan):
