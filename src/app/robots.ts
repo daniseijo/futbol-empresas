@@ -2,12 +2,29 @@ import type { MetadataRoute } from "next";
 import { siteConfig } from "@/config/site";
 
 /**
- * Crawlers that fetch every player and match page, each one a fresh render
- * that reads the database. Meta's AI crawler did that on 2026-11-20 and nearly
- * used up the month's Turso rows-read quota in a few hours. A firewall rule on
- * Vercel denies it too; robots.txt is the polite way to ask first.
+ * AI crawlers fetch every player and match page, each one a fresh render that
+ * reads the database. Meta's did that on 2026-11-20 and nearly used up the
+ * month's Turso rows-read quota in a few hours. Vercel's firewall denies them
+ * (the managed "AI Bots" rule); robots.txt is the polite way to ask first.
+ * Search engines and link previews (Googlebot, facebookexternalhit, Slackbot)
+ * stay allowed.
  */
-const BLOCKED_CRAWLERS = ["meta-externalagent"];
+const BLOCKED_CRAWLERS = [
+  "meta-externalagent",
+  "GPTBot",
+  "ClaudeBot",
+  "anthropic-ai",
+  "CCBot",
+  "Bytespider",
+  "PerplexityBot",
+  "Amazonbot",
+  "Applebot-Extended",
+  "Google-Extended",
+  "cohere-ai",
+  "Diffbot",
+  "omgili",
+  "Timpibot",
+];
 
 export default function robots(): MetadataRoute.Robots {
   return {
