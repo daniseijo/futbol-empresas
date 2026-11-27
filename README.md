@@ -96,6 +96,12 @@ Move `futbol-copy.db` over (AirDrop, Drive...), save it as `data/futbol.db` on t
    (`https://<domain>/api/revalidate`), and the variable `SYNC_ENABLED=true`. Without that variable the
    scheduled action does not run (so it does not load the API while there is no remote database).
 
+> **Since November 2026 futbolempresas.es answers GitHub Actions with a 403** (issue #26), so the scheduled
+> action fails and production is synced from a laptop instead: load `.env.local` into the shell (`pnpm sync`
+> does not read it), create a short-lived write token with `turso db tokens create futbolempresas -e 1d` and pass
+> it as `DATABASE_AUTH_TOKEN`. See AGENTS.md for the exact commands. The rest of this section describes the
+> action as it worked before.
+
 The `.github/workflows/sync.yml` action syncs every 3 hours, and an external cron starts it every 20 minutes on
 match nights (Monday to Friday, see below). Each run takes 15 minutes at most, then calls `/api/revalidate` so
 the site refreshes its cache.
