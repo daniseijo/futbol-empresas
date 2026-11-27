@@ -50,6 +50,11 @@ describe("parseGoals", () => {
     assert.deepEqual(parseGoals(3), { count: 3, minutes: [] });
   });
 
+  it("counts the minutes when the count is missing", () => {
+    assert.deepEqual(parseGoals(" (29')"), { count: 1, minutes: [29] });
+    assert.deepEqual(parseGoals("(3', 40')"), { count: 2, minutes: [3, 40] });
+  });
+
   it("treats empty or missing values as no goals", () => {
     assert.deepEqual(parseGoals(""), { count: 0, minutes: [] });
     assert.deepEqual(parseGoals(undefined), { count: 0, minutes: [] });

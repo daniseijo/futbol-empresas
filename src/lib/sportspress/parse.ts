@@ -40,12 +40,16 @@ export function cleanTeamName(name: string): string {
   return name.replace(ROUND_PREFIX, "").trim();
 }
 
-/** Match sheet goals: "2 (42', 44')" → { count: 2, minutes: [42, 44] }. */
+/**
+ * Match sheet goals: "2 (42', 44')" → { count: 2, minutes: [42, 44] }.
+ * The sheet sometimes leaves out the count and keeps only the minutes
+ * (" (29')"), so a count below the minutes listed is raised to match them.
+ */
 export function parseGoals(value: unknown): { count: number; minutes: number[] } {
   if (typeof value === "number") return { count: value, minutes: [] };
   if (typeof value !== "string" || value.trim() === "") return { count: 0, minutes: [] };
-  const count = parseInt(value, 10) || 0;
   const minutes = [...value.matchAll(/(\d+)\s*'/g)].map((m) => Number(m[1]));
+  const count = Math.max(parseInt(value, 10) || 0, minutes.length);
   return { count, minutes };
 }
 
