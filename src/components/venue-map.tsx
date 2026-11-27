@@ -28,8 +28,11 @@ export function VenueMap({
     let map: import("maplibre-gl").Map | null = null;
     let cancelled = false;
     Promise.all([import("maplibre-gl"), import("@/lib/map-style")])
-      .then(([{ Map, Marker }, { mapStyle }]) => {
+      .then(([{ Map, Marker, setWorkerUrl }, { mapStyle }]) => {
         if (cancelled || !container.current) return;
+        // MapLibre 6 finds its worker through its own import.meta.url, which bundling breaks: point it at the
+        // worker file, which Turbopack emits as an asset (the setup MapLibre documents for Next.js).
+        setWorkerUrl(new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).toString());
         map = new Map({
           container: container.current,
           style: mapStyle,
