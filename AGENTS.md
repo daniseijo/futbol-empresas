@@ -22,7 +22,7 @@ libSQL (Turso in production, `data/futbol.db` locally), pnpm, Node 24.
 
 ```
 futbolempresas.es (WordPress + SportsPress API)
-  └─ pnpm sync (src/sync/, GitHub Actions every 3 h, every 20 min on match nights via cron-job.org)
+  └─ pnpm sync (src/sync/, run from a laptop: the league answers GitHub Actions with a 403)
        └─ Turso database ──► POST /api/revalidate (refreshes the site's cache)
             └─ src/lib/data.ts        cached queries ("use cache", cacheLife, cacheTag(DATA_TAG))
                  └─ src/lib/views/*.ts  one function per page that composes the data
@@ -93,8 +93,14 @@ pnpm cron-job [diff|apply]                 # the match-night cron on cron-job.or
 - **Data:** without `DATABASE_URL` in `.env.local` the site reads `data/futbol.db`. Refresh it from production
   with `pnpm db:pull` (a few seconds; stop `pnpm dev` first). Prefer that to pointing `.env.local` at Turso: a dev
   session against production reads 1-3M rows an hour, and rows read are the plan's tightest limit. If you must,
-  use a **read-only** token (`turso db tokens create futbolempresas --read-only`). Never run `pnpm sync` against
-  production from a laptop.
+  use a **read-only** token (`turso db tokens create futbolempresas --read-only`).
+- **Syncing production** is done from a laptop, since futbolempresas.es answers GitHub Actions with a 403 (issue
+  #26). `pnpm sync` does not load `.env.local`, and without `DATABASE_URL` it writes to `data/futbol.db`, so:
+  `set -a; . ./.env.local; set +a`, check that `DATABASE_URL` starts with `libsql://`, then
+  `DATABASE_AUTH_TOKEN="$(turso db tokens create futbolempresas -e 1d)" pnpm sync`. Never print the token or write
+  it to a file. With `REVALIDATE_URL`/`REVALIDATE_SECRET` in `.env.local` it refreshes the site at the end
+  (`Site revalidation: 200`). If the league's Cloudflare answers the laptop with a 403 too, wait; do not try
+  to get around it.
 - **Restart `pnpm dev`** after changing `.env.local` or adding tokens to `globals.css`: it can keep serving stale CSS.
 - To try another focus team: `NEXT_PUBLIC_FOCUS_TEAM_SLUG=telefonica-femenino pnpm dev`.
 
